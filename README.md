@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Carta Tech - MyL Deck Builder
 
-## Getting Started
+Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque. Construye, comparte y explora mazos de la comunidad.
 
-First, run the development server:
+## 🚀 Getting Started
+
+### Desarrollo Local
+
+Primero, instala las dependencias:
+
+```bash
+npm install
+```
+
+Luego, ejecuta el servidor de desarrollo:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver el resultado.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Variables de Entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
 
-## Learn More
+```env
+NEXT_PUBLIC_SITE_URL=https://cartatech.com
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 📦 Scripts Disponibles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev` - Inicia el servidor de desarrollo
+- `npm run build` - Construye la aplicación para producción
+- `npm run start` - Inicia el servidor de producción
+- `npm run lint` - Ejecuta el linter
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚢 Deploy en Vercel
 
-## Deploy on Vercel
+### Opción 1: Deploy Automático desde GitHub
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Preparar el repositorio:**
+   - Asegúrate de que tu código esté en GitHub
+   - Verifica que el directorio raíz del proyecto sea `cartatech` (si tu repo está en la raíz) o ajusta la configuración en Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. **Conectar con Vercel:**
+   - Ve a [vercel.com](https://vercel.com) e inicia sesión
+   - Haz clic en "Add New Project"
+   - Importa tu repositorio de GitHub
+   - Vercel detectará automáticamente que es un proyecto Next.js
+
+3. **Configurar Variables de Entorno:**
+   - En la configuración del proyecto, ve a "Environment Variables"
+   - Agrega: `NEXT_PUBLIC_SITE_URL` con el valor de tu dominio (ej: `https://cartatech.com`)
+
+4. **Configurar el Directorio Raíz (si es necesario):**
+   - Si tu proyecto Next.js está en la carpeta `cartatech`, en "Root Directory" selecciona `cartatech`
+   - O configura el "Build Command" como: `cd cartatech && npm run build`
+   - Y el "Output Directory" como: `cartatech/.next`
+
+5. **Deploy:**
+   - Haz clic en "Deploy"
+   - Vercel construirá y desplegará tu aplicación automáticamente
+
+### Opción 2: Deploy Manual con Vercel CLI
+
+```bash
+# Instalar Vercel CLI globalmente
+npm i -g vercel
+
+# Desde el directorio del proyecto
+cd cartatech
+
+# Iniciar deploy
+vercel
+
+# Para producción
+vercel --prod
+```
+
+### Configuración Recomendada en Vercel
+
+- **Framework Preset:** Next.js
+- **Build Command:** `npm run build` (o `cd cartatech && npm run build` si el repo está en la raíz)
+- **Output Directory:** `.next` (o `cartatech/.next`)
+- **Install Command:** `npm install`
+- **Node.js Version:** 20.x o superior
+
+### Variables de Entorno en Vercel
+
+Asegúrate de configurar estas variables en el dashboard de Vercel:
+
+- `NEXT_PUBLIC_SITE_URL` - URL completa de tu sitio (ej: `https://cartatech.com`)
+
+## 🛠️ Tecnologías
+
+- **Next.js 16** - Framework React con App Router
+- **TypeScript** - Tipado estático
+- **Tailwind CSS 4** - Estilos
+- **Shadcn UI / Radix UI** - Componentes UI
+- **React 19** - Biblioteca UI
+- **Sonner** - Notificaciones toast
+
+## 📝 Notas
+
+- El proyecto usa localStorage para la autenticación en el cliente
+- Las imágenes se cargan desde Cloudinary
+- El proyecto está optimizado para SEO y accesibilidad
+- Compatible con pantallas desde móviles hasta 1920x1080px
+
+## 📚 Recursos
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Vercel Deployment Guide](https://vercel.com/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
