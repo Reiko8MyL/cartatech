@@ -1,6 +1,7 @@
 "use client"
 
 import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from "react-error-boundary"
+import type { ErrorInfo } from "react"
 import { AlertCircle, Home, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -106,7 +107,7 @@ function ErrorFallback({ error, resetErrorBoundary, showDetails = false }: Error
 interface ErrorBoundaryProps {
   children: React.ReactNode
   fallback?: React.ComponentType<FallbackProps>
-  onError?: (error: Error, errorInfo: { componentStack: string }) => void
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
   onReset?: () => void
   resetKeys?: Array<string | number>
   showDetails?: boolean
@@ -120,7 +121,7 @@ export function ErrorBoundary({
   resetKeys,
   showDetails = false,
 }: ErrorBoundaryProps) {
-  const handleError = (error: Error, errorInfo: { componentStack: string }) => {
+  const handleError = (error: Error, errorInfo: ErrorInfo) => {
     // Log del error
     if (process.env.NODE_ENV === "development") {
       console.error("Error capturado por ErrorBoundary:", error, errorInfo)
