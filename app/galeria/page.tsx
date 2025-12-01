@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { FiltersPanel } from "@/components/deck-builder/filters-panel"
 import { CardInfoModal } from "@/components/deck-builder/card-info-modal"
@@ -47,7 +47,7 @@ function saveCollectionToStorage(cardIds: Set<string>): void {
   }
 }
 
-export default function GaleriaPage() {
+function GaleriaContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
@@ -324,5 +324,22 @@ export default function GaleriaPage() {
         />
       )}
     </main>
+  )
+}
+
+export default function GaleriaPage() {
+  return (
+    <Suspense fallback={
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <div className="h-20 bg-muted animate-pulse rounded-lg" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <CardGridSkeleton count={12} columns={6} />
+        </div>
+      </main>
+    }>
+      <GaleriaContent />
+    </Suspense>
   )
 }

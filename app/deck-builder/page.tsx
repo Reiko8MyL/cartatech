@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { FiltersPanel } from "@/components/deck-builder/filters-panel"
 import { CardsPanel } from "@/components/deck-builder/cards-panel"
@@ -33,7 +33,7 @@ import { CardGridSkeleton } from "@/components/ui/card-grid-skeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 
-export default function DeckBuilderPage() {
+function DeckBuilderContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
@@ -308,5 +308,32 @@ export default function DeckBuilderPage() {
       </div>
     </main>
     </>
+  )
+}
+
+export default function DeckBuilderPage() {
+  return (
+    <Suspense fallback={
+      <main className="w-full h-[calc(100vh-4rem)] flex flex-col px-2 sm:px-4 lg:px-6 py-4">
+        <div className="mb-3">
+          <div className="h-20 bg-muted animate-pulse rounded-lg" />
+        </div>
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
+          <div className="border rounded-lg bg-card overflow-hidden">
+            <CardGridSkeleton count={12} columns={6} />
+          </div>
+          <div className="border rounded-lg bg-card overflow-hidden p-4 space-y-4">
+            <Skeleton className="h-8 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </div>
+        </div>
+      </main>
+    }>
+      <DeckBuilderContent />
+    </Suspense>
   )
 }
