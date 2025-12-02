@@ -41,9 +41,16 @@ export async function login(
     };
   } catch (error) {
     console.error("Error en login:", error);
+    
+    // Log detallado del error
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    
     return {
       success: false,
-      error: "Error de conexión al iniciar sesión",
+      error: error instanceof Error ? `Error de conexión: ${error.message}` : "Error de conexión al iniciar sesión",
     };
   }
 }

@@ -49,8 +49,26 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error en login:", error);
+    
+    // Log detallado para debugging
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    
+    // Si es un error de Prisma, log más detalles
+    if (error && typeof error === 'object' && 'code' in error) {
+      console.error("Prisma error code:", (error as any).code);
+      console.error("Prisma error meta:", (error as any).meta);
+    }
+    
     return NextResponse.json(
-      { error: "Error al iniciar sesión" },
+      { 
+        error: "Error al iniciar sesión",
+        ...(process.env.NODE_ENV === "development" && {
+          details: error instanceof Error ? error.message : String(error)
+        })
+      },
       { status: 500 }
     );
   }
