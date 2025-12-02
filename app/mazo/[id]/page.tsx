@@ -146,8 +146,8 @@ export default function ViewDeckPage() {
     const race = getDeckRace(deck.cards, allCards)
     const edition = getDeckEdition(deck.cards, allCards)
     const stats = calculateDeckStats(deck.cards, allCards)
-    const likeCount = likes[deck.id]?.length || 0
-    const userLiked = user ? hasUserLikedDeck(deck.id, user.id) : false
+    const likeCount = deck.id ? (likes[deck.id]?.length || 0) : 0
+    const userLiked = user && deck.id ? hasUserLikedDeck(deck.id, user.id) : false
     const backgroundImage = getDeckBackgroundImage(race)
 
     return {
@@ -248,6 +248,8 @@ export default function ViewDeckPage() {
   const handleToggleLike = async () => {
     if (!user || !deck) return
 
+    if (!deck.id) return;
+    
     // Actualización optimista
     const currentLikes = likes[deck.id] || [];
     const isCurrentlyLiked = currentLikes.includes(user.id);
@@ -295,7 +297,7 @@ export default function ViewDeckPage() {
   }
 
   const handleEditDeck = () => {
-    if (!deck) return
+    if (!deck || !deck.id) return
     router.push(`/deck-builder?load=${deck.id}`)
   }
 
@@ -347,6 +349,8 @@ export default function ViewDeckPage() {
   const confirmDeleteDeck = () => {
     if (!deck || !user) return
 
+    if (!deck.id) return;
+    
     const allSavedDecks = getSavedDecksFromLocalStorage()
     const updatedAllDecks = allSavedDecks.filter((d) => d.id !== deck.id)
     localStorage.setItem("myl_saved_decks", JSON.stringify(updatedAllDecks))
@@ -356,7 +360,7 @@ export default function ViewDeckPage() {
   }
 
   const handleCopyDeck = () => {
-    if (!deck) return
+    if (!deck || !deck.id) return
     trackDeckCopied(deck.id)
     router.push(`/deck-builder?load=${deck.id}`)
   }
@@ -506,7 +510,7 @@ export default function ViewDeckPage() {
 
   return (
     <>
-      {deck && (
+      {deck && deck.id && (
         <DeckJsonLd
           deckId={deck.id}
           name={deck.name}
@@ -629,7 +633,7 @@ export default function ViewDeckPage() {
                 {deckMetadata.likeCount || 0}
               </Button>
               <SocialShare
-                url={`/mazo/${deck.id}`}
+                url={deck.id ? `/mazo/${deck.id}` : ""}
                 title={deck.name}
                 description={deck.description}
               />
@@ -842,7 +846,7 @@ export default function ViewDeckPage() {
         </Card>
 
         {/* Sección de Comentarios */}
-        {deck.isPublic && (
+        {deck.isPublic && deck.id && (
           <div className="mt-6">
             <CommentsSection deckId={deck.id} deckName={deck.name} />
           </div>
