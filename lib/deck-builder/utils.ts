@@ -926,6 +926,6 @@ export function getFavoriteDecks(userId: string): SavedDeck[] {
   const allDecks = getSavedDecksFromLocalStorage();
   
   // Filtrar solo los mazos que están en favoritos y son públicos
-  return allDecks.filter((deck) => favoriteIds.includes(deck.id) && deck.isPublic === true);
+  return allDecks.filter((deck) => deck.id && favoriteIds.includes(deck.id) && deck.isPublic === true);
 }
 
