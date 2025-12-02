@@ -450,18 +450,18 @@ export async function POST(
 
     // Para otros errores, retornar 400 (Bad Request) en lugar de 500
     // Incluir detalles del error en desarrollo para debugging
-    return NextResponse.json(
-      {
-        error: "Error al crear comentario. Por favor, intenta nuevamente.",
-        ...(process.env.NODE_ENV === "development" && {
-          details: errorMessage,
-          ...(error && typeof error === 'object' && 'code' in error && {
-            prismaCode: (error as any).code,
-          }),
-        }),
-      },
-      { status: 400 }
-    )
+    const responseData: any = {
+      error: "Error al crear comentario. Por favor, intenta nuevamente.",
+    };
+
+    if (process.env.NODE_ENV === "development") {
+      responseData.details = errorMessage;
+      if (error && typeof error === 'object' && 'code' in error) {
+        responseData.prismaCode = (error as any).code;
+      }
+    }
+
+    return NextResponse.json(responseData, { status: 400 })
   }
 }
 
