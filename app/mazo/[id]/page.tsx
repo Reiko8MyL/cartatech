@@ -105,7 +105,7 @@ export default function ViewDeckPage() {
       setAllCards(getAllCards())
       
       // Track analytics
-      if (foundDeck) {
+      if (foundDeck && foundDeck.id) {
         trackDeckViewed(foundDeck.id, foundDeck.name)
       }
       
