@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: deck.name,
         description: deck.description,
-        cards: deck.cards,
+        cards: deck.cards as any,
         format: deck.format || "RE",
         userId,
         isPublic: deck.isPublic || false,
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         userId,
         name: deck.name,
         description: deck.description,
-        cards: deck.cards,
+        cards: deck.cards as any,
         format: deck.format || "RE",
         tags: deck.tags || [],
       },
