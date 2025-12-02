@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select"
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
-import { toastSuccess } from "@/lib/toast"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { AdInline } from "@/components/ads/ad-inline"
 import { AdSidebar } from "@/components/ads/ad-sidebar"
 
@@ -153,12 +153,12 @@ function MazosComunidadPage() {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
       // Usar el estado likes directamente para actualización inmediata
-      const likeCount = likes[deck.id]?.length || 0
+      const likeCount = deck.id ? (likes[deck.id]?.length || 0) : 0
       const userLiked = user && deck.id ? (likes[deck.id]?.includes(user.id) || false) : false
       // Usar el estado favorites en lugar de leer de localStorage para actualización inmediata
       const isFavorite = user && deck.id ? favorites.includes(deck.id) : false
       // Usar viewCount del mazo si viene de la API, sino usar localStorage como fallback
-      const viewCount = deck.viewCount !== undefined ? deck.viewCount : getDeckViewCount(deck.id)
+      const viewCount = deck.viewCount !== undefined ? deck.viewCount : (deck.id ? getDeckViewCount(deck.id) : 0)
       return {
         ...deck,
         race,
@@ -689,7 +689,7 @@ function MazosComunidadPage() {
                               variant={deck.userLiked ? "default" : "outline"}
                               size="sm"
                               className="h-7 px-2"
-                              onClick={() => handleToggleLike(deck.id)}
+                              onClick={() => deck.id && handleToggleLike(deck.id)}
                             >
                               <Heart
                                 className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""}`}
@@ -700,7 +700,7 @@ function MazosComunidadPage() {
                               variant={deck.isFavorite ? "default" : "outline"}
                               size="sm"
                               className="h-7 px-2"
-                              onClick={() => handleToggleFavorite(deck.id)}
+                              onClick={() => deck.id && handleToggleFavorite(deck.id)}
                               title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                             >
                               <Star
@@ -803,11 +803,11 @@ function MazosComunidadPage() {
                                 variant={deck.userLiked ? "default" : "outline"}
                                 size="sm"
                                 className="h-7 px-2"
-                                onClick={() => handleToggleLike(deck.id)}
-                                disabled={loadingLikes.has(deck.id)}
+                                onClick={() => deck.id && handleToggleLike(deck.id)}
+                                disabled={!deck.id || loadingLikes.has(deck.id)}
                               >
                                 <Heart
-                                  className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""} ${loadingLikes.has(deck.id) ? "animate-pulse" : ""}`}
+                                  className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""} ${deck.id && loadingLikes.has(deck.id) ? "animate-pulse" : ""}`}
                                 />
                                 {deck.likeCount || 0}
                               </Button>
@@ -815,12 +815,12 @@ function MazosComunidadPage() {
                                 variant={deck.isFavorite ? "default" : "outline"}
                                 size="sm"
                                 className="h-7 px-2"
-                                onClick={() => handleToggleFavorite(deck.id)}
+                                onClick={() => deck.id && handleToggleFavorite(deck.id)}
                                 title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-                                disabled={loadingFavorites.has(deck.id)}
+                                disabled={!deck.id || loadingFavorites.has(deck.id)}
                               >
                                 <Star
-                                  className={`h-3 w-3 ${deck.isFavorite ? "fill-current" : ""} ${loadingFavorites.has(deck.id) ? "animate-pulse" : ""}`}
+                                  className={`h-3 w-3 ${deck.isFavorite ? "fill-current" : ""} ${deck.id && loadingFavorites.has(deck.id) ? "animate-pulse" : ""}`}
                                 />
                               </Button>
                             </>
