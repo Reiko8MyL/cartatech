@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      const formattedDecks = decks.map((deck) => ({
+      const formattedDecks = decks.map((deck: any) => ({
         id: deck.id,
         name: deck.name,
         description: deck.description,
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const formattedUserDecks = decks.map((deck) => ({
+    const formattedUserDecks = decks.map((deck: any) => ({
       id: deck.id,
       name: deck.name,
       description: deck.description,

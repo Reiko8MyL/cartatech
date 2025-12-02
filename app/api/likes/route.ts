@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       });
 
       return NextResponse.json({
-        userIds: likes.map((like) => like.userId),
+        userIds: likes.map((like: any) => like.userId),
       });
     }
 

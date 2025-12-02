@@ -47,7 +47,7 @@ export async function GET(
     });
 
     return NextResponse.json({
-      versions: versions.map((version) => ({
+      versions: versions.map((version: any) => ({
         id: version.id,
         deckId: version.deckId,
         name: version.name,

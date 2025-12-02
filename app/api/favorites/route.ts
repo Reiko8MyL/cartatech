@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      favoriteDeckIds: favorites.map((f) => f.deckId),
-      decks: favorites.map((favorite) => ({
+      favoriteDeckIds: favorites.map((f: any) => f.deckId),
+      decks: favorites.map((favorite: any) => ({
         id: favorite.deck.id,
         name: favorite.deck.name,
         description: favorite.deck.description,

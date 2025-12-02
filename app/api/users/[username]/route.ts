@@ -90,7 +90,7 @@ export async function GET(
         totalLikes,
         totalViews: totalViews._sum.viewCount || 0,
       },
-      publicDecks: publicDecks.map((deck) => ({
+      publicDecks: publicDecks.map((deck: any) => ({
         ...deck,
         createdAt: deck.createdAt.getTime(),
         publishedAt: deck.publishedAt?.getTime(),

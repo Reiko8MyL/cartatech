@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Convertir fechas a timestamps
-    const formattedNotifications = notifications.map((notification) => ({
+    const formattedNotifications = notifications.map((notification: any) => ({
       ...notification,
       createdAt: notification.createdAt.getTime(),
     }))

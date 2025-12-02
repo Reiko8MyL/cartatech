@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       });
 
       return NextResponse.json({
-        votes: votes.map((v) => ({
+        votes: votes.map((v: any) => ({
           race: v.race,
           cardId: v.cardId,
           userId: v.userId,
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      votes: allVotes.map((v) => ({
+      votes: allVotes.map((v: any) => ({
         race: v.race,
         cardId: v.cardId,
         userId: v.userId,
