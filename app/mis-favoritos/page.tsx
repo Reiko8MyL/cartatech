@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select"
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
-import { toastSuccess } from "@/lib/toast"
+import { toastSuccess, toastError } from "@/lib/toast"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
