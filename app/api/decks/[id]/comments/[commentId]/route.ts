@@ -58,7 +58,7 @@ export async function PUT(
             username: true,
           },
         },
-        replies: [],
+        replies: true,
       },
     })
 
