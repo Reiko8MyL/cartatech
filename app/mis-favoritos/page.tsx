@@ -111,12 +111,12 @@ export default function MisFavoritosPage() {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
       // Usar el estado likes directamente para actualización inmediata
-      const likeCount = likes[deck.id]?.length || 0
+      const likeCount = deck.id ? (likes[deck.id]?.length || 0) : 0
       const userLiked = user && deck.id ? (likes[deck.id]?.includes(user.id) || false) : false
       // Usar el estado favorites directamente en lugar de leer de localStorage para actualización inmediata
       const isFavorite = user && deck.id ? favorites.includes(deck.id) : false
       // Usar viewCount del mazo si viene de la API, sino usar localStorage como fallback
-      const viewCount = deck.viewCount !== undefined ? deck.viewCount : getDeckViewCount(deck.id)
+      const viewCount = deck.viewCount !== undefined ? deck.viewCount : (deck.id ? getDeckViewCount(deck.id) : 0)
       return {
         ...deck,
         race,
@@ -551,13 +551,13 @@ export default function MisFavoritosPage() {
                       )}
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <Link href={`/mazo/${deck.id}`}>
+                          <Link href={deck.id ? `/mazo/${deck.id}` : "#"}>
                             <Eye className="h-4 w-4 mr-2" />
                             Ver
                           </Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/deck-builder?load=${deck.id}`}>
+                          <Link href={deck.id ? `/deck-builder?load=${deck.id}` : "#"}>
                             <Copy className="h-4 w-4" aria-hidden="true" />
                             <span className="sr-only">Copiar Mazo</span>
                           </Link>
@@ -566,7 +566,7 @@ export default function MisFavoritosPage() {
                           variant={deck.userLiked ? "default" : "outline"}
                           size="sm"
                           className="h-7 px-2"
-                          onClick={() => handleToggleLike(deck.id)}
+                          onClick={() => deck.id && handleToggleLike(deck.id)}
                         >
                           <Heart
                             className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""}`}
@@ -577,7 +577,7 @@ export default function MisFavoritosPage() {
                           variant={deck.isFavorite ? "default" : "outline"}
                           size="sm"
                           className="h-7 px-2"
-                          onClick={() => handleToggleFavorite(deck.id)}
+                          onClick={() => deck.id && handleToggleFavorite(deck.id)}
                           title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                         >
                           <Star
@@ -657,7 +657,7 @@ export default function MisFavoritosPage() {
                             variant={deck.userLiked ? "default" : "outline"}
                             size="sm"
                             className="h-7 px-2"
-                            onClick={() => handleToggleLike(deck.id)}
+                            onClick={() => deck.id && handleToggleLike(deck.id)}
                           >
                             <Heart
                               className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""}`}
@@ -668,7 +668,7 @@ export default function MisFavoritosPage() {
                             variant={deck.isFavorite ? "default" : "outline"}
                             size="sm"
                             className="h-7 px-2"
-                            onClick={() => handleToggleFavorite(deck.id)}
+                            onClick={() => deck.id && handleToggleFavorite(deck.id)}
                             title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                           >
                             <Star
@@ -691,13 +691,13 @@ export default function MisFavoritosPage() {
                               </div>
                             )}
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/mazo/${deck.id}`}>
+                              <Link href={deck.id ? `/mazo/${deck.id}` : "#"}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ver
                               </Link>
                             </Button>
                             <Button variant="outline" size="sm" asChild>
-                              <Link href={`/deck-builder?load=${deck.id}`}>
+                              <Link href={deck.id ? `/deck-builder?load=${deck.id}` : "#"}>
                                 <Copy className="h-4 w-4" aria-hidden="true" />
                                 <span className="sr-only">Copiar Mazo</span>
                               </Link>
