@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
         id: newDeck.id,
         name: newDeck.name,
         description: newDeck.description,
-        cards: newDeck.cards as DeckCard[],
+        cards: newDeck.cards as unknown as DeckCard[],
         format: newDeck.format,
         createdAt: newDeck.createdAt.getTime(),
         userId: newDeck.userId,
