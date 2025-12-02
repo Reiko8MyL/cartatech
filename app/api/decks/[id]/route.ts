@@ -105,7 +105,7 @@ export async function PUT(
       data: {
         name: deck.name,
         description: deck.description,
-        cards: deck.cards,
+        cards: deck.cards as any,
         format: deck.format || "RE",
         isPublic: deck.isPublic || false,
         publishedAt: deck.publishedAt ? new Date(deck.publishedAt) : null,
@@ -121,7 +121,7 @@ export async function PUT(
         userId,
         name: deck.name,
         description: deck.description,
-        cards: deck.cards,
+        cards: deck.cards as any,
         format: deck.format || "RE",
         tags: deck.tags || [],
       },
