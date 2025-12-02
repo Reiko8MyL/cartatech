@@ -2,12 +2,13 @@
 
 declare global {
   interface Window {
-    gtag: (
+    gtag?: (
       command: "config" | "event" | "js" | "set",
       targetId: string | Date,
       config?: Record<string, any>
     ) => void;
-    dataLayer: any[];
+    // dataLayer ya está declarado por @next/third-parties/google
+    // No necesitamos declararlo aquí para evitar conflictos de tipos
   }
 }
 
@@ -27,7 +28,7 @@ export const isGAEnabled = (): boolean => {
  * @param url - La URL de la página (ej: "/mazo/123")
  */
 export const pageview = (url: string) => {
-  if (!isGAEnabled()) return;
+  if (!isGAEnabled() || !window.gtag) return;
 
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
   if (!gaId) return;
@@ -48,7 +49,7 @@ export const event = (
   eventName: string,
   parameters?: Record<string, any>
 ) => {
-  if (!isGAEnabled()) return;
+  if (!isGAEnabled() || !window.gtag) return;
 
   window.gtag("event", eventName, {
     ...parameters,
@@ -72,7 +73,7 @@ export const legacyEvent = ({
   label?: string;
   value?: number;
 }) => {
-  if (!isGAEnabled()) return;
+  if (!isGAEnabled() || !window.gtag) return;
 
   // Convertir a formato GA4
   const parameters: Record<string, any> = {
@@ -99,7 +100,7 @@ export const setUserProperties = (
   userId?: string,
   customParams?: Record<string, any>
 ) => {
-  if (!isGAEnabled()) return;
+  if (!isGAEnabled() || !window.gtag) return;
 
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
   if (!gaId) return;
@@ -119,7 +120,7 @@ export const setUserProperties = (
  * Limpia los parámetros del usuario (útil para logout)
  */
 export const clearUserProperties = () => {
-  if (!isGAEnabled()) return;
+  if (!isGAEnabled() || !window.gtag) return;
 
   window.gtag("set", "user_properties", {
     user_id: null,
