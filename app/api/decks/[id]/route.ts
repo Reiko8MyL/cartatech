@@ -42,7 +42,7 @@ export async function GET(
         id: deck.id,
         name: deck.name,
         description: deck.description,
-        cards: deck.cards as DeckCard[],
+        cards: deck.cards as unknown as DeckCard[],
         format: deck.format,
         createdAt: deck.createdAt.getTime(),
         userId: deck.userId,
