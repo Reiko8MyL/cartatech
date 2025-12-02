@@ -295,7 +295,7 @@ export async function POST(
               username: true,
             },
           },
-          replies: [],
+          replies: true,
         },
       })
     } catch (dbError: any) {
