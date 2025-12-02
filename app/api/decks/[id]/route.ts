@@ -132,7 +132,7 @@ export async function PUT(
         id: updatedDeck.id,
         name: updatedDeck.name,
         description: updatedDeck.description,
-        cards: updatedDeck.cards as DeckCard[],
+        cards: updatedDeck.cards as unknown as DeckCard[],
         format: updatedDeck.format,
         createdAt: updatedDeck.createdAt.getTime(),
         userId: updatedDeck.userId,
