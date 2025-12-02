@@ -86,11 +86,11 @@ export async function GET(
     }
 
     // Convertir fechas a timestamps
-    const formattedComments = comments.map((comment) => ({
+    const formattedComments = comments.map((comment: any) => ({
       ...comment,
       createdAt: comment.createdAt.getTime(),
       updatedAt: comment.updatedAt.getTime(),
-      replies: comment.replies.map((reply) => ({
+      replies: comment.replies.map((reply: any) => ({
         ...reply,
         createdAt: reply.createdAt.getTime(),
         updatedAt: reply.updatedAt.getTime(),
