@@ -121,9 +121,9 @@ export default function MisMazosPage() {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
       // Usar viewCount del mazo si viene de la API, sino usar localStorage como fallback
-      const viewCount = deck.viewCount !== undefined ? deck.viewCount : getDeckViewCount(deck.id)
+      const viewCount = deck.viewCount !== undefined ? deck.viewCount : (deck.id ? getDeckViewCount(deck.id) : 0)
       // Usar el estado favorites directamente en lugar de leer de localStorage
-      const isFavorite = user ? favorites.includes(deck.id) : false
+      const isFavorite = user && deck.id ? favorites.includes(deck.id) : false
       return {
         ...deck,
         race,
@@ -630,7 +630,7 @@ export default function MisMazosPage() {
                         </div>
                       )}
                       <Button variant="outline" size="sm" className="flex-1" asChild>
-                        <Link href={`/mazo/${deck.id}`} aria-label={`Ver mazo ${deck.name}`}>
+                        <Link href={deck.id ? `/mazo/${deck.id}` : "#"} aria-label={`Ver mazo ${deck.name}`}>
                           <Eye className="h-4 w-4 mr-2" aria-hidden="true" />
                           Ver
                         </Link>
@@ -641,7 +641,7 @@ export default function MisMazosPage() {
                         asChild
                         aria-label={`Editar mazo ${deck.name}`}
                       >
-                        <Link href={`/deck-builder?load=${deck.id}`}>
+                        <Link href={deck.id ? `/deck-builder?load=${deck.id}` : "#"}>
                           <Edit2 className="h-4 w-4" aria-hidden="true" />
                           <span className="sr-only">Editar Mazo</span>
                         </Link>
@@ -651,7 +651,7 @@ export default function MisMazosPage() {
                           variant={deck.isFavorite ? "default" : "outline"}
                           size="sm"
                           className="h-7 px-2"
-                          onClick={() => handleToggleFavorite(deck.id)}
+                          onClick={() => deck.id && handleToggleFavorite(deck.id)}
                           title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                           aria-label={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                         >
@@ -663,7 +663,7 @@ export default function MisMazosPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeleteDeck(deck.id)}
+                        onClick={() => deck.id && handleDeleteDeck(deck.id)}
                         className="text-destructive hover:text-destructive"
                         aria-label={`Eliminar mazo ${deck.name}`}
                       >
@@ -764,7 +764,7 @@ export default function MisMazosPage() {
                             </div>
                           )}
                           <Button variant="outline" size="sm" asChild>
-                            <Link href={`/mazo/${deck.id}`} aria-label={`Ver mazo ${deck.name}`}>
+                            <Link href={deck.id ? `/mazo/${deck.id}` : "#"} aria-label={`Ver mazo ${deck.name}`}>
                               <Eye className="h-4 w-4 mr-2" aria-hidden="true" />
                               Ver
                             </Link>
@@ -775,7 +775,7 @@ export default function MisMazosPage() {
                             asChild
                             aria-label={`Editar mazo ${deck.name}`}
                           >
-                            <Link href={`/deck-builder?load=${deck.id}`}>
+                            <Link href={deck.id ? `/deck-builder?load=${deck.id}` : "#"}>
                               <Edit2 className="h-4 w-4 mr-2" aria-hidden="true" />
                               Editar Mazo
                             </Link>
@@ -785,7 +785,7 @@ export default function MisMazosPage() {
                               variant={deck.isFavorite ? "default" : "outline"}
                               size="sm"
                               className="h-7 px-2"
-                              onClick={() => handleToggleFavorite(deck.id)}
+                              onClick={() => deck.id && handleToggleFavorite(deck.id)}
                               title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                               aria-label={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                             >
@@ -797,7 +797,7 @@ export default function MisMazosPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteDeck(deck.id)}
+                            onClick={() => deck.id && handleDeleteDeck(deck.id)}
                             className="text-destructive hover:text-destructive"
                             aria-label={`Eliminar mazo ${deck.name}`}
                           >
