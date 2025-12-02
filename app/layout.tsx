@@ -74,6 +74,12 @@ export const metadata: Metadata = {
     // google: "verification-code",
     // yandex: "verification-code",
   },
+  other: {
+    // Google AdSense verification meta tag
+    ...(process.env.NEXT_PUBLIC_ADSENSE_ID && {
+      "google-adsense-account": process.env.NEXT_PUBLIC_ADSENSE_ID,
+    }),
+  },
 };
 
 export default function RootLayout({
@@ -86,7 +92,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        {/* Google AdSense */}
+        {/* Google AdSense - Script de anuncios */}
         {adsenseId && (
           <Script
             async
