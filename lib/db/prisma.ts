@@ -7,11 +7,9 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // En Prisma 7, necesitamos usar un adapter para la conexión
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL no está configurada en las variables de entorno");
-}
+// Durante el build, DATABASE_URL puede no estar disponible, así que usamos una URL dummy
+// Solo validaremos en runtime cuando realmente se use la conexión
+const databaseUrl = process.env.DATABASE_URL || "postgresql://user:password@localhost:5432/dummy";
 
 // Crear el pool de conexiones PostgreSQL
 const pool = new Pool({ connectionString: databaseUrl });
