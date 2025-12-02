@@ -43,11 +43,11 @@ export default function InicioSesionPage() {
 
     setIsLoading(true)
 
-    const success = await login(formData.username, formData.password)
+    const result = await login(formData.username, formData.password)
 
     setIsLoading(false)
 
-    if (success) {
+    if (result.success) {
       // Si hay un mazo temporal, redirigir al deck builder
       const temporaryDeck = getTemporaryDeck()
       if (temporaryDeck && temporaryDeck.cards.length > 0) {
@@ -56,7 +56,7 @@ export default function InicioSesionPage() {
         router.push("/")
       }
     } else {
-      setError("Usuario o contraseña incorrectos")
+      setError(result.error || "Usuario o contraseña incorrectos")
     }
   }
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { RaceVotingData } from "@/lib/voting/utils"
-import { saveVoteToStorage, getRaceVotingData } from "@/lib/voting/utils"
+import { saveVoteToStorage, getRaceVotingData, getRaceVotingDataFromStorage } from "@/lib/voting/utils"
 import Image from "next/image"
 import { CheckCircle2, Search, X, Grid3x3, List } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -25,29 +25,52 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
 
-  const refreshData = useCallback(() => {
-    const updatedData = getRaceVotingData(race, userId)
-    setData(updatedData)
-    setSelectedCardId(updatedData.userVote)
-    setHasVoted(!!updatedData.userVote)
+  const refreshData = useCallback(async () => {
+    try {
+      const updatedData = await getRaceVotingDataFromStorage(race, userId)
+      setData(updatedData)
+      setSelectedCardId(updatedData.userVote)
+      setHasVoted(!!updatedData.userVote)
+    } catch (error) {
+      console.error("Error al actualizar datos de votación:", error)
+      // Fallback a función síncrona
+      const updatedData = getRaceVotingData(race, userId)
+      setData(updatedData)
+      setSelectedCardId(updatedData.userVote)
+      setHasVoted(!!updatedData.userVote)
+    }
   }, [race, userId])
 
   useEffect(() => {
-    refreshData()
+    void refreshData()
   }, [refreshData])
 
-  const handleVote = () => {
+  const handleVote = async () => {
     if (!selectedCardId) return
 
-    saveVoteToStorage({
-      race,
-      cardId: selectedCardId,
-      userId,
-      timestamp: Date.now(),
-    })
-
-    refreshData()
-    onVoteUpdate()
+    try {
+      await saveVoteToStorage({
+        race,
+        cardId: selectedCardId,
+        userId,
+        timestamp: Date.now(),
+      })
+      
+      await refreshData()
+      onVoteUpdate()
+    } catch (error) {
+      console.error("Error al guardar voto:", error)
+      // Fallback a localStorage
+      const { saveVoteToLocalStorage } = await import("@/lib/voting/utils");
+      saveVoteToLocalStorage({
+        race,
+        cardId: selectedCardId,
+        userId,
+        timestamp: Date.now(),
+      })
+      await refreshData()
+      onVoteUpdate()
+    }
   }
 
   const handleChangeVote = () => {

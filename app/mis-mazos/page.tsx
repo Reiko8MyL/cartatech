@@ -75,37 +75,55 @@ export default function MisMazosPage() {
   useEffect(() => {
     if (user) {
       setIsLoading(true)
-      // Simular carga asíncrona para mostrar skeleton
-      setTimeout(() => {
-        const userDecks = getUserDecksFromLocalStorage(user.id)
-        // Asegurar que los mazos tengan el autor si no lo tienen
-        const decksWithAuthor = userDecks.map((deck) => ({
-          ...deck,
-          author: deck.author || user.username,
-        }))
-        setDecks(decksWithAuthor)
-        const userFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
-        setFavorites(userFavorites)
-        setIsLoading(false)
-      }, 300)
+      // Cargar mazos desde la API
+      const loadDecks = async () => {
+        try {
+          // Intentar cargar desde la API
+          const { getUserDecksFromStorage } = await import("@/lib/deck-builder/utils");
+          const userDecks = await getUserDecksFromStorage(user.id);
+          
+          // Asegurar que los mazos tengan el autor si no lo tienen
+          const decksWithAuthor = userDecks.map((deck) => ({
+            ...deck,
+            author: deck.author || user.username,
+          }))
+          setDecks(decksWithAuthor)
+          
+          // Cargar favoritos desde la API
+          const { getUserFavoriteDecksFromStorage } = await import("@/lib/deck-builder/utils");
+          const userFavorites = await getUserFavoriteDecksFromStorage(user.id);
+          setFavorites(userFavorites)
+        } catch (error) {
+          console.error("Error al cargar mazos:", error);
+          // Fallback a localStorage si la API falla
+          const userDecks = getUserDecksFromLocalStorage(user.id)
+          const decksWithAuthor = userDecks.map((deck) => ({
+            ...deck,
+            author: deck.author || user.username,
+          }))
+          setDecks(decksWithAuthor)
+          const userFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
+          setFavorites(userFavorites)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      
+      loadDecks()
     } else {
       setIsLoading(false)
     }
   }, [user])
-
-  // Obtener mazos favoritos públicos (de otros usuarios) cuando se activa el filtro
-  const favoritePublicDecks = useMemo(() => {
-    if (!user || filters.favorites !== "favorites") return []
-    return getFavoriteDecks(user.id)
-  }, [user, filters.favorites])
 
   // Calcular raza, edición y favoritos para cada mazo
   const decksWithMetadata = useMemo(() => {
     return decks.map((deck) => {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
-      const viewCount = getDeckViewCount(deck.id)
-      const isFavorite = user ? isDeckFavorite(deck.id, user.id) : false
+      // Usar viewCount del mazo si viene de la API, sino usar localStorage como fallback
+      const viewCount = deck.viewCount !== undefined ? deck.viewCount : getDeckViewCount(deck.id)
+      // Usar el estado favorites directamente en lugar de leer de localStorage
+      const isFavorite = user ? favorites.includes(deck.id) : false
       return {
         ...deck,
         race,
@@ -119,69 +137,6 @@ export default function MisMazosPage() {
 
   // Filtrar mazos
   const filteredDecks = useMemo(() => {
-    // Si el filtro de favoritos está activo, mostrar solo los mazos favoritos públicos
-    if (filters.favorites === "favorites") {
-      const favoriteDecksWithMetadata = favoritePublicDecks.map((deck) => {
-        const race = getDeckRace(deck.cards, allCards)
-        const edition = getDeckEdition(deck.cards, allCards)
-        const viewCount = getDeckViewCount(deck.id)
-        const isFavorite = user ? isDeckFavorite(deck.id, user.id) : false
-        return {
-          ...deck,
-          race,
-          edition,
-          backgroundImage: getDeckBackgroundImage(race),
-          viewCount,
-          isFavorite,
-        }
-      })
-
-      let filtered = favoriteDecksWithMetadata.filter((deck) => {
-        if (filters.search) {
-          const searchLower = filters.search.toLowerCase()
-          const matchesName = deck.name.toLowerCase().includes(searchLower)
-          const matchesDescription = deck.description?.toLowerCase().includes(searchLower) || false
-          if (!matchesName && !matchesDescription) return false
-        }
-
-        if (filters.race && deck.race !== filters.race) return false
-        if (filters.edition && deck.edition !== filters.edition) return false
-        if (filters.format && (deck.format || "RE") !== filters.format) return false
-
-        return true
-      })
-
-      // Ordenar mazos favoritos
-      filtered.sort((a, b) => {
-        let comparison = 0
-
-        switch (sortBy) {
-          case "name":
-            comparison = a.name.localeCompare(b.name, "es", { sensitivity: "base" })
-            break
-          case "edition":
-            const editionA = a.edition || ""
-            const editionB = b.edition || ""
-            comparison = editionA.localeCompare(editionB, "es", { sensitivity: "base" })
-            break
-          case "date":
-            const dateA = a.publishedAt || a.createdAt
-            const dateB = b.publishedAt || b.createdAt
-            comparison = dateA - dateB
-            break
-          case "race":
-            const raceA = a.race || ""
-            const raceB = b.race || ""
-            comparison = raceA.localeCompare(raceB, "es", { sensitivity: "base" })
-            break
-        }
-
-        return sortDirection === "asc" ? comparison : -comparison
-      })
-
-      return filtered
-    }
-
     // Filtrado normal para mazos propios
     let filtered = decksWithMetadata.filter((deck) => {
       if (filters.search) {
@@ -196,6 +151,8 @@ export default function MisMazosPage() {
       if (filters.format && (deck.format || "RE") !== filters.format) return false
       if (filters.isPublic === "public" && !deck.isPublic) return false
       if (filters.isPublic === "private" && deck.isPublic) return false
+      // Filtrar por favoritos: mostrar solo los mazos que están en favoritos
+      if (filters.favorites === "favorites" && !deck.isFavorite) return false
 
       return true
     })
@@ -227,7 +184,7 @@ export default function MisMazosPage() {
     })
 
     return filtered
-  }, [decksWithMetadata, filters, sortBy, sortDirection, favoritePublicDecks, allCards, user])
+  }, [decksWithMetadata, filters, sortBy, sortDirection])
 
   // Obtener valores únicos para los filtros
   const availableRaces = useMemo(() => {
@@ -289,26 +246,46 @@ export default function MisMazosPage() {
 
   const hasActiveFilters = filters.search || filters.race || filters.edition || filters.format || filters.isPublic || filters.favorites
 
-  const handleToggleFavorite = (deckId: string) => {
+  const handleToggleFavorite = async (deckId: string) => {
     if (!user) return
 
     // Solo permitir favoritos en mazos públicos
-    const allDecks = getPublicDecksFromLocalStorage()
-    const deck = allDecks.find((d) => d.id === deckId)
+    // Buscar el mazo en la lista actual de mazos
+    const deck = decks.find((d) => d.id === deckId)
     
     if (!deck || !deck.isPublic) {
       toastError("Solo puedes agregar mazos públicos a favoritos")
       return
     }
 
-    const added = toggleFavoriteDeck(deckId, user.id)
-    const updatedFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
-    setFavorites(updatedFavorites)
+    // Guardar el estado anterior para poder revertir si hay error
+    const previousFavorites = [...favorites]
     
-    if (added) {
-      toastSuccess("Mazo agregado a favoritos")
-    } else {
-      toastSuccess("Mazo eliminado de favoritos")
+    // Actualización optimista: actualizar el estado inmediatamente
+    const isCurrentlyFavorite = favorites.includes(deckId)
+    const newFavorites = isCurrentlyFavorite
+      ? favorites.filter((id) => id !== deckId)
+      : [...favorites, deckId]
+    setFavorites(newFavorites)
+
+    try {
+      const added = await toggleFavoriteDeck(deckId, user.id)
+      
+      // Actualizar favoritos desde la API
+      const { getUserFavoriteDecksFromStorage } = await import("@/lib/deck-builder/utils");
+      const updatedFavorites = await getUserFavoriteDecksFromStorage(user.id);
+      setFavorites(updatedFavorites);
+      
+      if (added) {
+        toastSuccess("Mazo agregado a favoritos")
+      } else {
+        toastSuccess("Mazo eliminado de favoritos")
+      }
+    } catch (error) {
+      console.error("Error al alternar favorito:", error);
+      // Revertir la actualización optimista en caso de error
+      setFavorites(previousFavorites)
+      toastError("Error al actualizar favoritos. Por favor intenta de nuevo.");
     }
   }
 

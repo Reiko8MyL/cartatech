@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  password  String // Hasheada con bcrypt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  decks       Deck[]
+  favorites   FavoriteDeck[]
+  deckVersions DeckVersion[]
+  deckLikes   DeckLike[]
+  votes       Vote[]
+  collection  UserCollection?
+  comments    Comment[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Deck {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  cards       Json     // Array de DeckCard[]
+  format      String   @default("RE") // RE, RL, LI
+  isPublic    Boolean  @default(false)
+  publishedAt DateTime?
+  techCardId  String?
+  viewCount   Int      @default(0)
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favorites   FavoriteDeck[]
+  versions    DeckVersion[]
+  likes       DeckLike[]
+  comments    Comment[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([publishedAt])
+  @@map("decks")
+}
+
+model DeckVersion {
+  id          String   @id @default(cuid())
+  deckId      String
+  name        String
+  description String?
+  cards       Json     // Array de DeckCard[]
+  format      String
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck        Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([deckId])
+  @@index([userId])
+  @@map("deck_versions")
+}
+
+model FavoriteDeck {
+  id        String   @id @default(cuid())
+  userId    String
+  deckId    String
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deckId])
+  @@index([userId])
+  @@index([deckId])
+  @@map("favorite_decks")
+}
+
+model DeckLike {
+  id        String   @id @default(cuid())
+  userId    String
+  deckId    String
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deckId])
+  @@index([userId])
+  @@index([deckId])
+  @@map("deck_likes")
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  userId    String
+  race      String
+  cardId    String
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, race])
+  @@index([userId])
+  @@index([race])
+  @@index([cardId])
+  @@map("votes")
+}
+
+model UserCollection {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  cardIds   String[] @default([]) // Array de IDs de cartas
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_collections")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  deckId    String
+  userId    String
+  parentId  String?  // Para respuestas anidadas
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+
+  @@index([deckId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "like", "comment", "follow", "featured"
+  title     String
+  message   String
+  link      String?  // URL relacionada
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+

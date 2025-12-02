@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Plus, Minus } from "lucide-react"
@@ -64,6 +65,9 @@ export function CardInfoModal({
               )}
             </div>
           </div>
+          <DialogDescription className="sr-only">
+            Información detallada de la carta {card.name}. {card.type}{card.race ? ` - ${card.race}` : ""}. {card.description || "Sin descripción disponible."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-6 md:gap-8 items-start">

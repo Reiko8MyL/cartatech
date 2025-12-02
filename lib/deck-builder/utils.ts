@@ -182,21 +182,69 @@ export function exportDeckList(
   return lines.join("\n");
 }
 
-export function saveDeckToLocalStorage(deck: SavedDeck): void {
-  if (typeof window === "undefined") return;
+/**
+ * Guarda un mazo. Si el usuario está autenticado, usa la API.
+ * Si no, guarda en localStorage como mazo temporal.
+ */
+export async function saveDeckToStorage(deck: SavedDeck, userId?: string): Promise<SavedDeck | null> {
+  if (typeof window === "undefined") return null;
+
+  // Si hay usuario, usar API
+  if (userId) {
+    const { saveDeck } = await import("@/lib/api/decks");
+    return await saveDeck(userId, deck);
+  }
+
+  // Fallback a localStorage para usuarios no autenticados
+  return saveDeckToLocalStorage(deck);
+}
+
+/**
+ * Guarda un mazo en localStorage (para usuarios no autenticados o fallback)
+ */
+export function saveDeckToLocalStorage(deck: SavedDeck): SavedDeck | null {
+  if (typeof window === "undefined") return null;
 
   const savedDecks = getSavedDecksFromLocalStorage();
-  const existingIndex = savedDecks.findIndex((d) => d.id === deck.id);
+  
+  // Si el mazo no tiene ID, generar uno para localStorage
+  const deckWithId: SavedDeck = {
+    ...deck,
+    id: deck.id || Date.now().toString(),
+  };
+  
+  const existingIndex = savedDecks.findIndex((d) => d.id === deckWithId.id);
 
   if (existingIndex >= 0) {
-    savedDecks[existingIndex] = deck;
+    savedDecks[existingIndex] = deckWithId;
   } else {
-    savedDecks.push(deck);
+    savedDecks.push(deckWithId);
   }
 
   localStorage.setItem("myl_saved_decks", JSON.stringify(savedDecks));
+  return deckWithId;
 }
 
+/**
+ * Obtiene mazos guardados. Si el usuario está autenticado, usa la API.
+ * Si no, obtiene de localStorage.
+ */
+export async function getSavedDecksFromStorage(userId?: string): Promise<SavedDeck[]> {
+  if (typeof window === "undefined") return [];
+
+  // Si hay usuario, usar API
+  if (userId) {
+    const { getUserDecks } = await import("@/lib/api/decks");
+    return await getUserDecks(userId);
+  }
+
+  // Fallback a localStorage
+  return getSavedDecksFromLocalStorage();
+}
+
+/**
+ * Obtiene mazos de localStorage (para usuarios no autenticados o fallback)
+ */
 export function getSavedDecksFromLocalStorage(): SavedDeck[] {
   if (typeof window === "undefined") return [];
 
@@ -208,6 +256,27 @@ export function getSavedDecksFromLocalStorage(): SavedDeck[] {
   }
 }
 
+/**
+ * Elimina un mazo. Si el usuario está autenticado, usa la API.
+ * Si no, elimina de localStorage.
+ */
+export async function deleteDeckFromStorage(deckId: string, userId?: string): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  // Si hay usuario, usar API
+  if (userId) {
+    const { deleteDeck } = await import("@/lib/api/decks");
+    return await deleteDeck(userId, deckId);
+  }
+
+  // Fallback a localStorage
+  deleteDeckFromLocalStorage(deckId);
+  return true;
+}
+
+/**
+ * Elimina un mazo de localStorage (para usuarios no autenticados o fallback)
+ */
 export function deleteDeckFromLocalStorage(deckId: string): void {
   if (typeof window === "undefined") return;
 
@@ -242,12 +311,52 @@ export function getUniqueCosts(cards: Card[]): number[] {
   return Array.from(costs).sort((a, b) => a - b);
 }
 
+/**
+ * Obtiene mazos de un usuario específico. Usa API si está disponible.
+ */
+export async function getUserDecksFromStorage(userId: string): Promise<SavedDeck[]> {
+  if (typeof window === "undefined") return [];
+  
+  // Intentar usar API primero
+  try {
+    const { getUserDecks } = await import("@/lib/api/decks");
+    return await getUserDecks(userId);
+  } catch {
+    // Fallback a localStorage
+    const allDecks = getSavedDecksFromLocalStorage();
+    return allDecks.filter((deck) => deck.userId === userId);
+  }
+}
+
+/**
+ * Obtiene mazos públicos. Usa API si está disponible.
+ */
+export async function getPublicDecksFromStorage(): Promise<SavedDeck[]> {
+  if (typeof window === "undefined") return [];
+  
+  // Intentar usar API primero
+  try {
+    const { getPublicDecks } = await import("@/lib/api/decks");
+    return await getPublicDecks();
+  } catch {
+    // Fallback a localStorage
+    const allDecks = getSavedDecksFromLocalStorage();
+    return allDecks.filter((deck) => deck.isPublic === true);
+  }
+}
+
+/**
+ * @deprecated Usar getUserDecksFromStorage en su lugar
+ */
 export function getUserDecksFromLocalStorage(userId: string): SavedDeck[] {
   if (typeof window === "undefined") return [];
   const allDecks = getSavedDecksFromLocalStorage();
   return allDecks.filter((deck) => deck.userId === userId);
 }
 
+/**
+ * @deprecated Usar getPublicDecksFromStorage en su lugar
+ */
 export function getPublicDecksFromLocalStorage(): SavedDeck[] {
   if (typeof window === "undefined") return [];
   const allDecks = getSavedDecksFromLocalStorage();
@@ -419,7 +528,24 @@ export function clearTemporaryDeck(): void {
 }
 
 /**
- * Obtiene todos los likes de los mazos desde localStorage
+ * Obtiene todos los likes de los mazos. Usa API si está disponible.
+ * @returns Un objeto que mapea deckId -> userId[]
+ */
+export async function getDeckLikesFromStorage(): Promise<Record<string, string[]>> {
+  if (typeof window === "undefined") return {};
+  
+  // Intentar usar API primero
+  try {
+    const { getAllDeckLikes } = await import("@/lib/api/likes");
+    return await getAllDeckLikes();
+  } catch {
+    // Fallback a localStorage
+    return getDeckLikesFromLocalStorage();
+  }
+}
+
+/**
+ * Obtiene todos los likes de los mazos desde localStorage (fallback)
  * @returns Un objeto que mapea deckId -> userId[]
  */
 export function getDeckLikesFromLocalStorage(): Record<string, string[]> {
@@ -443,7 +569,25 @@ export function saveDeckLikesToLocalStorage(likes: Record<string, string[]>): vo
 }
 
 /**
- * Obtiene el número de likes de un mazo
+ * Obtiene el número de likes de un mazo. Usa API si está disponible.
+ * @param deckId ID del mazo
+ * @returns Número de likes
+ */
+export async function getDeckLikeCountFromStorage(deckId: string): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  
+  // Intentar usar API primero
+  try {
+    const { getDeckLikeCount } = await import("@/lib/api/likes");
+    return await getDeckLikeCount(deckId);
+  } catch {
+    // Fallback a localStorage
+    return getDeckLikeCount(deckId);
+  }
+}
+
+/**
+ * Obtiene el número de likes de un mazo desde localStorage (fallback)
  * @param deckId ID del mazo
  * @returns Número de likes
  */
@@ -453,7 +597,26 @@ export function getDeckLikeCount(deckId: string): number {
 }
 
 /**
- * Verifica si un usuario ha dado like a un mazo
+ * Verifica si un usuario ha dado like a un mazo. Usa API si está disponible.
+ * @param deckId ID del mazo
+ * @param userId ID del usuario
+ * @returns true si el usuario ha dado like al mazo
+ */
+export async function hasUserLikedDeckFromStorage(deckId: string, userId: string): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  
+  // Intentar usar API primero
+  try {
+    const { hasUserLikedDeck: apiHasUserLiked } = await import("@/lib/api/likes");
+    return await apiHasUserLiked(userId, deckId);
+  } catch {
+    // Fallback a localStorage
+    return hasUserLikedDeck(deckId, userId);
+  }
+}
+
+/**
+ * Verifica si un usuario ha dado like a un mazo desde localStorage (fallback)
  * @param deckId ID del mazo
  * @param userId ID del usuario
  * @returns true si el usuario ha dado like al mazo
@@ -464,7 +627,26 @@ export function hasUserLikedDeck(deckId: string, userId: string): boolean {
 }
 
 /**
- * Alterna el like de un usuario en un mazo (agrega si no existe, quita si existe)
+ * Alterna el like de un usuario en un mazo. Usa API si está disponible.
+ * @param deckId ID del mazo
+ * @param userId ID del usuario
+ * @returns true si se agregó el like, false si se quitó
+ */
+export async function toggleDeckLikeFromStorage(deckId: string, userId: string): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  
+  // Intentar usar API primero
+  try {
+    const { toggleDeckLike: apiToggleLike } = await import("@/lib/api/likes");
+    return await apiToggleLike(userId, deckId);
+  } catch {
+    // Fallback a localStorage
+    return toggleDeckLike(deckId, userId);
+  }
+}
+
+/**
+ * Alterna el like de un usuario en un mazo desde localStorage (fallback)
  * @param deckId ID del mazo
  * @param userId ID del usuario
  * @returns true si se agregó el like, false si se quitó
@@ -514,7 +696,9 @@ export function saveDeckViewsToLocalStorage(views: Record<string, number>): void
 }
 
 /**
- * Incrementa el contador de visitas de un mazo
+ * Incrementa el contador de visitas de un mazo. 
+ * Nota: Si el mazo viene de la API, el viewCount se incrementa automáticamente al obtenerlo.
+ * Esta función solo se usa como fallback para mazos en localStorage.
  * @param deckId ID del mazo
  * @returns El nuevo número de visitas
  */
@@ -526,7 +710,29 @@ export function incrementDeckView(deckId: string): number {
 }
 
 /**
- * Obtiene el número de visitas de un mazo
+ * Obtiene el número de visitas de un mazo. Usa API si está disponible.
+ * @param deckId ID del mazo
+ * @returns Número de visitas
+ */
+export async function getDeckViewCountFromStorage(deckId: string): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  
+  // Intentar obtener desde la API primero
+  try {
+    const { getDeckById } = await import("@/lib/api/decks");
+    const deck = await getDeckById(deckId);
+    if (deck && deck.viewCount !== undefined) {
+      return deck.viewCount;
+    }
+  } catch {
+    // Fallback a localStorage
+  }
+  
+  return getDeckViewCount(deckId);
+}
+
+/**
+ * Obtiene el número de visitas de un mazo desde localStorage (fallback)
  * @param deckId ID del mazo
  * @returns Número de visitas
  */
@@ -590,9 +796,27 @@ export function getFavoriteDecksFromLocalStorage(): string[] {
 }
 
 /**
- * Obtiene los IDs de mazos favoritos de un usuario específico
+ * Obtiene los IDs de mazos favoritos de un usuario. Usa API si está disponible.
  * @param userId ID del usuario
  * @returns Array de IDs de mazos favoritos del usuario
+ */
+export async function getUserFavoriteDecksFromStorage(userId: string): Promise<string[]> {
+  if (typeof window === "undefined") return [];
+  
+  // Intentar usar API primero
+  try {
+    const { getUserFavoriteDecks } = await import("@/lib/api/favorites");
+    const result = await getUserFavoriteDecks(userId);
+    return result.favoriteDeckIds;
+  } catch {
+    // Fallback a localStorage
+    return getUserFavoriteDecksFromLocalStorage(userId);
+  }
+}
+
+/**
+ * Obtiene los IDs de mazos favoritos de un usuario específico desde localStorage
+ * @deprecated Usar getUserFavoriteDecksFromStorage en su lugar
  */
 export function getUserFavoriteDecksFromLocalStorage(userId: string): string[] {
   if (typeof window === "undefined") return [];
@@ -608,8 +832,7 @@ export function getUserFavoriteDecksFromLocalStorage(userId: string): string[] {
 
 /**
  * Guarda los IDs de mazos favoritos de un usuario en localStorage
- * @param userId ID del usuario
- * @param favoriteDeckIds Array de IDs de mazos favoritos
+ * @deprecated Los favoritos ahora se manejan individualmente con toggleFavoriteDeck
  */
 export function saveUserFavoriteDecksToLocalStorage(userId: string, favoriteDeckIds: string[]): void {
   if (typeof window === "undefined") return;
@@ -619,12 +842,28 @@ export function saveUserFavoriteDecksToLocalStorage(userId: string, favoriteDeck
 }
 
 /**
- * Alterna el estado de favorito de un mazo para un usuario
+ * Alterna el estado de favorito de un mazo para un usuario. Usa API si está disponible.
  * @param deckId ID del mazo
  * @param userId ID del usuario
  * @returns true si se agregó a favoritos, false si se quitó
  */
-export function toggleFavoriteDeck(deckId: string, userId: string): boolean {
+export async function toggleFavoriteDeck(deckId: string, userId: string): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  
+  // Intentar usar API primero
+  try {
+    const { toggleFavoriteDeck: apiToggleFavorite } = await import("@/lib/api/favorites");
+    return await apiToggleFavorite(userId, deckId);
+  } catch {
+    // Fallback a localStorage
+    return toggleFavoriteDeckLocalStorage(deckId, userId);
+  }
+}
+
+/**
+ * Alterna el estado de favorito de un mazo en localStorage (fallback)
+ */
+function toggleFavoriteDeckLocalStorage(deckId: string, userId: string): boolean {
   if (typeof window === "undefined") return false;
   
   const favorites = getUserFavoriteDecksFromLocalStorage(userId);
@@ -657,7 +896,26 @@ export function isDeckFavorite(deckId: string, userId: string): boolean {
 }
 
 /**
- * Obtiene los mazos favoritos completos de un usuario
+ * Obtiene los mazos favoritos completos de un usuario. Usa API si está disponible.
+ * @param userId ID del usuario
+ * @returns Array de mazos favoritos (SavedDeck[])
+ */
+export async function getFavoriteDecksFromStorage(userId: string): Promise<SavedDeck[]> {
+  if (typeof window === "undefined") return [];
+  
+  // Intentar usar API primero
+  try {
+    const { getUserFavoriteDecks } = await import("@/lib/api/favorites");
+    const result = await getUserFavoriteDecks(userId);
+    return result.decks;
+  } catch {
+    // Fallback a localStorage
+    return getFavoriteDecks(userId);
+  }
+}
+
+/**
+ * Obtiene los mazos favoritos completos de un usuario desde localStorage (fallback)
  * @param userId ID del usuario
  * @returns Array de mazos favoritos (SavedDeck[])
  */

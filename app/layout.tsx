@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { Navbar } from "@/components/navigation/navbar";
 import { AuthProviderWrapper } from "@/components/providers/auth-provider-wrapper";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { AdBanner } from "@/components/ads/ad-banner";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { WebsiteJsonLd } from "@/components/seo/json-ld";
+import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -74,8 +81,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const adsenseId = process.env.NEXT_PUBLIC_ADSENSE_ID;
+
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        {/* Google AdSense */}
+        {adsenseId && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -89,15 +109,30 @@ export default function RootLayout({
           <ErrorBoundary>
             <AuthProviderWrapper>
               <Navbar />
+              {/* Banner superior de anuncios */}
+              {adsenseId && (
+                <div className="w-full border-b border-border/40 bg-muted/30 py-2">
+                  <div className="container mx-auto px-4">
+                    <AdBanner position="top" />
+                  </div>
+                </div>
+              )}
               {children}
               <Toaster 
                 position="top-right"
                 richColors
                 closeButton
               />
+              <WelcomeTour />
             </AuthProviderWrapper>
           </ErrorBoundary>
         </ThemeProvider>
+        <WebsiteJsonLd />
+        <Analytics />
+        <SpeedInsights />
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );

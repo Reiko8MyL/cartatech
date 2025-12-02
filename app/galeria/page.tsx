@@ -23,7 +23,10 @@ import type { Card, DeckFilters } from "@/lib/deck-builder/types"
 
 const COLLECTION_STORAGE_KEY = "myl_collection"
 
-function loadCollectionFromStorage(): Set<string> {
+/**
+ * Carga la colección desde localStorage (fallback)
+ */
+function loadCollectionFromLocalStorage(): Set<string> {
   if (typeof window === "undefined") return new Set()
 
   try {
@@ -36,7 +39,10 @@ function loadCollectionFromStorage(): Set<string> {
   }
 }
 
-function saveCollectionToStorage(cardIds: Set<string>): void {
+/**
+ * Guarda la colección en localStorage (fallback)
+ */
+function saveCollectionToLocalStorage(cardIds: Set<string>): void {
   if (typeof window === "undefined") return
 
   try {
@@ -44,6 +50,50 @@ function saveCollectionToStorage(cardIds: Set<string>): void {
     localStorage.setItem(COLLECTION_STORAGE_KEY, JSON.stringify(array))
   } catch {
     // Ignorar errores de localStorage
+  }
+}
+
+/**
+ * Carga la colección desde la API con fallback a localStorage
+ */
+async function loadCollectionFromStorage(userId: string): Promise<Set<string>> {
+  if (typeof window === "undefined") return new Set()
+
+  try {
+    const { getUserCollection } = await import("@/lib/api/collection");
+    const cardIds = await getUserCollection(userId);
+    return new Set(cardIds);
+  } catch (error) {
+    console.error("Error al cargar colección desde API, usando localStorage:", error);
+    return loadCollectionFromLocalStorage();
+  }
+}
+
+/**
+ * Alterna una carta en la colección usando API con fallback a localStorage
+ */
+async function toggleCardInCollectionStorage(
+  userId: string,
+  cardId: string,
+  currentCollection: Set<string>
+): Promise<Set<string>> {
+  if (typeof window === "undefined") return currentCollection
+
+  try {
+    const { toggleCardInCollection } = await import("@/lib/api/collection");
+    const result = await toggleCardInCollection(userId, cardId);
+    return new Set(result.cardIds);
+  } catch (error) {
+    console.error("Error al actualizar colección en API, usando localStorage:", error);
+    // Fallback: actualizar localStorage
+    const newCollection = new Set(currentCollection);
+    if (newCollection.has(cardId)) {
+      newCollection.delete(cardId);
+    } else {
+      newCollection.add(cardId);
+    }
+    saveCollectionToLocalStorage(newCollection);
+    return newCollection;
   }
 }
 
@@ -88,8 +138,33 @@ function GaleriaContent() {
   // Estado del modo colección - solo disponible para usuarios autenticados
   const [isCollectionMode, setIsCollectionMode] = useState(false)
   const [collectedCards, setCollectedCards] = useState<Set<string>>(() =>
-    user ? loadCollectionFromStorage() : new Set()
+    user ? loadCollectionFromLocalStorage() : new Set()
   )
+  const [isLoadingCollection, setIsLoadingCollection] = useState(false)
+  const [loadingCards, setLoadingCards] = useState<Set<string>>(new Set())
+
+  // Cargar colección desde la API cuando el usuario se autentica
+  useEffect(() => {
+    if (user) {
+      setIsLoadingCollection(true);
+      loadCollectionFromStorage(user.id)
+        .then((collection) => {
+          setCollectedCards(collection);
+          // Sincronizar con localStorage como backup
+          saveCollectionToLocalStorage(collection);
+        })
+        .catch((error) => {
+          console.error("Error al cargar colección:", error);
+          // Ya se hizo fallback en loadCollectionFromStorage
+        })
+        .finally(() => {
+          setIsLoadingCollection(false);
+        });
+    } else {
+      // Si no hay usuario, limpiar la colección
+      setCollectedCards(new Set());
+    }
+  }, [user])
 
   // Desactivar modo colección si el usuario cierra sesión
   useEffect(() => {
@@ -97,13 +172,6 @@ function GaleriaContent() {
       setIsCollectionMode(false)
     }
   }, [user, isCollectionMode])
-
-  // Guardar colección en localStorage cuando cambie (solo si el usuario está autenticado)
-  useEffect(() => {
-    if (user) {
-      saveCollectionToStorage(collectedCards)
-    }
-  }, [collectedCards, user])
 
   // Filtrar cartas según los filtros
   const filteredCards = useMemo(() => {
@@ -125,9 +193,19 @@ function GaleriaContent() {
   const [isLoading, setIsLoading] = useState(true)
 
   // Funciones para manejar el modo colección (solo si el usuario está autenticado)
-  const toggleCardCollection = useCallback((cardId: string) => {
+  const toggleCardCollection = useCallback(async (cardId: string) => {
     if (!user) return
+    
+    // Prevenir múltiples clicks
+    if (loadingCards.has(cardId)) return;
+    setLoadingCards((prev) => new Set(prev).add(cardId));
+    
+    // Guardar el estado anterior para poder revertir si falla
+    let previousCollection: Set<string> = new Set();
+    
+    // Actualización optimista: actualizar UI inmediatamente
     setCollectedCards((prev) => {
+      previousCollection = new Set(prev); // Guardar estado anterior
       const newSet = new Set(prev)
       if (newSet.has(cardId)) {
         newSet.delete(cardId)
@@ -136,7 +214,32 @@ function GaleriaContent() {
       }
       return newSet
     })
-  }, [user])
+
+    // Actualizar en la API (con fallback a localStorage)
+    try {
+      const updatedCollection = await toggleCardInCollectionStorage(
+        user.id,
+        cardId,
+        previousCollection
+      );
+      // Actualizar con la respuesta de la API (por si hay diferencias)
+      setCollectedCards(updatedCollection);
+      // Sincronizar con localStorage como backup
+      saveCollectionToLocalStorage(updatedCollection);
+    } catch (error) {
+      console.error("Error al actualizar colección:", error);
+      // Revertir cambio optimista si falla
+      setCollectedCards(previousCollection);
+      const { toastError } = await import("@/lib/toast");
+      toastError("Error al actualizar la colección. Por favor, intenta nuevamente.");
+    } finally {
+      setLoadingCards((prev) => {
+        const next = new Set(prev);
+        next.delete(cardId);
+        return next;
+      });
+    }
+  }, [user, loadingCards])
 
   // Manejar click derecho en carta (abrir modal)
   const handleCardRightClick = useCallback((e: React.MouseEvent, card: Card) => {
@@ -208,9 +311,13 @@ function GaleriaContent() {
               <CardGridSkeleton count={12} columns={6} />
             ) : (
               <div className="space-y-4 sm:space-y-6 p-2 sm:p-3 lg:p-4 animate-in fade-in duration-300">
-                {editionOrder.map((edition) => {
+                {editionOrder.map((edition, editionIndex) => {
                 const editionCards = cardsByEdition.get(edition)
                 if (!editionCards || editionCards.length === 0) return null
+
+                // Marcar las primeras 12 imágenes de la primera edición como priority (above the fold)
+                const isFirstEdition = editionIndex === 0
+                const priorityCount = 12
 
                 return (
                   <div key={edition} className="space-y-3">
@@ -218,9 +325,11 @@ function GaleriaContent() {
                       {edition}
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
-                      {editionCards.map((card) => {
+                      {editionCards.map((card, cardIndex) => {
                         const isCollected = collectedCards.has(card.id)
                         const maxQuantity = card.banListRE
+                        // Solo las primeras imágenes de la primera edición tienen priority
+                        const hasPriority = isFirstEdition && cardIndex < priorityCount
 
                         return (
                           <div key={card.id} className="relative group/card">
@@ -231,6 +340,8 @@ function GaleriaContent() {
                               canAddMore={true}
                               onCardClick={handleCardClick}
                               onCardRightClick={handleCardRightClick}
+                              priority={hasPriority}
+                              showBanListIndicator={false}
                             />
                             {/* Toggle de colección - visible cuando está en modo colección */}
                             {isCollectionMode && (
@@ -239,11 +350,12 @@ function GaleriaContent() {
                                   e.stopPropagation()
                                   toggleCardCollection(card.id)
                                 }}
+                                disabled={loadingCards.has(card.id)}
                                 className={`absolute top-1 left-1/2 -translate-x-1/2 z-30 size-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center shadow-lg ${
                                   isCollected
                                     ? "bg-green-500 border-background hover:bg-green-600"
                                     : "bg-background/80 border-border hover:bg-background"
-                                }`}
+                                } ${loadingCards.has(card.id) ? "opacity-50 cursor-not-allowed animate-pulse" : ""}`}
                                 aria-label={
                                   isCollected
                                     ? "Marcar como no tengo"

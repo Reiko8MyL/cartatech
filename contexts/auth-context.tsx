@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { login as apiLogin, register as apiRegister } from "@/lib/api/auth"
 
 export interface User {
   id: string
@@ -11,8 +12,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null
-  login: (username: string, password: string) => Promise<boolean>
-  register: (username: string, email: string, password: string, dateOfBirth: { month: string; day: string; year: string }) => Promise<boolean>
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
+  register: (username: string, email: string, password: string, dateOfBirth: { month: string; day: string; year: string }) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   isLoading: boolean
 }
@@ -24,12 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Cargar usuario desde localStorage al iniciar
+    // Cargar usuario desde localStorage al iniciar (solo para mantener sesión)
     if (typeof window !== "undefined") {
       const storedUser = localStorage.getItem("cartatech_user")
       if (storedUser) {
         try {
-          setUser(JSON.parse(storedUser))
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
         } catch {
           localStorage.removeItem("cartatech_user")
         }
@@ -38,25 +40,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    if (typeof window === "undefined") return false
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    if (typeof window === "undefined") return { success: false, error: "No disponible en servidor" }
 
-    // Simular autenticación (en producción esto sería una llamada a API)
-    const users = JSON.parse(localStorage.getItem("cartatech_users") || "[]")
-    const foundUser = users.find(
-      (u: User & { password: string }) => 
-        u.username.toLowerCase() === username.toLowerCase() && 
-        u.password === password
-    )
+    const result = await apiLogin(username, password)
 
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser
-      setUser(userWithoutPassword)
-      localStorage.setItem("cartatech_user", JSON.stringify(userWithoutPassword))
-      return true
+    if (result.success && result.user) {
+      setUser(result.user)
+      // Guardar en localStorage solo para mantener la sesión
+      localStorage.setItem("cartatech_user", JSON.stringify(result.user))
+      return { success: true }
     }
 
-    return false
+    return { success: false, error: result.error }
   }
 
   const register = async (
@@ -64,57 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     dateOfBirth: { month: string; day: string; year: string }
-  ): Promise<boolean> => {
-    if (typeof window === "undefined") return false
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (typeof window === "undefined") return { success: false, error: "No disponible en servidor" }
 
-    // Validar fecha de nacimiento (debe ser mayor de 13 años)
-    const birthDate = new Date(
-      parseInt(dateOfBirth.year),
-      parseInt(dateOfBirth.month) - 1,
-      parseInt(dateOfBirth.day)
-    )
-    const today = new Date()
-    const age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      // Aún no ha cumplido años este año
-      if (age - 1 < 13) {
-        return false
-      }
-    } else if (age < 13) {
-      return false
+    const result = await apiRegister(username, email, password, dateOfBirth)
+
+    if (result.success && result.user) {
+      setUser(result.user)
+      // Guardar en localStorage solo para mantener la sesión
+      localStorage.setItem("cartatech_user", JSON.stringify(result.user))
+      return { success: true }
     }
 
-    // Verificar si el usuario ya existe
-    const users = JSON.parse(localStorage.getItem("cartatech_users") || "[]")
-    const userExists = users.some(
-      (u: User & { password: string }) => 
-        u.username.toLowerCase() === username.toLowerCase() || 
-        u.email.toLowerCase() === email.toLowerCase()
-    )
-
-    if (userExists) {
-      return false
-    }
-
-    // Crear nuevo usuario
-    const newUser: User & { password: string } = {
-      id: Date.now().toString(),
-      username,
-      email,
-      password, // En producción esto debería estar hasheado
-      createdAt: Date.now(),
-    }
-
-    users.push(newUser)
-    localStorage.setItem("cartatech_users", JSON.stringify(users))
-
-    // Auto-login después del registro
-    const { password: _, ...userWithoutPassword } = newUser
-    setUser(userWithoutPassword)
-    localStorage.setItem("cartatech_user", JSON.stringify(userWithoutPassword))
-
-    return true
+    return { success: false, error: result.error }
   }
 
   const logout = () => {

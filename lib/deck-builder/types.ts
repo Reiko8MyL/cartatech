@@ -25,7 +25,7 @@ export interface DeckCard {
 export type DeckFormat = "RE" | "RL" | "LI";
 
 export interface SavedDeck {
-  id: string;
+  id?: string; // Opcional para mazos nuevos (será generado por la base de datos)
   name: string;
   description?: string;
   cards: DeckCard[];

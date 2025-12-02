@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Sitemap (se actualizará automáticamente con tu dominio)
+Sitemap: https://cartatech.com/sitemap.xml
+
+# Bloquear archivos de sistema
+Disallow: /api/
+Disallow: /.next/
+Disallow: /_next/
+Disallow: /test-error/
+

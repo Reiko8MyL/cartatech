@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { VotePanel } from "@/components/voting/vote-panel"
-import { getAllRaces, getRaceVotingData } from "@/lib/voting/utils"
+import { getAllRaces, getRaceVotingData, getRaceVotingDataFromStorage } from "@/lib/voting/utils"
 
 export default function ComunidadVotaPage() {
   const { user } = useAuth()
@@ -64,6 +64,7 @@ export default function ComunidadVotaPage() {
         </p>
         <div className="mt-8 space-y-6">
           {races.map((race) => {
+            // Usar datos iniciales desde localStorage (se actualizarán con API en el componente)
             const initialData = getRaceVotingData(race, user.id)
             return (
               <VotePanel

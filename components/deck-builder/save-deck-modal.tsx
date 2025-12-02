@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,9 @@ export function SaveDeckModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Guardar Mazo</DialogTitle>
+          <DialogDescription>
+            Guarda tu mazo con un nombre, descripción opcional y etiquetas para organizarlo mejor.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>

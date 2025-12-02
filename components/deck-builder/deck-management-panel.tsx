@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import {
@@ -152,42 +153,69 @@ export function DeckManagementPanel({
     setShowSaveModal(true)
   }
 
-  function handleSaveDeckConfirm(deckData: Omit<SavedDeck, "id" | "createdAt">) {
+  async function handleSaveDeckConfirm(deckData: Omit<SavedDeck, "id" | "createdAt">) {
     if (!user) return
 
-    // Verificar si ya existe un mazo con ese nombre para este usuario
-    const userDecks = getUserDecksFromLocalStorage(user.id)
-    const exists = userDecks.some(
-      (d) => d.name.trim().toLowerCase() === deckData.name.trim().toLowerCase()
-    )
+    try {
+      // Verificar si ya existe un mazo con ese nombre para este usuario
+      // Primero intentar desde la API, luego fallback a localStorage
+      let userDecks: SavedDeck[] = []
+      try {
+        const { getUserDecks } = await import("@/lib/api/decks");
+        userDecks = await getUserDecks(user.id);
+      } catch {
+        // Fallback a localStorage si la API falla
+        userDecks = getUserDecksFromLocalStorage(user.id);
+      }
 
-    if (exists) {
-      const newName = typeof window !== "undefined"
-        ? window.prompt(
-            "Ya existe un mazo con ese nombre. Escribe un nombre diferente:",
-            `${deckData.name} (copia)`
-          )
-        : null
-      if (!newName || !newName.trim()) return
-      deckData.name = newName.trim()
-    }
+      const exists = userDecks.some(
+        (d) => d.name.trim().toLowerCase() === deckData.name.trim().toLowerCase()
+      )
 
-    const deck: SavedDeck = {
-      id: Date.now().toString(),
-      name: deckData.name,
-      description: deckData.description,
-      cards: deckData.cards,
-      createdAt: Date.now(),
-      userId: deckData.userId,
-      author: deckData.author || user.username,
-      isPublic: deckData.isPublic,
-      publishedAt: deckData.publishedAt,
-      tags: deckData.tags,
-      format: deckFormat,
+      if (exists) {
+        const newName = typeof window !== "undefined"
+          ? window.prompt(
+              "Ya existe un mazo con ese nombre. Escribe un nombre diferente:",
+              `${deckData.name} (copia)`
+            )
+          : null
+        if (!newName || !newName.trim()) return
+        deckData.name = newName.trim()
+      }
+
+      // Para mazos nuevos, no incluir ID (será generado por la base de datos)
+      // Solo incluir ID si estamos actualizando un mazo existente
+      const deck: SavedDeck = {
+        // id se omite para mazos nuevos - será generado por la base de datos
+        name: deckData.name,
+        description: deckData.description,
+        cards: deckData.cards,
+        createdAt: Date.now(),
+        userId: deckData.userId,
+        author: deckData.author || user.username,
+        isPublic: deckData.isPublic,
+        publishedAt: deckData.publishedAt,
+        tags: deckData.tags,
+        format: deckFormat,
+      }
+
+      // Usar la función que guarda en la API si hay usuario
+      const { saveDeckToStorage } = await import("@/lib/deck-builder/utils");
+      const savedDeck = await saveDeckToStorage(deck, user.id);
+
+      if (savedDeck) {
+        onDeckNameChange(deckData.name)
+        toastSuccess("Mazo guardado correctamente")
+        // Actualizar la lista de mazos guardados
+        setSavedDecks(getSavedDecksFromLocalStorage())
+      } else {
+        toastError("Error al guardar el mazo. Por favor intenta de nuevo.")
+      }
+    } catch (error) {
+      console.error("Error al guardar mazo:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      toastError(`Error al guardar el mazo: ${errorMessage}`)
     }
-    saveDeckToLocalStorage(deck)
-    onDeckNameChange(deckData.name)
-    toastSuccess("Mazo guardado correctamente")
   }
 
   function handleLoadDeck(deck: SavedDeck) {
@@ -726,7 +754,11 @@ export function DeckManagementPanel({
               Aliados:{" "}
               <span
                 className={`font-semibold ${
-                  stats.totalCards === 50 ? "text-destructive" : ""
+                  stats.totalCards === 50
+                    ? (stats.cardsByType["Aliado"] || 0) >= 16
+                      ? "text-green-600 dark:text-green-500"
+                      : "text-destructive"
+                    : ""
                 }`}
               >
                 {stats.cardsByType["Aliado"] || 0}
@@ -746,13 +778,13 @@ export function DeckManagementPanel({
                     </button>
                     {showAliadosTooltip && (
                       <div
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50"
+                        className="absolute bottom-full left-0 mb-2 z-50"
                         onMouseEnter={() => setShowAliadosTooltip(true)}
                         onMouseLeave={() => setShowAliadosTooltip(false)}
                       >
-                        <div className="bg-popover text-popover-foreground text-xs rounded-md border shadow-md px-3 py-2 max-w-[200px] whitespace-nowrap">
+                        <div className="bg-popover text-popover-foreground text-xs rounded-md border shadow-md px-3 py-2 max-w-[200px] whitespace-normal break-words">
                           El mínimo de Aliados por mazo es de 16
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                          <div className="absolute top-full left-4 -mt-1">
                             <div className="border-4 border-transparent border-t-popover" />
                           </div>
                         </div>
@@ -775,7 +807,11 @@ export function DeckManagementPanel({
               Oros:{" "}
               <span
                 className={`font-semibold ${
-                  stats.totalCards === 50 ? "text-destructive" : ""
+                  stats.totalCards === 50
+                    ? stats.hasOroIni
+                      ? "text-green-600 dark:text-green-500"
+                      : "text-destructive"
+                    : ""
                 }`}
               >
                 {stats.cardsByType["Oro"] || 0}
@@ -794,13 +830,13 @@ export function DeckManagementPanel({
                     </button>
                   {showOrosTooltip && (
                     <div
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50"
+                      className="absolute bottom-full right-0 mb-2 z-50"
                       onMouseEnter={() => setShowOrosTooltip(true)}
                       onMouseLeave={() => setShowOrosTooltip(false)}
                     >
-                      <div className="bg-popover text-popover-foreground text-xs rounded-md border shadow-md px-3 py-2 max-w-[200px] whitespace-nowrap">
+                      <div className="bg-popover text-popover-foreground text-xs rounded-md border shadow-md px-3 py-2 max-w-[200px] whitespace-normal break-words">
                         Agrega un Oro Inicial (Sin habilidad)
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                        <div className="absolute top-full right-4 -mt-1">
                           <div className="border-4 border-transparent border-t-popover" />
                         </div>
                       </div>
@@ -969,6 +1005,9 @@ export function DeckManagementPanel({
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Mazos guardados</DialogTitle>
+            <DialogDescription>
+              Selecciona un mazo guardado para cargarlo en el constructor.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-2 pr-2">
             {decksWithMetadata.length === 0 ? (
@@ -1124,11 +1163,11 @@ export function DeckManagementPanel({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Inicia sesión para guardar tu mazo</DialogTitle>
+            <DialogDescription>
+              Tu mazo ha sido guardado temporalmente. Para guardarlo permanentemente y acceder a todas las funciones, necesitas iniciar sesión o crear una cuenta.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Tu mazo ha sido guardado temporalmente. Para guardarlo permanentemente y acceder a todas las funciones, necesitas iniciar sesión o crear una cuenta.
-            </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={() => {

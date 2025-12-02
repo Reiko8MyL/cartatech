@@ -9,6 +9,7 @@ import { UtilidadDropdown } from "./utilidad-dropdown";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/contexts/auth-context";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,6 +83,9 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           {/* Toggle de tema */}
           <ThemeToggle />
+          
+          {/* Notificaciones */}
+          {user && <NotificationBell />}
           
           {user ? (
             <DropdownMenu>

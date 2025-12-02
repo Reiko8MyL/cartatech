@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, Suspense, Fragment } from "react"
+import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,6 +38,8 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess } from "@/lib/toast"
+import { AdInline } from "@/components/ads/ad-inline"
+import { AdSidebar } from "@/components/ads/ad-sidebar"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -51,44 +54,97 @@ interface DeckFilters {
   liked: string
 }
 
-export default function MazosComunidadPage() {
+function MazosComunidadPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
+  
+  // Leer el parámetro de búsqueda de la URL
+  const searchFromUrl = searchParams.get("search") || ""
+  
   const [publicDecks, setPublicDecks] = useState<SavedDeck[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [filters, setFilters] = useState<DeckFilters>({
-    search: "",
+    search: searchFromUrl,
     race: "",
     edition: "",
     format: "",
     favorites: "",
     liked: "",
   })
+  
+  // Actualizar filtros cuando cambie el parámetro de búsqueda en la URL
+  useEffect(() => {
+    setFilters((prev) => {
+      if (prev.search !== searchFromUrl) {
+        return {
+          ...prev,
+          search: searchFromUrl,
+        }
+      }
+      return prev
+    })
+  }, [searchFromUrl])
   const [likes, setLikes] = useState<Record<string, string[]>>({})
   const [favorites, setFavorites] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadingLikes, setLoadingLikes] = useState<Set<string>>(new Set())
+  const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
 
   const allCards = useMemo(() => getAllCards(), [])
 
   // Cargar likes y favoritos al iniciar
   useEffect(() => {
-    const deckLikes = getDeckLikesFromLocalStorage()
-    setLikes(deckLikes)
-    if (user) {
-      const userFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
-      setFavorites(userFavorites)
-    }
+    const loadData = async () => {
+      try {
+        // Cargar likes desde la API
+        const { getDeckLikesFromStorage } = await import("@/lib/deck-builder/utils");
+        const deckLikes = await getDeckLikesFromStorage();
+        setLikes(deckLikes);
+      } catch (error) {
+        console.error("Error al cargar likes:", error);
+        // Fallback a localStorage
+        const deckLikes = getDeckLikesFromLocalStorage();
+        setLikes(deckLikes);
+      }
+      
+      if (user) {
+        try {
+          const { getUserFavoriteDecksFromStorage } = await import("@/lib/deck-builder/utils");
+          const userFavorites = await getUserFavoriteDecksFromStorage(user.id);
+          setFavorites(userFavorites);
+        } catch (error) {
+          console.error("Error al cargar favoritos:", error);
+          // Fallback a localStorage
+          const userFavorites = getUserFavoriteDecksFromLocalStorage(user.id);
+          setFavorites(userFavorites);
+        }
+      }
+    };
+    
+    loadData();
   }, [user])
 
   useEffect(() => {
     setIsLoading(true)
-    // Simular carga asíncrona para mostrar skeleton
-    setTimeout(() => {
-      const decks = getPublicDecksFromLocalStorage()
-      setPublicDecks(decks)
-      setIsLoading(false)
-    }, 300)
+    const loadDecks = async () => {
+      try {
+        // Intentar cargar desde la API primero
+        const { getPublicDecksFromStorage } = await import("@/lib/deck-builder/utils");
+        const decks = await getPublicDecksFromStorage();
+        setPublicDecks(decks);
+      } catch (error) {
+        console.error("Error al cargar mazos públicos desde API:", error);
+        // Fallback a localStorage si la API falla
+        const decks = getPublicDecksFromLocalStorage();
+        setPublicDecks(decks);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadDecks();
   }, [])
 
   // Calcular raza, edición, likes y favoritos para cada mazo
@@ -96,10 +152,13 @@ export default function MazosComunidadPage() {
     return publicDecks.map((deck: SavedDeck) => {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
+      // Usar el estado likes directamente para actualización inmediata
       const likeCount = likes[deck.id]?.length || 0
-      const userLiked = user ? hasUserLikedDeck(deck.id, user.id) : false
-      const isFavorite = user ? isDeckFavorite(deck.id, user.id) : false
-      const viewCount = getDeckViewCount(deck.id)
+      const userLiked = user && deck.id ? (likes[deck.id]?.includes(user.id) || false) : false
+      // Usar el estado favorites en lugar de leer de localStorage para actualización inmediata
+      const isFavorite = user && deck.id ? favorites.includes(deck.id) : false
+      // Usar viewCount del mazo si viene de la API, sino usar localStorage como fallback
+      const viewCount = deck.viewCount !== undefined ? deck.viewCount : getDeckViewCount(deck.id)
       return {
         ...deck,
         race,
@@ -126,7 +185,10 @@ export default function MazosComunidadPage() {
       if (filters.race && deck.race !== filters.race) return false
       if (filters.edition && deck.edition !== filters.edition) return false
       if (filters.format && (deck.format || "RE") !== filters.format) return false
-      if (filters.favorites === "favorites" && !deck.isFavorite) return false
+      // Filtrar por favoritos: solo mostrar si el usuario está logueado y el mazo está en favoritos
+      if (filters.favorites === "favorites") {
+        if (!user || !deck.isFavorite) return false
+      }
       if (filters.liked === "liked" && !deck.userLiked) return false
 
       return true
@@ -204,31 +266,105 @@ export default function MazosComunidadPage() {
 
   const hasActiveFilters = filters.search || filters.race || filters.edition || filters.format || filters.favorites || filters.liked
 
-  const handleToggleLike = (deckId: string) => {
+  const handleToggleLike = async (deckId: string) => {
     if (!user) return
 
-    const newLiked = toggleDeckLike(deckId, user.id)
-    const updatedLikes = getDeckLikesFromLocalStorage()
-    setLikes(updatedLikes)
+    // Prevenir múltiples clicks
+    if (loadingLikes.has(deckId)) return;
+    setLoadingLikes((prev) => new Set(prev).add(deckId));
+
+    // Actualización optimista
+    const currentLikes = likes[deckId] || [];
+    const isCurrentlyLiked = currentLikes.includes(user.id);
+    const previousLikes = { ...likes };
+    const newLikes = { ...likes };
+    
+    if (isCurrentlyLiked) {
+      newLikes[deckId] = currentLikes.filter((id) => id !== user.id);
+    } else {
+      newLikes[deckId] = [...currentLikes, user.id];
+    }
+    setLikes(newLikes);
+
+    try {
+      const { toggleDeckLikeFromStorage } = await import("@/lib/deck-builder/utils");
+      await toggleDeckLikeFromStorage(deckId, user.id);
+      
+      // Actualizar desde la API para sincronizar
+      const { getDeckLikesFromStorage } = await import("@/lib/deck-builder/utils");
+      const updatedLikes = await getDeckLikesFromStorage();
+      setLikes(updatedLikes);
+    } catch (error) {
+      console.error("Error al alternar like:", error);
+      // Revertir actualización optimista
+      setLikes(previousLikes);
+      const { toastError } = await import("@/lib/toast");
+      toastError("Error al actualizar el like. Por favor, intenta nuevamente.");
+    } finally {
+      setLoadingLikes((prev) => {
+        const next = new Set(prev);
+        next.delete(deckId);
+        return next;
+      });
+    }
   }
 
-  const handleToggleFavorite = (deckId: string) => {
+  const handleToggleFavorite = async (deckId: string) => {
     if (!user) return
 
-    const added = toggleFavoriteDeck(deckId, user.id)
-    const updatedFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
-    setFavorites(updatedFavorites)
+    // Prevenir múltiples clicks
+    if (loadingFavorites.has(deckId)) return;
+    setLoadingFavorites((prev) => new Set(prev).add(deckId));
+
+    // Guardar el estado anterior para poder revertir si hay error
+    const previousFavorites = [...favorites]
     
-    if (added) {
-      toastSuccess("Mazo agregado a favoritos")
-    } else {
-      toastSuccess("Mazo eliminado de favoritos")
+    // Actualización optimista: actualizar el estado inmediatamente
+    const isCurrentlyFavorite = favorites.includes(deckId)
+    const newFavorites = isCurrentlyFavorite
+      ? favorites.filter((id) => id !== deckId)
+      : [...favorites, deckId]
+    setFavorites(newFavorites)
+
+    try {
+      const added = await toggleFavoriteDeck(deckId, user.id)
+      
+      // Verificar que el resultado coincida con la actualización optimista
+      // Si no coincide, actualizar desde la API
+      if (added !== !isCurrentlyFavorite) {
+        const { getUserFavoriteDecksFromStorage } = await import("@/lib/deck-builder/utils");
+        const updatedFavorites = await getUserFavoriteDecksFromStorage(user.id);
+        setFavorites(updatedFavorites);
+      }
+      
+      if (added) {
+        toastSuccess("Mazo agregado a favoritos")
+      } else {
+        toastSuccess("Mazo eliminado de favoritos")
+      }
+    } catch (error) {
+      console.error("Error al alternar favorito:", error);
+      // Revertir la actualización optimista en caso de error
+      setFavorites(previousFavorites)
+      toastError("Error al actualizar favoritos. Por favor intenta de nuevo.");
+    } finally {
+      setLoadingFavorites((prev) => {
+        const next = new Set(prev);
+        next.delete(deckId);
+        return next;
+      });
     }
   }
 
   return (
     <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
+        {/* Sidebar de anuncios en desktop */}
+        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+          <div className="hidden lg:block fixed right-4 top-24 w-48 z-10">
+            <AdSidebar />
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -433,7 +569,9 @@ export default function MazosComunidadPage() {
           </Card>
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300">
-            {filteredDecks.map((deck) => {
+            {filteredDecks.map((deck, index) => {
+              // Insertar anuncio inline cada 6 mazos
+              const shouldShowAd = index > 0 && index % 6 === 0 && process.env.NEXT_PUBLIC_ADSENSE_ID
               const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
               const publishedDate = deck.publishedAt
                 ? new Date(deck.publishedAt)
@@ -445,7 +583,13 @@ export default function MazosComunidadPage() {
               })
 
               return (
-                <Card key={deck.id} className="flex flex-col overflow-hidden group">
+                <Fragment key={`deck-wrapper-${deck.id}`}>
+                  {shouldShowAd && (
+                    <div className="col-span-full flex justify-center my-4">
+                      <AdInline />
+                    </div>
+                  )}
+                  <Card className="flex flex-col overflow-hidden group">
                   <div
                     className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
                     style={{
@@ -492,7 +636,18 @@ export default function MazosComunidadPage() {
                       <p className="text-xs text-muted-foreground flex items-center gap-2">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          Por {deck.author || "Anónimo"} · {formattedDate}
+                          Por{" "}
+                          {deck.author ? (
+                            <Link
+                              href={`/perfil/${deck.author}`}
+                              className="hover:underline font-semibold"
+                            >
+                              {deck.author}
+                            </Link>
+                          ) : (
+                            "Anónimo"
+                          )}{" "}
+                          · {formattedDate}
                         </span>
                         <span className="flex items-center gap-1">
                           <Eye className="h-3 w-3" />
@@ -558,6 +713,7 @@ export default function MazosComunidadPage() {
                     </div>
                   </CardContent>
                 </Card>
+                </Fragment>
               )
             })}
           </div>
@@ -622,7 +778,17 @@ export default function MazosComunidadPage() {
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {cardCount} {cardCount === 1 ? "carta" : "cartas"} · Por{" "}
-                              {deck.author || "Anónimo"} · {formattedDate}
+                              {deck.author ? (
+                                <Link
+                                  href={`/perfil/${deck.author}`}
+                                  className="hover:underline font-semibold"
+                                >
+                                  {deck.author}
+                                </Link>
+                              ) : (
+                                "Anónimo"
+                              )}{" "}
+                              · {formattedDate}
                             </span>
                             <span className="flex items-center gap-1">
                               <Eye className="h-3 w-3" />
@@ -638,9 +804,10 @@ export default function MazosComunidadPage() {
                                 size="sm"
                                 className="h-7 px-2"
                                 onClick={() => handleToggleLike(deck.id)}
+                                disabled={loadingLikes.has(deck.id)}
                               >
                                 <Heart
-                                  className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""}`}
+                                  className={`h-3 w-3 mr-1 ${deck.userLiked ? "fill-current" : ""} ${loadingLikes.has(deck.id) ? "animate-pulse" : ""}`}
                                 />
                                 {deck.likeCount || 0}
                               </Button>
@@ -650,9 +817,10 @@ export default function MazosComunidadPage() {
                                 className="h-7 px-2"
                                 onClick={() => handleToggleFavorite(deck.id)}
                                 title={deck.isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+                                disabled={loadingFavorites.has(deck.id)}
                               >
                                 <Star
-                                  className={`h-3 w-3 ${deck.isFavorite ? "fill-current" : ""}`}
+                                  className={`h-3 w-3 ${deck.isFavorite ? "fill-current" : ""} ${loadingFavorites.has(deck.id) ? "animate-pulse" : ""}`}
                                 />
                               </Button>
                             </>
@@ -701,5 +869,23 @@ export default function MazosComunidadPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function MazosComunidadPageWrapper() {
+  return (
+    <Suspense fallback={
+      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <DeckCardSkeleton key={i} viewMode="grid" />
+            ))}
+          </div>
+        </div>
+      </main>
+    }>
+      <MazosComunidadPage />
+    </Suspense>
   )
 }

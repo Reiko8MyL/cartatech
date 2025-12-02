@@ -145,6 +145,26 @@
   }
 }
 
+/* Hero principal - fondo distinto en móvil vs desktop */
+@layer components {
+  .hero-section {
+    background-image: url("https://res.cloudinary.com/dpbmbrekj/image/upload/v1764569887/logo_celu_wallpaper_i3qyme.webp");
+    background-size: cover;
+    background-repeat: no-repeat;
+    /* Desplazamos más el fondo para recortar un poco más la parte superior en móvil */
+    background-position: center 120%;
+  }
+
+  @media (min-width: 768px) {
+    .hero-section {
+      background-image: url("https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435879/FONDO_WEBPP_etcgej.webp");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+  }
+}
+
 /* Scrollbars personalizadas - más discretas */
 @layer base {
   /* Webkit (Chrome, Safari, Edge) */

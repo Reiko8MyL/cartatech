@@ -9,7 +9,8 @@ import { generateMetadata as genMeta } from "@/lib/metadata";
 
 export const metadata: Metadata = genMeta({
   title: "Inicio",
-  description: "Deck Builder para Mitos y Leyendas Primer Bloque. Construye, explora y comparte tus mazos. La base de datos más completa de cartas del formato Primer Bloque Extendido.",
+  description:
+    "Deck Builder para Mitos y Leyendas Primer Bloque. Construye, explora y comparte tus mazos. La base de datos más completa de cartas del formato Primer Bloque Extendido.",
   keywords: ["deck builder", "constructor de mazos", "base de datos", "cartas MyL"],
   path: "/",
 });
@@ -19,18 +20,12 @@ export default function Home() {
     <>
       <main className="flex flex-col">
         {/* Hero Section con fondo de imagen - Ocupa toda la altura del viewport */}
-        <section 
-          className="relative h-screen flex items-start justify-center px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 md:pt-20"
-          style={{
-            backgroundImage: 'url(https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435879/FONDO_WEBPP_etcgej.webp)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-          }}
+        <section
+          className="relative h-screen flex items-start justify-center px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 md:pt-20 hero-section"
         >
           {/* Overlay sutil para mejorar legibilidad del texto */}
           <div className="absolute inset-0 bg-black/18 dark:bg-black/18" />
-          
+
           <div className="container mx-auto max-w-6xl text-center relative z-10">
             <div className="mb-4 flex justify-center">
               <Logo
@@ -56,22 +51,19 @@ export default function Home() {
         {/* Secciones para futuras actualizaciones */}
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl font-bold text-center mb-12 sm:text-4xl">
-              Próximamente
-            </h2>
+            <h2 className="text-3xl font-bold text-center mb-12 sm:text-4xl">Próximamente</h2>
             <div className="grid gap-6 sm:grid-cols-2">
               <Card className="bg-background/50">
                 <CardHeader>
                   <CardTitle>Nueva Funcionalidad</CardTitle>
                   <CardDescription>
-                    Estamos trabajando en nuevas características que mejorarán
-                    tu experiencia. Mantente atento a las actualizaciones.
+                    Estamos trabajando en nuevas características que mejorarán tu experiencia. Mantente atento a las
+                    actualizaciones.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Esta sección se actualizará próximamente con contenido
-                    exclusivo.
+                    Esta sección se actualizará próximamente con contenido exclusivo.
                   </p>
                 </CardContent>
               </Card>
@@ -79,14 +71,13 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle>Nueva Funcionalidad</CardTitle>
                   <CardDescription>
-                    Estamos trabajando en nuevas características que mejorarán
-                    tu experiencia. Mantente atento a las actualizaciones.
+                    Estamos trabajando en nuevas características que mejorarán tu experiencia. Mantente atento a las
+                    actualizaciones.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Esta sección se actualizará próximamente con contenido
-                    exclusivo.
+                    Esta sección se actualizará próximamente con contenido exclusivo.
                   </p>
                 </CardContent>
               </Card>
@@ -98,3 +89,6 @@ export default function Home() {
     </>
   );
 }
+
+
+

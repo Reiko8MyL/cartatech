@@ -71,7 +71,7 @@ export default function RegistroPage() {
 
     setIsLoading(true)
 
-    const success = await register(
+    const result = await register(
       formData.username,
       formData.email,
       formData.password,
@@ -84,7 +84,7 @@ export default function RegistroPage() {
 
     setIsLoading(false)
 
-    if (success) {
+    if (result.success) {
       // Si hay un mazo temporal, redirigir al deck builder
       const temporaryDeck = getTemporaryDeck()
       if (temporaryDeck && temporaryDeck.cards.length > 0) {
@@ -93,7 +93,7 @@ export default function RegistroPage() {
         router.push("/")
       }
     } else {
-      setError("El usuario o email ya existe, o no cumples con la edad mínima (13 años)")
+      setError(result.error || "El usuario o email ya existe, o no cumples con la edad mínima (13 años)")
     }
   }
 

@@ -11,6 +11,8 @@ interface CardItemProps {
   canAddMore: boolean
   onCardClick: (card: Card) => void
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
+  priority?: boolean
+  showBanListIndicator?: boolean
 }
 
 export const CardItem = memo(function CardItem({
@@ -20,6 +22,8 @@ export const CardItem = memo(function CardItem({
   canAddMore,
   onCardClick,
   onCardRightClick,
+  priority = false,
+  showBanListIndicator = true,
 }: CardItemProps) {
   const fillRatio =
     maxQuantity > 0 ? Math.min(quantity / maxQuantity, 1) : 0
@@ -45,7 +49,8 @@ export const CardItem = memo(function CardItem({
             canAddMore ? "" : "opacity-50"
           }`}
           sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          priority={priority}
           decoding="async"
         />
 
@@ -80,25 +85,27 @@ export const CardItem = memo(function CardItem({
         </div>
 
         {/* Banlist (centro) - usa maxQuantity que ya viene calculado según el formato */}
-        <div
-          className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg text-white ${
-            maxQuantity === 0
-              ? "bg-red-600 opacity-100"
+        {showBanListIndicator && (
+          <div
+            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg text-white ${
+              maxQuantity === 0
+                ? "bg-red-600 opacity-100"
+                : maxQuantity === 1 && !card.isUnique
+                ? "bg-red-500 opacity-100"
+                : maxQuantity === 2
+                ? "bg-red-500 opacity-100"
+                : "opacity-0"
+            }`}
+          >
+            {maxQuantity === 0
+              ? "BAN"
               : maxQuantity === 1 && !card.isUnique
-              ? "bg-red-500 opacity-100"
+              ? "Max 1"
               : maxQuantity === 2
-              ? "bg-red-500 opacity-100"
-              : "opacity-0"
-          }`}
-        >
-          {maxQuantity === 0
-            ? "BAN"
-            : maxQuantity === 1 && !card.isUnique
-            ? "Max 1"
-            : maxQuantity === 2
-            ? "Max 2"
-            : ""}
-        </div>
+              ? "Max 2"
+              : ""}
+          </div>
+        )}
 
         {/* Rework (abajo) */}
         <div
@@ -118,6 +125,8 @@ export const CardItem = memo(function CardItem({
   if (prevProps.quantity !== nextProps.quantity) return false
   if (prevProps.maxQuantity !== nextProps.maxQuantity) return false
   if (prevProps.canAddMore !== nextProps.canAddMore) return false
+  if (prevProps.priority !== nextProps.priority) return false
+  if (prevProps.showBanListIndicator !== nextProps.showBanListIndicator) return false
   // Comparar propiedades de la carta que afectan los indicadores
   if (prevProps.card.isUnique !== nextProps.card.isUnique) return false
   if (prevProps.maxQuantity !== nextProps.maxQuantity) return false

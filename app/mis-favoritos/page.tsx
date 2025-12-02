@@ -66,16 +66,40 @@ export default function MisFavoritosPage() {
   useEffect(() => {
     if (user) {
       setIsLoading(true)
-      // Simular carga asíncrona para mostrar skeleton
-      setTimeout(() => {
-        const decks = getFavoriteDecks(user.id)
-        setFavoriteDecks(decks)
-        const deckLikes = getDeckLikesFromLocalStorage()
-        setLikes(deckLikes)
-        const userFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
-        setFavorites(userFavorites)
-        setIsLoading(false)
-      }, 300)
+      const loadFavorites = async () => {
+        try {
+          // Intentar cargar desde la API primero
+          const { getUserFavoriteDecks } = await import("@/lib/api/favorites");
+          const result = await getUserFavoriteDecks(user.id);
+          setFavoriteDecks(result.decks);
+          
+          // Actualizar el estado de favoritos con los IDs
+          setFavorites(result.favoriteDeckIds);
+        } catch (error) {
+          console.error("Error al cargar favoritos desde API:", error);
+          // Fallback a localStorage si la API falla
+          const decks = getFavoriteDecks(user.id);
+          setFavoriteDecks(decks);
+          const userFavorites = getUserFavoriteDecksFromLocalStorage(user.id);
+          setFavorites(userFavorites);
+        }
+        
+        try {
+          // Cargar likes desde la API
+          const { getDeckLikesFromStorage } = await import("@/lib/deck-builder/utils");
+          const deckLikes = await getDeckLikesFromStorage();
+          setLikes(deckLikes);
+        } catch (error) {
+          console.error("Error al cargar likes:", error);
+          // Fallback a localStorage
+          const deckLikes = getDeckLikesFromLocalStorage();
+          setLikes(deckLikes);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      loadFavorites();
     } else {
       setIsLoading(false)
     }
@@ -86,10 +110,13 @@ export default function MisFavoritosPage() {
     return favoriteDecks.map((deck) => {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
+      // Usar el estado likes directamente para actualización inmediata
       const likeCount = likes[deck.id]?.length || 0
-      const userLiked = user ? hasUserLikedDeck(deck.id, user.id) : false
-      const isFavorite = user ? isDeckFavorite(deck.id, user.id) : false
-      const viewCount = getDeckViewCount(deck.id)
+      const userLiked = user && deck.id ? (likes[deck.id]?.includes(user.id) || false) : false
+      // Usar el estado favorites directamente en lugar de leer de localStorage para actualización inmediata
+      const isFavorite = user && deck.id ? favorites.includes(deck.id) : false
+      // Usar viewCount del mazo si viene de la API, sino usar localStorage como fallback
+      const viewCount = deck.viewCount !== undefined ? deck.viewCount : getDeckViewCount(deck.id)
       return {
         ...deck,
         race,
@@ -180,29 +207,76 @@ export default function MisFavoritosPage() {
 
   const hasActiveFilters = filters.search || filters.race || filters.edition
 
-  const handleToggleLike = (deckId: string) => {
+  const handleToggleLike = async (deckId: string) => {
     if (!user) return
 
-    const newLiked = toggleDeckLike(deckId, user.id)
-    const updatedLikes = getDeckLikesFromLocalStorage()
-    setLikes(updatedLikes)
+    // Actualización optimista
+    const currentLikes = likes[deckId] || [];
+    const isCurrentlyLiked = currentLikes.includes(user.id);
+    const newLikes = { ...likes };
+    
+    if (isCurrentlyLiked) {
+      newLikes[deckId] = currentLikes.filter((id) => id !== user.id);
+    } else {
+      newLikes[deckId] = [...currentLikes, user.id];
+    }
+    setLikes(newLikes);
+
+    try {
+      const { toggleDeckLikeFromStorage } = await import("@/lib/deck-builder/utils");
+      await toggleDeckLikeFromStorage(deckId, user.id);
+      
+      // Actualizar desde la API
+      const { getDeckLikesFromStorage } = await import("@/lib/deck-builder/utils");
+      const updatedLikes = await getDeckLikesFromStorage();
+      setLikes(updatedLikes);
+    } catch (error) {
+      console.error("Error al alternar like:", error);
+      // Revertir actualización optimista
+      setLikes(likes);
+    }
   }
 
-  const handleToggleFavorite = (deckId: string) => {
+  const handleToggleFavorite = async (deckId: string) => {
     if (!user) return
 
-    const added = toggleFavoriteDeck(deckId, user.id)
-    const updatedFavorites = getUserFavoriteDecksFromLocalStorage(user.id)
-    setFavorites(updatedFavorites)
+    // Guardar el estado anterior para poder revertir si hay error
+    const previousFavorites = [...favorites]
+    const previousDecks = [...favoriteDecks]
     
-    // Actualizar la lista de mazos favoritos
-    const updatedDecks = getFavoriteDecks(user.id)
-    setFavoriteDecks(updatedDecks)
+    // Actualización optimista: actualizar el estado inmediatamente
+    const isCurrentlyFavorite = favorites.includes(deckId)
+    const newFavorites = isCurrentlyFavorite
+      ? favorites.filter((id) => id !== deckId)
+      : [...favorites, deckId]
+    setFavorites(newFavorites)
     
-    if (added) {
-      toastSuccess("Mazo agregado a favoritos")
-    } else {
-      toastSuccess("Mazo eliminado de favoritos")
+    // Si se quitó de favoritos, también quitarlo de la lista de mazos
+    if (isCurrentlyFavorite) {
+      const newDecks = favoriteDecks.filter((deck) => deck.id !== deckId)
+      setFavoriteDecks(newDecks)
+    }
+
+    try {
+      const added = await toggleFavoriteDeck(deckId, user.id)
+      
+      // Actualizar favoritos desde la API
+      const { getUserFavoriteDecks } = await import("@/lib/api/favorites");
+      const result = await getUserFavoriteDecks(user.id);
+      setFavorites(result.favoriteDeckIds);
+      setFavoriteDecks(result.decks);
+      
+      if (added) {
+        toastSuccess("Mazo agregado a favoritos")
+      } else {
+        toastSuccess("Mazo eliminado de favoritos")
+      }
+    } catch (error) {
+      console.error("Error al alternar favorito:", error);
+      // Revertir la actualización optimista en caso de error
+      setFavorites(previousFavorites)
+      setFavoriteDecks(previousDecks)
+      toastError("Error al actualizar favoritos. Por favor intenta de nuevo.");
     }
   }
 

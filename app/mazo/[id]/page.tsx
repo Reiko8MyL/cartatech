@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -23,6 +24,7 @@ import {
   getDeckViewCount,
   getDeckFormatName,
 } from "@/lib/deck-builder/utils"
+import { getDeckById } from "@/lib/api/decks"
 import type { SavedDeck, Card as CardType } from "@/lib/deck-builder/types"
 import { DECK_TAGS } from "@/lib/deck-builder/types"
 import { 
@@ -40,6 +42,10 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { SocialShare } from "@/components/sharing/social-share"
+import { CommentsSection } from "@/components/deck/comments-section"
+import { DeckJsonLd } from "@/components/seo/json-ld"
+import { trackDeckViewed, trackDeckLiked, trackDeckCopied } from "@/lib/analytics/events"
 import {
   Dialog,
   DialogContent,
@@ -73,27 +79,64 @@ export default function ViewDeckPage() {
 
   // Cargar datos
   useEffect(() => {
-    const allDecks = getSavedDecksFromLocalStorage()
-    const foundDeck = allDecks.find((d) => d.id === deckId)
-    
-    if (!foundDeck) {
-      router.push("/mazos-comunidad")
-      return
-    }
+    const loadDeck = async () => {
+      // Primero intentar obtener desde la API
+      let foundDeck: SavedDeck | null = null
+      
+      try {
+        foundDeck = await getDeckById(deckId)
+      } catch (error) {
+        console.error("Error al obtener mazo desde API:", error)
+      }
+      
+      // Si no se encuentra en la API, buscar en localStorage como fallback
+      if (!foundDeck) {
+        const allDecks = getSavedDecksFromLocalStorage()
+        foundDeck = allDecks.find((d) => d.id === deckId) || null
+      }
+      
+      // Si no se encuentra en ningún lugar, redirigir
+      if (!foundDeck) {
+        router.push("/mazos-comunidad")
+        return
+      }
 
-    setDeck(foundDeck)
-    setAllCards(getAllCards())
+      setDeck(foundDeck)
+      setAllCards(getAllCards())
+      
+      // Track analytics
+      if (foundDeck) {
+        trackDeckViewed(foundDeck.id, foundDeck.name)
+      }
+      
+      // Cargar likes desde la API
+      try {
+        const { getDeckLikesFromStorage } = await import("@/lib/deck-builder/utils");
+        const deckLikes = await getDeckLikesFromStorage();
+        setLikes(deckLikes);
+      } catch (error) {
+        console.error("Error al cargar likes:", error);
+        // Fallback a localStorage
+        const deckLikes = getDeckLikesFromLocalStorage();
+        setLikes(deckLikes);
+      }
+      
+      // Cargar contador de visitas actual
+      // Si el mazo viene de la API, usar el viewCount del mazo
+      if (foundDeck.viewCount !== undefined) {
+        setViewCount(foundDeck.viewCount)
+      } else {
+        const currentViews = getDeckViewCount(deckId)
+        setViewCount(currentViews)
+        
+        // Incrementar contador de visitas solo si no viene de la API
+        // (la API ya incrementa el contador automáticamente)
+        const newViews = incrementDeckView(deckId)
+        setViewCount(newViews)
+      }
+    }
     
-    const deckLikes = getDeckLikesFromLocalStorage()
-    setLikes(deckLikes)
-    
-    // Cargar contador de visitas actual
-    const currentViews = getDeckViewCount(deckId)
-    setViewCount(currentViews)
-    
-    // Incrementar contador de visitas
-    const newViews = incrementDeckView(deckId)
-    setViewCount(newViews)
+    loadDeck()
   }, [deckId, router])
 
   // Calcular metadata del mazo
@@ -202,12 +245,39 @@ export default function ViewDeckPage() {
     Oro: "Oros",
   }
 
-  const handleToggleLike = () => {
+  const handleToggleLike = async () => {
     if (!user || !deck) return
 
-    toggleDeckLike(deck.id, user.id)
-    const updatedLikes = getDeckLikesFromLocalStorage()
-    setLikes(updatedLikes)
+    // Actualización optimista
+    const currentLikes = likes[deck.id] || [];
+    const isCurrentlyLiked = currentLikes.includes(user.id);
+    const newLikes = { ...likes };
+    
+    if (isCurrentlyLiked) {
+      newLikes[deck.id] = currentLikes.filter((id) => id !== user.id);
+    } else {
+      newLikes[deck.id] = [...currentLikes, user.id];
+    }
+    setLikes(newLikes);
+
+    try {
+      const { toggleDeckLikeFromStorage } = await import("@/lib/deck-builder/utils");
+      await toggleDeckLikeFromStorage(deck.id, user.id);
+      
+      // Track analytics
+      if (!isCurrentlyLiked) {
+        trackDeckLiked(deck.id)
+      }
+      
+      // Actualizar desde la API
+      const { getDeckLikesFromStorage } = await import("@/lib/deck-builder/utils");
+      const updatedLikes = await getDeckLikesFromStorage();
+      setLikes(updatedLikes);
+    } catch (error) {
+      console.error("Error al alternar like:", error);
+      // Revertir actualización optimista
+      setLikes(likes);
+    }
   }
 
   const handleEditDescription = () => {
@@ -287,6 +357,7 @@ export default function ViewDeckPage() {
 
   const handleCopyDeck = () => {
     if (!deck) return
+    trackDeckCopied(deck.id)
     router.push(`/deck-builder?load=${deck.id}`)
   }
 
@@ -434,8 +505,20 @@ export default function ViewDeckPage() {
   })
 
   return (
-    <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+    <>
+      {deck && (
+        <DeckJsonLd
+          deckId={deck.id}
+          name={deck.name}
+          description={deck.description}
+          author={deck.author}
+          publishedAt={deck.publishedAt}
+          viewCount={viewCount}
+          likeCount={deckMetadata.likeCount}
+        />
+      )}
+      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
         {/* Header con botón de volver */}
         <div className="mb-6">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="mb-4">
@@ -534,16 +617,23 @@ export default function ViewDeckPage() {
             </Button>
           )}
           {deck.isPublic && (
-            <Button
-              variant={deckMetadata.userLiked ? "default" : "outline"}
-              onClick={handleToggleLike}
-              disabled={!user}
-            >
-              <Heart
-                className={`h-4 w-4 mr-2 ${deckMetadata.userLiked ? "fill-current" : ""}`}
+            <>
+              <Button
+                variant={deckMetadata.userLiked ? "default" : "outline"}
+                onClick={handleToggleLike}
+                disabled={!user}
+              >
+                <Heart
+                  className={`h-4 w-4 mr-2 ${deckMetadata.userLiked ? "fill-current" : ""}`}
+                />
+                {deckMetadata.likeCount || 0}
+              </Button>
+              <SocialShare
+                url={`/mazo/${deck.id}`}
+                title={deck.name}
+                description={deck.description}
               />
-              {deckMetadata.likeCount || 0}
-            </Button>
+            </>
           )}
         </div>
 
@@ -751,6 +841,13 @@ export default function ViewDeckPage() {
           </CardContent>
         </Card>
 
+        {/* Sección de Comentarios */}
+        {deck.isPublic && (
+          <div className="mt-6">
+            <CommentsSection deckId={deck.id} deckName={deck.name} />
+          </div>
+        )}
+
         {/* Modal de edición */}
         <Dialog open={!!editingDeck} onOpenChange={() => setEditingDeck(null)}>
           <DialogContent className="sm:max-w-[600px]">
@@ -909,5 +1006,6 @@ export default function ViewDeckPage() {
         </Dialog>
       </div>
     </main>
+    </>
   )
 }
