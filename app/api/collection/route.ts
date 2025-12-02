@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const isInCollection = currentCardIds.includes(cardId);
     
     const updatedCardIds = isInCollection
-      ? currentCardIds.filter((id) => id !== cardId)
+      ? currentCardIds.filter((id: string) => id !== cardId)
       : [...currentCardIds, cardId];
 
     // Actualizar la colección
