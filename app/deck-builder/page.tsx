@@ -19,6 +19,7 @@ import {
   getTemporaryDeck,
   clearTemporaryDeck,
 } from "@/lib/deck-builder/utils"
+import { getDeckById } from "@/lib/api/decks"
 import type {
   Card,
   DeckCard,
@@ -162,15 +163,31 @@ function DeckBuilderContent() {
     
     const loadDeckId = searchParams.get("load")
     if (loadDeckId) {
-      const allDecks = getSavedDecksFromLocalStorage()
-      const deckToLoad = allDecks.find((d) => d.id === loadDeckId)
-      
-      if (deckToLoad) {
-        setDeckName(deckToLoad.name)
-        setDeckCards(deckToLoad.cards)
-        setDeckFormat(deckToLoad.format || "RE")
-        setHasLoadedFromUrl(true)
+      const loadDeck = async () => {
+        let deckToLoad: SavedDeck | null = null
+        
+        // Primero intentar cargar desde la API
+        try {
+          deckToLoad = await getDeckById(loadDeckId)
+        } catch (error) {
+          console.error("Error al obtener mazo desde API:", error)
+        }
+        
+        // Si no se encuentra en la API, buscar en localStorage como fallback
+        if (!deckToLoad) {
+          const allDecks = getSavedDecksFromLocalStorage()
+          deckToLoad = allDecks.find((d) => d.id === loadDeckId) || null
+        }
+        
+        if (deckToLoad) {
+          setDeckName(deckToLoad.name)
+          setDeckCards(deckToLoad.cards)
+          setDeckFormat(deckToLoad.format || "RE")
+          setHasLoadedFromUrl(true)
+        }
       }
+      
+      loadDeck()
     }
   }, [searchParams, hasLoadedFromUrl])
 

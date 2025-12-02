@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { login as apiLogin, register as apiRegister } from "@/lib/api/auth"
+import { trackUserLoggedIn, trackUserRegistered, trackUserLoggedOut } from "@/lib/analytics/events"
 
 export interface User {
   id: string
@@ -49,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(result.user)
       // Guardar en localStorage solo para mantener la sesión
       localStorage.setItem("cartatech_user", JSON.stringify(result.user))
+      
+      // Trackear evento de login
+      trackUserLoggedIn(result.user.username, result.user.id)
+      
       return { success: true }
     }
 
@@ -69,6 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(result.user)
       // Guardar en localStorage solo para mantener la sesión
       localStorage.setItem("cartatech_user", JSON.stringify(result.user))
+      
+      // Trackear evento de registro
+      trackUserRegistered(result.user.username, result.user.id)
+      
       return { success: true }
     }
 
@@ -76,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    // Trackear evento de logout antes de limpiar
+    trackUserLoggedOut()
+    
     setUser(null)
     if (typeof window !== "undefined") {
       localStorage.removeItem("cartatech_user")

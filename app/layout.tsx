@@ -9,10 +9,12 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { AdBanner } from "@/components/ads/ad-banner";
+import { AdSenseScript } from "@/components/ads/adsense-script";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { WebsiteJsonLd } from "@/components/seo/json-ld";
 import { WelcomeTour } from "@/components/onboarding/welcome-tour";
+import { GoogleAnalyticsProvider } from "@/components/analytics/google-analytics-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -93,14 +95,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <head>
         {/* Google AdSense - Script de anuncios */}
-        {adsenseId && (
-          <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-          />
-        )}
+        {adsenseId && <AdSenseScript adsenseId={adsenseId} />}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -137,7 +132,10 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
         {process.env.NEXT_PUBLIC_GA_ID && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+          <>
+            <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+            <GoogleAnalyticsProvider />
+          </>
         )}
       </body>
     </html>
