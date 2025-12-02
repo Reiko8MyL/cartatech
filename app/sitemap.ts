@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     })
 
-    deckUrls = publicDecks.map((deck) => ({
+    deckUrls = publicDecks.map((deck: { id: string; updatedAt: Date }) => ({
       url: `${baseUrl}/mazo/${deck.id}`,
       lastModified: deck.updatedAt,
       changeFrequency: 'weekly' as const,
