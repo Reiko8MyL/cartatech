@@ -79,43 +79,44 @@ export function SaveDeckModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[85vh] sm:max-h-[90vh] overflow-y-auto top-[5%] sm:top-[50%] translate-y-0 sm:translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>Guardar Mazo</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Guarda tu mazo con un nombre, descripción opcional y etiquetas para organizarlo mejor.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
           <div>
-            <Label htmlFor="deck-name">Nombre del Mazo</Label>
+            <Label htmlFor="deck-name" className="text-sm">Nombre del Mazo</Label>
             <Input
               id="deck-name"
               value={deckName}
               onChange={(e) => setDeckName(e.target.value)}
               placeholder="Ingresa un nombre para tu mazo"
-              className="mt-2"
+              className="mt-1.5 sm:mt-2"
               autoFocus
             />
           </div>
 
           <div>
-            <Label htmlFor="deck-description">Descripción (opcional)</Label>
+            <Label htmlFor="deck-description" className="text-sm">Descripción (opcional)</Label>
             <Textarea
               id="deck-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe tu mazo, estrategia, o cualquier información relevante..."
-              className="mt-2"
-              rows={4}
+              className="mt-1.5 sm:mt-2"
+              rows={2}
+              style={{ minHeight: '60px' }}
             />
           </div>
 
           <div>
-            <Label className="text-sm font-medium mb-2 block">Tags del Mazo</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+            <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">Tags del Mazo</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
               {DECK_TAGS.map((tag) => (
-                <div key={tag} className="flex items-center space-x-2">
+                <div key={tag} className="flex items-center space-x-1.5 sm:space-x-2">
                   <Checkbox
                     id={`tag-${tag}`}
                     checked={tags.includes(tag)}
@@ -131,7 +132,7 @@ export function SaveDeckModal({
                   />
                   <Label
                     htmlFor={`tag-${tag}`}
-                    className="text-sm font-normal leading-none cursor-pointer"
+                    className="text-xs sm:text-sm font-normal leading-none cursor-pointer"
                   >
                     {tag}
                   </Label>
@@ -146,28 +147,30 @@ export function SaveDeckModal({
               checked={isPublic}
               onCheckedChange={(checked) => setIsPublic(checked === true)}
             />
-            <div className="space-y-1">
+            <div className="space-y-0.5 sm:space-y-1">
               <Label
                 htmlFor="is-public"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
                 Publicar en la comunidad
               </Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Al publicar, tu mazo será visible para todos los usuarios en "Mazos de la Comunidad"
               </p>
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             <p>Total de cartas: {deckCards.reduce((sum, dc) => sum + dc.quantity, 0)}</p>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} className="text-xs sm:text-sm h-8 sm:h-9">
             Cancelar
           </Button>
-          <Button onClick={handleSave}>Guardar</Button>
+          <Button onClick={handleSave} className="text-xs sm:text-sm h-8 sm:h-9">
+            Guardar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -111,9 +111,9 @@ export default function RootLayout({
           <ErrorBoundary>
             <AuthProviderWrapper>
               <Navbar />
-              {/* Banner superior de anuncios */}
+              {/* Banner superior de anuncios - Solo visible en desktop */}
               {adsenseId && (
-                <div className="w-full border-b border-border/40 bg-muted/30 py-2">
+                <div className="hidden lg:block w-full border-b border-border/40 bg-muted/30 py-2">
                   <div className="container mx-auto px-4">
                     <AdBanner position="top" />
                   </div>

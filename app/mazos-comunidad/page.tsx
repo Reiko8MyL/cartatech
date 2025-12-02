@@ -585,7 +585,7 @@ function MazosComunidadPage() {
               return (
                 <Fragment key={`deck-wrapper-${deck.id}`}>
                   {shouldShowAd && (
-                    <div className="col-span-full flex justify-center my-4">
+                    <div className="hidden lg:flex col-span-full justify-center my-4">
                       <AdInline />
                     </div>
                   )}

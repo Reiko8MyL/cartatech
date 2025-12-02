@@ -18,15 +18,26 @@ export function AdContainer({ position, className = "" }: AdContainerProps) {
       return
     }
 
-    // Verificar si AdSense ya está cargado
-    if ((window as any).adsbygoogle) {
-      try {
-        // Intentar push del anuncio
-        ;((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({})
-      } catch (error) {
-        console.error("Error al cargar anuncio:", error)
+    // Esperar un poco para que el script de AdSense se cargue
+    const timer = setTimeout(() => {
+      // Verificar si AdSense ya está cargado
+      if ((window as any).adsbygoogle) {
+        try {
+          // Intentar push del anuncio
+          ;((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({})
+        } catch (error) {
+          // Silenciar errores de AdSense (comunes con bloqueadores de anuncios)
+          if (process.env.NODE_ENV === "development") {
+            console.debug("AdSense no disponible (puede ser bloqueador de anuncios):", error)
+          }
+        }
+      } else if (process.env.NODE_ENV === "development") {
+        // Solo en desarrollo, avisar si AdSense no está disponible
+        console.debug("AdSense no está disponible (puede ser bloqueador de anuncios)")
       }
-    }
+    }, 100)
+
+    return () => clearTimeout(timer)
   }, [])
 
   // No mostrar anuncios si no hay ID configurado

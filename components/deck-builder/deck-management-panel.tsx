@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,7 @@ import {
   Globe,
   Lock,
   Calendar,
+  GripVertical,
 } from "lucide-react"
 import type { DeckCard, DeckStats, SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import type { Card as CardType } from "@/lib/deck-builder/types"
@@ -54,6 +55,7 @@ import {
   calculateDeckStats,
   EDITION_LOGOS,
   getPrioritizedDeckTags,
+  getSavedDecksFromStorage,
 } from "@/lib/deck-builder/utils"
 import { SaveDeckModal } from "./save-deck-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -96,11 +98,25 @@ export function DeckManagementPanel({
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([])
+  const [isLoadingDecks, setIsLoadingDecks] = useState(false)
   const [copied, setCopied] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deckToDelete, setDeckToDelete] = useState<string | null>(null)
   const [showAliadosTooltip, setShowAliadosTooltip] = useState(false)
   const [showOrosTooltip, setShowOrosTooltip] = useState(false)
+  const [showTotalCartasTooltip, setShowTotalCartasTooltip] = useState(false)
+  
+  // Estados para el panel deslizable (solo en pantallas < 1024px)
+  const [panelHeight, setPanelHeight] = useState(200) // Altura inicial en px
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStartY, setDragStartY] = useState(0)
+  const [dragStartHeight, setDragStartHeight] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  
+  // Alturas mínima y máxima del panel
+  const MIN_HEIGHT = 120 // Solo muestra el header cuando está colapsado
+  const getMaxHeight = () => typeof window !== "undefined" ? window.innerHeight * 0.85 : 800
 
   function handleSaveName() {
     onDeckNameChange(tempName)
@@ -206,8 +222,19 @@ export function DeckManagementPanel({
       if (savedDeck) {
         onDeckNameChange(deckData.name)
         toastSuccess("Mazo guardado correctamente")
-        // Actualizar la lista de mazos guardados
-        setSavedDecks(getSavedDecksFromLocalStorage())
+        // Actualizar la lista de mazos guardados desde la API
+        if (user) {
+          try {
+            const decks = await getSavedDecksFromStorage(user.id)
+            setSavedDecks(decks)
+          } catch (error) {
+            console.error("Error al actualizar lista de mazos:", error)
+            // Fallback a localStorage
+            setSavedDecks(getUserDecksFromLocalStorage(user.id))
+          }
+        } else {
+          setSavedDecks(getSavedDecksFromLocalStorage())
+        }
       } else {
         toastError("Error al guardar el mazo. Por favor intenta de nuevo.")
       }
@@ -228,13 +255,28 @@ export function DeckManagementPanel({
     setDeleteDialogOpen(true)
   }
 
-  function confirmDeleteDeck() {
-    if (!deckToDelete) return
+  async function confirmDeleteDeck() {
+    if (!deckToDelete || !user) return
 
-    deleteDeckFromLocalStorage(deckToDelete)
-    setSavedDecks(getSavedDecksFromLocalStorage())
-    toastSuccess("Mazo eliminado correctamente")
-    setDeckToDelete(null)
+    try {
+      // Usar la función que elimina de la API si hay usuario
+      const { deleteDeckFromStorage } = await import("@/lib/deck-builder/utils")
+      await deleteDeckFromStorage(deckToDelete, user.id)
+      
+      // Recargar la lista de mazos
+      const decks = await getSavedDecksFromStorage(user.id)
+      setSavedDecks(decks)
+      
+      toastSuccess("Mazo eliminado correctamente")
+    } catch (error) {
+      console.error("Error al eliminar mazo:", error)
+      // Fallback a localStorage si hay error
+      deleteDeckFromLocalStorage(deckToDelete)
+      setSavedDecks(getUserDecksFromLocalStorage(user.id))
+      toastSuccess("Mazo eliminado correctamente")
+    } finally {
+      setDeckToDelete(null)
+    }
   }
 
   function handleExportList() {
@@ -589,13 +631,26 @@ export function DeckManagementPanel({
     }
   }
 
-  function openLoadDialog() {
+  async function openLoadDialog() {
     if (!user) {
       toastError("Debes iniciar sesión para cargar mazos guardados")
       return
     }
-    setSavedDecks(getUserDecksFromLocalStorage(user.id))
+    
+    setIsLoadingDecks(true)
     setShowLoadDialog(true)
+    
+    try {
+      // Usar la función que obtiene de la API primero, luego fallback a localStorage
+      const decks = await getSavedDecksFromStorage(user.id)
+      setSavedDecks(decks)
+    } catch (error) {
+      console.error("Error al cargar mazos:", error)
+      // Fallback a localStorage si hay error
+      setSavedDecks(getUserDecksFromLocalStorage(user.id))
+    } finally {
+      setIsLoadingDecks(false)
+    }
   }
 
   // Calcular información adicional para cada mazo guardado
@@ -670,10 +725,182 @@ export function DeckManagementPanel({
       .filter((item): item is NonNullable<typeof item> => item !== null)
   }, [deckCardsGrouped, cardMap])
 
+  // Detectar si estamos en móvil
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 1024)
+      if (window.innerWidth >= 1024) {
+        setPanelHeight(200) // Reset cuando vuelve a desktop
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Handlers para el drag del panel (solo en pantallas < 1024px)
+  function handleDragStart(e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) {
+    if (!isMobile) return
+    
+    setIsDragging(true)
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    setDragStartY(clientY)
+    setDragStartHeight(panelHeight)
+    
+    // Prevenir scroll del fondo
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // Prevenir scroll del body
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+  }
+
+  function handleDragMove(e: MouseEvent | TouchEvent) {
+    if (!isDragging || !isMobile) return
+    
+    // Prevenir scroll del fondo
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    const deltaY = dragStartY - clientY // Negativo cuando arrastra hacia arriba
+    const maxHeight = getMaxHeight()
+    const newHeight = Math.max(MIN_HEIGHT, Math.min(maxHeight, dragStartHeight + deltaY))
+    setPanelHeight(newHeight)
+  }
+
+  function handleDragEnd() {
+    if (!isDragging || !isMobile) return
+    
+    setIsDragging(false)
+    
+    // Restaurar scroll del body
+    document.body.style.overflow = ''
+    document.body.style.touchAction = ''
+    
+    const maxHeight = getMaxHeight()
+    // Snap a posiciones cercanas
+    const threshold = (maxHeight - MIN_HEIGHT) / 3
+    if (panelHeight < MIN_HEIGHT + threshold) {
+      setPanelHeight(MIN_HEIGHT)
+    } else if (panelHeight > maxHeight - threshold) {
+      setPanelHeight(maxHeight)
+    } else {
+      // Snap al medio
+      setPanelHeight((MIN_HEIGHT + maxHeight) / 2)
+    }
+  }
+
+  // Efectos para manejar eventos globales de drag
+  useEffect(() => {
+    if (isDragging && isMobile) {
+      document.addEventListener('mousemove', handleDragMove)
+      document.addEventListener('mouseup', handleDragEnd)
+      document.addEventListener('touchmove', handleDragMove, { passive: false })
+      document.addEventListener('touchend', handleDragEnd)
+      
+      return () => {
+        document.removeEventListener('mousemove', handleDragMove)
+        document.removeEventListener('mouseup', handleDragEnd)
+        document.removeEventListener('touchmove', handleDragMove)
+        document.removeEventListener('touchend', handleDragEnd)
+      }
+    }
+  }, [isDragging, isMobile, dragStartY, dragStartHeight, panelHeight])
+
+  // Actualizar altura cuando cambia el tamaño de la ventana
+  useEffect(() => {
+    if (!isMobile) return
+    
+    function updateMaxHeight() {
+      const newMaxHeight = window.innerHeight * 0.85
+      if (panelHeight > newMaxHeight) {
+        setPanelHeight(newMaxHeight)
+      }
+    }
+    
+    window.addEventListener('resize', updateMaxHeight)
+    return () => window.removeEventListener('resize', updateMaxHeight)
+  }, [panelHeight, isMobile])
+
+  // Prevenir scroll del fondo cuando el panel está expandido en móvil
+  useEffect(() => {
+    if (!isMobile) return
+    
+    if (panelHeight > MIN_HEIGHT + 50) {
+      // Panel expandido: prevenir scroll del fondo
+      document.body.style.overflow = 'hidden'
+      document.body.style.touchAction = 'none'
+    } else {
+      // Panel colapsado: permitir scroll del fondo
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+    }
+    
+    return () => {
+      // Limpiar al desmontar o cambiar a desktop
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+    }
+  }, [panelHeight, isMobile])
+
+  const maxHeight = getMaxHeight()
+  const overlayOpacity = isMobile && panelHeight > MIN_HEIGHT + 50 
+    ? (panelHeight - MIN_HEIGHT) / (maxHeight - MIN_HEIGHT)
+    : 0
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Encabezado con nombre del mazo */}
-      <div className="p-2 sm:p-3 lg:p-4 border-b space-y-3">
+    <>
+      {/* Overlay cuando el panel está expandido en móvil */}
+      {isMobile && panelHeight > MIN_HEIGHT + 50 && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden transition-opacity duration-300"
+          onClick={() => setPanelHeight(MIN_HEIGHT)}
+          onTouchMove={(e) => e.preventDefault()}
+          style={{
+            opacity: overlayOpacity,
+            touchAction: 'none',
+          }}
+        />
+      )}
+      
+      <div 
+        ref={panelRef}
+        className="flex flex-col h-full lg:h-full bg-card overflow-hidden"
+        style={{
+          ...(isMobile ? {
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: `${panelHeight}px`,
+            maxHeight: '85vh',
+            zIndex: 40,
+            transition: isDragging ? 'none' : 'height 0.3s ease-out',
+            borderTopLeftRadius: '1rem',
+            borderTopRightRadius: '1rem',
+            boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1)',
+          } : {})
+        }}
+      >
+        {/* Handle para arrastrar (solo visible en pantallas < 1024px) */}
+        {isMobile && (
+          <div
+            className="flex items-center justify-center py-2 cursor-grab active:cursor-grabbing touch-none lg:hidden select-none"
+            style={{ touchAction: 'none' }}
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            onTouchMove={(e) => e.preventDefault()}
+          >
+            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+            <GripVertical className="size-4 text-muted-foreground/50 ml-2" />
+          </div>
+        )}
+        
+        {/* Encabezado con nombre del mazo */}
+        <div className="p-2 sm:p-3 lg:p-4 border-b space-y-3">
         <div className="flex items-center gap-2">
           {isEditingName ? (
             <>
@@ -739,9 +966,47 @@ export function DeckManagementPanel({
         <h3 className="text-sm font-semibold">Estadísticas</h3>
         <div className="space-y-1.5 text-sm">
           <div className="flex gap-4">
-            <div>
+            <div className="relative inline-flex items-center gap-0.5">
               <span className="text-muted-foreground">Total cartas: </span>
-              <span className="font-medium">{stats.totalCards}</span>
+              <span
+                className={`font-medium ${
+                  stats.totalCards === 50
+                    ? "text-green-600 dark:text-green-500"
+                    : stats.totalCards < 50
+                    ? "text-destructive"
+                    : ""
+                }`}
+              >
+                {stats.totalCards}
+              </span>
+              {stats.totalCards < 50 && (
+                <div className="relative inline-block">
+                  <button
+                    type="button"
+                    className="text-destructive hover:text-destructive/80 transition-colors text-[0.7rem] leading-none align-super"
+                    onMouseEnter={() => setShowTotalCartasTooltip(true)}
+                    onMouseLeave={() => setShowTotalCartasTooltip(false)}
+                    onClick={() => setShowTotalCartasTooltip(!showTotalCartasTooltip)}
+                    aria-label="Información sobre Total de Cartas"
+                  >
+                    (?)
+                  </button>
+                  {showTotalCartasTooltip && (
+                    <div
+                      className="absolute bottom-full left-0 mb-2 z-50"
+                      onMouseEnter={() => setShowTotalCartasTooltip(true)}
+                      onMouseLeave={() => setShowTotalCartasTooltip(false)}
+                    >
+                      <div className="bg-popover text-popover-foreground text-xs rounded-none border shadow-md px-3 py-2 w-[140px] whitespace-normal break-words">
+                        El mazo necesita 50 cartas
+                        <div className="absolute top-full left-4 -mt-1">
+                          <div className="border-4 border-transparent border-t-popover" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <span className="text-muted-foreground">Coste promedio: </span>
@@ -782,7 +1047,7 @@ export function DeckManagementPanel({
                         onMouseEnter={() => setShowAliadosTooltip(true)}
                         onMouseLeave={() => setShowAliadosTooltip(false)}
                       >
-                        <div className="bg-popover text-popover-foreground text-xs rounded-md border shadow-md px-3 py-2 max-w-[200px] whitespace-normal break-words">
+                        <div className="bg-popover text-popover-foreground text-xs rounded-none border shadow-md px-3 py-2 w-[140px] whitespace-normal break-words">
                           El mínimo de Aliados por mazo es de 16
                           <div className="absolute top-full left-4 -mt-1">
                             <div className="border-4 border-transparent border-t-popover" />
@@ -834,7 +1099,7 @@ export function DeckManagementPanel({
                       onMouseEnter={() => setShowOrosTooltip(true)}
                       onMouseLeave={() => setShowOrosTooltip(false)}
                     >
-                      <div className="bg-popover text-popover-foreground text-xs rounded-md border shadow-md px-3 py-2 max-w-[200px] whitespace-normal break-words">
+                      <div className="bg-popover text-popover-foreground text-xs rounded-none border shadow-md px-3 py-2 w-[140px] whitespace-normal break-words">
                         Agrega un Oro Inicial (Sin habilidad)
                         <div className="absolute top-full right-4 -mt-1">
                           <div className="border-4 border-transparent border-t-popover" />
@@ -851,22 +1116,23 @@ export function DeckManagementPanel({
 
       {/* Botones de acción */}
       <div className="p-2 sm:p-3 lg:p-4 border-b space-y-2">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-row gap-1 overflow-x-auto lg:grid lg:grid-cols-2 lg:gap-2 lg:overflow-visible">
           <Button
             variant="outline"
             size="sm"
             onClick={handleCopyCode}
-            className="w-full"
+            className="lg:w-full flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
           >
             {copied ? (
               <>
-                <Check className="size-4 mr-2" />
-                Copiado
+                <Check className="size-3 lg:size-4" />
+                <span className="hidden lg:inline">Copiado</span>
               </>
             ) : (
               <>
-                <Copy className="size-4 mr-2" />
-                Código TTS
+                <Copy className="size-3 lg:size-4" />
+                <span className="hidden lg:inline">Código TTS</span>
+                <span className="lg:hidden">TTS</span>
               </>
             )}
           </Button>
@@ -874,9 +1140,11 @@ export function DeckManagementPanel({
             variant="outline" 
             size="sm" 
             onClick={handleSaveDeck}
+            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
           >
-            <Save className="size-4 mr-2" />
-            Guardar
+            <Save className="size-3 lg:size-4" />
+            <span className="hidden lg:inline">Guardar</span>
+            <span className="lg:hidden">Guardar</span>
           </Button>
           <Button 
             variant="outline" 
@@ -884,32 +1152,61 @@ export function DeckManagementPanel({
             onClick={openLoadDialog}
             disabled={!user}
             title={!user ? "Debes iniciar sesión para cargar mazos" : ""}
+            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
           >
-            <Loader2 className="size-4 mr-2" />
-            Cargar
+            <Loader2 className="size-3 lg:size-4" />
+            <span className="hidden lg:inline">Cargar</span>
+            <span className="lg:hidden">Cargar</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={onClearDeck}
-            className="text-destructive"
+            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 text-destructive lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
           >
-            <Trash2 className="size-4 mr-2" />
-            Borrar
+            <Trash2 className="size-3 lg:size-4" />
+            <span className="hidden lg:inline">Borrar</span>
+            <span className="lg:hidden">Borrar</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportImage}>
-            <Download className="size-4 mr-2" />
-            Exportar imagen
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportImage}
+            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
+          >
+            <Download className="size-3 lg:size-4" />
+            <span className="hidden lg:inline">Exportar imagen</span>
+            <span className="lg:hidden">Exp. Img</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportList}>
-            <FileText className="size-4 mr-2" />
-            Exportar lista
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportList}
+            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
+          >
+            <FileText className="size-3 lg:size-4" />
+            <span className="hidden lg:inline">Exportar lista</span>
+            <span className="lg:hidden">Exp. List</span>
           </Button>
         </div>
       </div>
 
       {/* Lista de cartas del mazo */}
-      <div className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4">
+      <div 
+        className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+        onTouchStart={(e) => {
+          // Prevenir que el scroll del fondo se active cuando se toca dentro del panel
+          if (isMobile && panelHeight > MIN_HEIGHT + 50) {
+            e.stopPropagation()
+          }
+        }}
+        onWheel={(e) => {
+          // Prevenir scroll del fondo cuando se hace scroll dentro del panel en móvil
+          if (isMobile && panelHeight > MIN_HEIGHT + 50) {
+            e.stopPropagation()
+          }
+        }}
+      >
         {deckCardsGrouped.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             No hay cartas en el mazo
@@ -1010,7 +1307,12 @@ export function DeckManagementPanel({
             </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-            {decksWithMetadata.length === 0 ? (
+            {isLoadingDecks ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Cargando mazos...</span>
+              </div>
+            ) : decksWithMetadata.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No hay mazos guardados
               </p>
@@ -1197,7 +1499,8 @@ export function DeckManagementPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   )
 }
 

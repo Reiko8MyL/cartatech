@@ -232,13 +232,24 @@ export function saveDeckToLocalStorage(deck: SavedDeck): SavedDeck | null {
 export async function getSavedDecksFromStorage(userId?: string): Promise<SavedDeck[]> {
   if (typeof window === "undefined") return [];
 
-  // Si hay usuario, usar API
+  // Si hay usuario, usar API primero
   if (userId) {
-    const { getUserDecks } = await import("@/lib/api/decks");
-    return await getUserDecks(userId);
+    try {
+      const { getUserDecks } = await import("@/lib/api/decks");
+      const decks = await getUserDecks(userId);
+      // Si la API devuelve mazos, usarlos
+      if (decks && decks.length >= 0) {
+        return decks;
+      }
+    } catch (error) {
+      console.warn("Error al obtener mazos de la API, usando localStorage:", error);
+      // Fallback a localStorage si la API falla
+    }
+    // Fallback a localStorage si no hay mazos o si hubo error
+    return getUserDecksFromLocalStorage(userId);
   }
 
-  // Fallback a localStorage
+  // Fallback a localStorage para usuarios no autenticados
   return getSavedDecksFromLocalStorage();
 }
 

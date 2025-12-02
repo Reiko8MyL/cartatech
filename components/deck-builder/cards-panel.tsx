@@ -85,7 +85,7 @@ export function CardsPanel({
                 <h2 className="text-lg font-semibold sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
                   {edition}
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
+                <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
                   {editionCards.map((card) => {
                     const quantity = getCardQuantity(card.id)
                     const maxQuantity = getMaxQuantity(card)

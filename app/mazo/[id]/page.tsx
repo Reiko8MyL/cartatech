@@ -20,6 +20,7 @@ import {
   toggleDeckLike,
   getDeckLikesFromLocalStorage,
   saveDeckToLocalStorage,
+  saveDeckToStorage,
   incrementDeckView,
   getDeckViewCount,
   getDeckFormatName,
@@ -301,7 +302,7 @@ export default function ViewDeckPage() {
     router.push(`/deck-builder?load=${deck.id}`)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingDeck || !editName.trim() || !user) {
       toastError("El nombre del mazo no puede estar vacío")
       return
@@ -317,15 +318,40 @@ export default function ViewDeckPage() {
       tags: editTags.length > 0 ? editTags : undefined,
     }
 
-    saveDeckToLocalStorage(updatedDeck)
-    setDeck(updatedDeck)
-    setEditingDeck(null)
-    setEditName("")
-    setEditDescription("")
-    setEditIsPublic(false)
-    setEditTags([])
-    
-    toastSuccess("Mazo actualizado correctamente")
+    try {
+      // Guardar en la base de datos si hay usuario, o en localStorage como fallback
+      const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      if (savedDeck) {
+        setDeck(savedDeck)
+        setEditingDeck(null)
+        setEditName("")
+        setEditDescription("")
+        setEditIsPublic(false)
+        setEditTags([])
+        toastSuccess("Mazo actualizado correctamente")
+      } else {
+        // Fallback a localStorage si falla la API
+        saveDeckToLocalStorage(updatedDeck)
+        setDeck(updatedDeck)
+        setEditingDeck(null)
+        setEditName("")
+        setEditDescription("")
+        setEditIsPublic(false)
+        setEditTags([])
+        toastSuccess("Mazo actualizado correctamente (guardado local)")
+      }
+    } catch (error) {
+      console.error("Error al guardar mazo:", error)
+      // Fallback a localStorage si hay error
+      saveDeckToLocalStorage(updatedDeck)
+      setDeck(updatedDeck)
+      setEditingDeck(null)
+      setEditName("")
+      setEditDescription("")
+      setEditIsPublic(false)
+      setEditTags([])
+      toastSuccess("Mazo actualizado correctamente (guardado local)")
+    }
   }
 
   const handleToggleTag = (tag: string) => {
@@ -403,7 +429,7 @@ export default function ViewDeckPage() {
     })
   }, [deck, allCards])
 
-  const handleSelectTechCard = (cardId: string) => {
+  const handleSelectTechCard = async (cardId: string) => {
     if (!deck || !user || deck.userId !== user.id) return
 
     const updatedDeck: SavedDeck = {
@@ -411,13 +437,31 @@ export default function ViewDeckPage() {
       techCardId: cardId,
     }
 
-    saveDeckToLocalStorage(updatedDeck)
-    setDeck(updatedDeck)
-    setTechCardSelectorOpen(false)
-    toastSuccess("La Carta Tech ha sido actualizada")
+    try {
+      // Guardar en la base de datos si hay usuario, o en localStorage como fallback
+      const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      if (savedDeck) {
+        setDeck(savedDeck)
+        setTechCardSelectorOpen(false)
+        toastSuccess("La Carta Tech ha sido actualizada")
+      } else {
+        // Fallback a localStorage si falla la API
+        saveDeckToLocalStorage(updatedDeck)
+        setDeck(updatedDeck)
+        setTechCardSelectorOpen(false)
+        toastSuccess("La Carta Tech ha sido actualizada")
+      }
+    } catch (error) {
+      console.error("Error al guardar carta tech:", error)
+      // Fallback a localStorage si hay error
+      saveDeckToLocalStorage(updatedDeck)
+      setDeck(updatedDeck)
+      setTechCardSelectorOpen(false)
+      toastSuccess("La Carta Tech ha sido actualizada (guardado local)")
+    }
   }
 
-  const handleRemoveTechCard = () => {
+  const handleRemoveTechCard = async () => {
     if (!deck || !user || deck.userId !== user.id) return
 
     const updatedDeck: SavedDeck = {
@@ -425,9 +469,25 @@ export default function ViewDeckPage() {
       techCardId: undefined,
     }
 
-    saveDeckToLocalStorage(updatedDeck)
-    setDeck(updatedDeck)
-    toastSuccess("La Carta Tech ha sido eliminada")
+    try {
+      // Guardar en la base de datos si hay usuario, o en localStorage como fallback
+      const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      if (savedDeck) {
+        setDeck(savedDeck)
+        toastSuccess("La Carta Tech ha sido eliminada")
+      } else {
+        // Fallback a localStorage si falla la API
+        saveDeckToLocalStorage(updatedDeck)
+        setDeck(updatedDeck)
+        toastSuccess("La Carta Tech ha sido eliminada")
+      }
+    } catch (error) {
+      console.error("Error al eliminar carta tech:", error)
+      // Fallback a localStorage si hay error
+      saveDeckToLocalStorage(updatedDeck)
+      setDeck(updatedDeck)
+      toastSuccess("La Carta Tech ha sido eliminada (guardado local)")
+    }
   }
 
   if (!deck || !deckMetadata) {
