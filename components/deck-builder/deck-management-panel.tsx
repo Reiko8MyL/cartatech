@@ -1117,7 +1117,7 @@ export function DeckManagementPanel({
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleDeleteDeck(deck.id)}
+                        onClick={() => deck.id && handleDeleteDeck(deck.id)}
                         className="px-3"
                       >
                         <Trash2 className="size-4" />
