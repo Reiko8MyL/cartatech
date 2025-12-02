@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getUserProfile, type UserProfile } from "@/lib/api/users"
 import { getAllCards, getDeckRace, getDeckEdition, getDeckBackgroundImage, EDITION_LOGOS, getDeckFormatName } from "@/lib/deck-builder/utils"
+import type { DeckFormat } from "@/lib/deck-builder/types"
 import { Eye, Calendar, Heart, Globe, User, ArrowLeft } from "lucide-react"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 
@@ -197,7 +198,7 @@ export default function UserProfilePage() {
                             </span>
                           )}
                           <span className="px-2 py-1 bg-blue-500/10 text-blue-500 rounded-md">
-                            {getDeckFormatName(deck.format)}
+                            {getDeckFormatName(deck.format as DeckFormat)}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground">
