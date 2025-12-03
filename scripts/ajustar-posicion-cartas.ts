@@ -133,3 +133,4 @@ VALORES RECOMENDADOS:
 - 35-45%: Muestra más la parte inferior de la carta
 `);
 
+

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { getAllCardsMetadata, updateCardMetadata, getCardMetadata } from "@/lib/api/cards"
-import { getAllCards } from "@/lib/deck-builder/utils"
+import { getAllCards, getAlternativeArtCards } from "@/lib/deck-builder/utils"
 import type { Card as CardType } from "@/lib/deck-builder/types"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { Search, Save, RotateCcw, Loader2, Filter } from "lucide-react"
@@ -39,8 +39,11 @@ export default function AjustarCartasPage() {
     async function loadData() {
       setIsLoading(true)
       try {
-        const cards = getAllCards()
-        setAllCards(cards)
+        // Cargar cartas principales y alternativas
+        const mainCards = getAllCards()
+        const altCards = getAlternativeArtCards()
+        const allCardsCombined = [...mainCards, ...altCards]
+        setAllCards(allCardsCombined)
         
         const metadata = await getAllCardsMetadata()
         setMetadataMap(metadata)

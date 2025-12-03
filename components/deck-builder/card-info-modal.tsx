@@ -72,6 +72,14 @@ export function CardInfoModal({
 
   // Función para agregar carta (agrega la alternativa si está seleccionada, sino la original)
   const handleAddCard = () => {
+    // Calcular total de cartas en el mazo
+    const totalCards = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
+    
+    // Verificar límite total de 50 cartas
+    if (totalCards >= 50) {
+      return // No permitir agregar más cartas si ya hay 50
+    }
+    
     if (isShowingAlternative && selectedAlternativeCard) {
       // Si se está mostrando una alternativa, agregar esa alternativa
       if (cardInDeck && cardInDeck.cardId !== selectedAlternativeCard.id) {

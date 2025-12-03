@@ -114,3 +114,4 @@ R: Prueba diferentes valores en la interfaz web y ve cuál se ve mejor. La vista
 - ✅ Usa la interfaz web en `/admin/ajustar-cartas` para ajustar visualmente
 - ✅ O usa las funciones API si prefieres hacerlo programáticamente
 
+

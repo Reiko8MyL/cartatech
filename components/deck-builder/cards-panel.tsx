@@ -91,6 +91,14 @@ export function CardsPanel({
     // Si no, usar la carta original
     const cardToCheck = displayedCard || card
     
+    // Calcular total de cartas en el mazo
+    const totalCards = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
+    
+    // Verificar límite total de 50 cartas
+    if (totalCards >= 50) {
+      return // No permitir agregar más cartas si ya hay 50
+    }
+    
     // Obtener la carta que realmente se debe agregar (puede ser alternativa si está reemplazada)
     const cardIdToAdd = getCardIdToAdd(card)
     const cardToAdd = altCardsMap.get(cardIdToAdd) || cardToCheck
@@ -103,7 +111,7 @@ export function CardsPanel({
     if (totalQuantity < maxQuantity) {
       onAddCard(cardIdToAdd)
     }
-  }, [baseCardQuantityMap, onAddCard, deckFormat, getCardIdToAdd, altCardsMap])
+  }, [baseCardQuantityMap, onAddCard, deckFormat, getCardIdToAdd, altCardsMap, deckCards])
 
   const getCardQuantity = useCallback((cardId: string): number => {
     // Retornar la cantidad total considerando todas las variantes (original + alternativas)
@@ -154,7 +162,12 @@ export function CardsPanel({
                     const cardToDisplay = getCardToDisplay(card)
                     const quantity = getCardQuantity(card.id)
                     const maxQuantity = getMaxQuantity(cardToDisplay)
-                    const canAddMore = quantity < maxQuantity
+                    
+                    // Calcular total de cartas en el mazo
+                    const totalCards = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
+                    
+                    // Verificar si se puede agregar más: debe cumplir límite individual Y límite total de 50
+                    const canAddMore = quantity < maxQuantity && totalCards < 50
 
                     return (
                       <CardItem

@@ -192,6 +192,12 @@ export function DeckManagementPanel({
   const [showOrosTooltip, setShowOrosTooltip] = useState(false)
   const [showTotalCartasTooltip, setShowTotalCartasTooltip] = useState(false)
   
+  // Estados para el modal de exportación
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportType, setExportType] = useState<"horizontal" | "vertical">("horizontal")
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
+  
   // Metadatos de cartas (ajustes personalizados de posición Y)
   const [cardMetadataMap, setCardMetadataMap] = useState<Record<string, number>>({})
   
@@ -426,8 +432,187 @@ export function DeckManagementPanel({
     URL.revokeObjectURL(url)
   }
 
-  async function handleExportImage() {
-    if (typeof document === "undefined") return
+  // Función auxiliar para cargar imágenes
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+
+  // Función auxiliar para dibujar badges redondeados
+  function drawRoundedRectPath(
+    ctx2: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number
+  ) {
+    const radius = Math.min(r, h / 2, w / 2)
+    ctx2.beginPath()
+    ctx2.moveTo(x + radius, y)
+    ctx2.lineTo(x + w - radius, y)
+    ctx2.quadraticCurveTo(x + w, y, x + w, y + radius)
+    ctx2.lineTo(x + w, y + h - radius)
+    ctx2.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+    ctx2.lineTo(x + radius, y + h)
+    ctx2.quadraticCurveTo(x, y + h, x, y + h - radius)
+    ctx2.lineTo(x, y + radius)
+    ctx2.quadraticCurveTo(x, y, x + radius, y)
+    ctx2.closePath()
+  }
+
+  // Función auxiliar para dibujar título y badges
+  async function drawTitleAndBadges(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    deckName: string,
+    stats: DeckStats,
+    cropFromRight: boolean = false
+  ) {
+    const backgroundUrl =
+      "https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435880/EXPORTADO_WEBPPP_jxcgox.webp"
+    const bg = await loadImage(backgroundUrl)
+    
+    if (cropFromRight) {
+      // Cortar desde la derecha: la imagen de fondo es 1920x1080, queremos cortar una sección cuadrada 1080x1080 desde la izquierda
+      // Calcular qué parte de la imagen fuente usar (mantener altura completa, cortar ancho)
+      const sourceAspectRatio = bg.width / bg.height // 1920/1080 = 1.777...
+      const targetAspectRatio = width / ctx.canvas.height // 1080/1080 = 1.0
+      
+      if (sourceAspectRatio > targetAspectRatio) {
+        // La imagen fuente es más ancha, cortar desde la derecha
+        const sourceWidth = bg.height * targetAspectRatio // altura * 1.0 = altura
+        ctx.drawImage(
+          bg,
+          0, 0, // origen en la imagen fuente (esquina superior izquierda)
+          sourceWidth, bg.height, // tamaño del área a copiar (cuadrado desde la izquierda)
+          0, 0, // destino en el canvas
+          width, ctx.canvas.height // tamaño en el canvas (1080x1080)
+        )
+      } else {
+        // Si la imagen fuente no es lo suficientemente ancha, escalar normalmente
+        ctx.drawImage(bg, 0, 0, width, ctx.canvas.height)
+      }
+    } else {
+      // Escalar normalmente
+      ctx.drawImage(bg, 0, 0, width, ctx.canvas.height)
+    }
+
+    // Título del mazo
+    ctx.fillStyle = "white"
+    ctx.textBaseline = "top"
+    ctx.font = "bold 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+    ctx.fillText(deckName || "Mazo sin nombre", 40, 20)
+
+    // Contadores por tipo en óvalos con iconos
+    const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
+    interface TypeBadge {
+      key: string
+      label: string
+    }
+    const typeBadges: TypeBadge[] = [
+      { key: "Aliado", label: "Aliados" },
+      { key: "Arma", label: "Armas" },
+      { key: "Talismán", label: "Talismanes" },
+      { key: "Tótem", label: "Tótems" },
+      { key: "Oro", label: "Oros" },
+    ]
+
+    const badgeTop = 52
+    let badgeX = 40
+    const badgeGapX = 14
+    const labelFont = "bold 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+    const countFont = "16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+
+    // Mapa de URLs de iconos por tipo
+    const iconUrls: Record<string, string> = {
+      Aliado: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
+      Arma: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/arma_icono_dgmgej.webp",
+      Talismán: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/talisman_icono_kco7k9.webp",
+      Tótem: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/totem_icono_fk5p2k.webp",
+      Oro: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Oro_icono_godhwp.webp",
+    }
+
+    // Cargar todos los iconos
+    const iconImages = new Map<string, HTMLImageElement>()
+    for (const [key, url] of Object.entries(iconUrls)) {
+      try {
+        const img = await loadImage(url)
+        iconImages.set(key, img)
+      } catch {
+        // Si falla la carga, continuamos sin ese icono
+      }
+    }
+
+    for (const badge of typeBadges) {
+      const count = stats.cardsByType[badge.key] || 0
+
+      // Medir texto
+      ctx.font = labelFont
+      const labelText = `${badge.label}:`
+      const labelWidth = ctx.measureText(labelText).width
+
+      ctx.font = countFont
+      const countText = String(count)
+      const countWidth = ctx.measureText(countText).width
+
+      const textBlockWidth = Math.max(labelWidth, countWidth)
+      const iconBoxSize = 40
+      const horizontalPadding = 18
+      const innerGap = 14
+
+      const badgeWidth =
+        horizontalPadding + textBlockWidth + innerGap + iconBoxSize + horizontalPadding
+      const badgeHeight = 48
+      const radius = badgeHeight / 2
+
+      // Dibuja óvalo de fondo
+      drawRoundedRectPath(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, radius)
+      ctx.fillStyle = "#302146"
+      ctx.fill()
+
+      // Texto (tipo y cantidad) centrado
+      const textCenterX = badgeX + horizontalPadding + textBlockWidth / 2
+      const labelY = badgeTop + badgeHeight * 0.42
+      const countY = badgeTop + badgeHeight * 0.78
+
+      ctx.fillStyle = "white"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "alphabetic"
+      ctx.font = labelFont
+      ctx.fillText(labelText, textCenterX, labelY)
+
+      ctx.font = countFont
+      ctx.fillText(countText, textCenterX, countY)
+
+      // Icono de imagen a la derecha del óvalo
+      const iconCenterX = badgeX + badgeWidth - horizontalPadding - iconBoxSize / 2
+      const iconCenterY = badgeTop + badgeHeight / 2
+      const iconSize = iconBoxSize * 0.7
+      const iconImg = iconImages.get(badge.key)
+      if (iconImg) {
+        const iconX = iconCenterX - iconSize / 2
+        const iconY = iconCenterY - iconSize / 2
+        ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize)
+      }
+
+      // Restaurar alineación por defecto
+      ctx.textAlign = "left"
+      ctx.textBaseline = "top"
+
+      badgeX += badgeWidth + badgeGapX
+    }
+
+    return badgeTop + 48 + 20 // Retornar la posición Y donde empiezan las cartas
+  }
+
+  // Generar imagen horizontal (versión original)
+  async function generateHorizontalImage(): Promise<string | null> {
+    if (typeof document === "undefined") return null
 
     const canvas = document.createElement("canvas")
     const width = 1920
@@ -436,160 +621,13 @@ export function DeckManagementPanel({
     canvas.height = height
 
     const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    if (!ctx) return null
 
-    // Configurar alta calidad de renderizado
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = "high"
 
-    const loadImage = (src: string) =>
-      new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new window.Image()
-        img.crossOrigin = "anonymous"
-        img.onload = () => resolve(img)
-        img.onerror = reject
-        img.src = src
-      })
-
-    const backgroundUrl =
-      "https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435880/EXPORTADO_WEBPPP_jxcgox.webp"
-
     try {
-      const bg = await loadImage(backgroundUrl)
-      ctx.drawImage(bg, 0, 0, width, height)
-
-      // Título del mazo (fuente más pequeña y cercano a los contadores)
-      ctx.fillStyle = "white"
-      ctx.textBaseline = "top"
-      ctx.font = "bold 28px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
-      ctx.fillText(deckName || "Mazo sin nombre", 40, 20)
-
-      // Contadores por tipo en óvalos con iconos vectoriales
-      const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
-
-      interface TypeBadge {
-        key: string
-        label: string
-      }
-
-      const typeBadges: TypeBadge[] = [
-        { key: "Aliado", label: "Aliados" },
-        { key: "Arma", label: "Armas" },
-        { key: "Talismán", label: "Talismanes" },
-        { key: "Tótem", label: "Tótems" },
-        { key: "Oro", label: "Oros" },
-      ]
-
-      const badgeTop = 52
-      let badgeX = 40
-      const badgeGapX = 14
-
-      const labelFont =
-        "bold 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
-      const countFont =
-        "16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
-
-      function drawRoundedRectPath(
-        ctx2: CanvasRenderingContext2D,
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        r: number
-      ) {
-        const radius = Math.min(r, h / 2, w / 2)
-        ctx2.beginPath()
-        ctx2.moveTo(x + radius, y)
-        ctx2.lineTo(x + w - radius, y)
-        ctx2.quadraticCurveTo(x + w, y, x + w, y + radius)
-        ctx2.lineTo(x + w, y + h - radius)
-        ctx2.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
-        ctx2.lineTo(x + radius, y + h)
-        ctx2.quadraticCurveTo(x, y + h, x, y + h - radius)
-        ctx2.lineTo(x, y + radius)
-        ctx2.quadraticCurveTo(x, y, x + radius, y)
-        ctx2.closePath()
-      }
-
-      // Mapa de URLs de iconos por tipo
-      const iconUrls: Record<string, string> = {
-        Aliado: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
-        Arma: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/arma_icono_dgmgej.webp",
-        Talismán: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/talisman_icono_kco7k9.webp",
-        Tótem: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/totem_icono_fk5p2k.webp",
-        Oro: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Oro_icono_godhwp.webp",
-      }
-
-      // Cargar todos los iconos antes de dibujar los badges
-      const iconImages = new Map<string, HTMLImageElement>()
-      for (const [key, url] of Object.entries(iconUrls)) {
-        try {
-          const img = await loadImage(url)
-          iconImages.set(key, img)
-        } catch {
-          // Si falla la carga, continuamos sin ese icono
-        }
-      }
-
-      for (const badge of typeBadges) {
-        const count = stats.cardsByType[badge.key] || 0
-
-        // Medir texto
-        ctx.font = labelFont
-        const labelText = `${badge.label}:`
-        const labelWidth = ctx.measureText(labelText).width
-
-        ctx.font = countFont
-        const countText = String(count)
-        const countWidth = ctx.measureText(countText).width
-
-        const textBlockWidth = Math.max(labelWidth, countWidth)
-        const iconBoxSize = 40
-        const horizontalPadding = 18
-        const innerGap = 14
-
-        const badgeWidth =
-          horizontalPadding + textBlockWidth + innerGap + iconBoxSize + horizontalPadding
-        const badgeHeight = 48
-        const radius = badgeHeight / 2
-
-        // Dibuja óvalo de fondo
-        drawRoundedRectPath(ctx, badgeX, badgeTop, badgeWidth, badgeHeight, radius)
-        ctx.fillStyle = "#302146"
-        ctx.fill()
-
-        // Texto (tipo y cantidad) centrado en el bloque de texto del óvalo
-        const textCenterX = badgeX + horizontalPadding + textBlockWidth / 2
-        // Bajamos ligeramente el texto dentro del óvalo
-        const labelY = badgeTop + badgeHeight * 0.42
-        const countY = badgeTop + badgeHeight * 0.78
-
-        ctx.fillStyle = "white"
-        ctx.textAlign = "center"
-        ctx.textBaseline = "alphabetic"
-        ctx.font = labelFont
-        ctx.fillText(labelText, textCenterX, labelY)
-
-        ctx.font = countFont
-        ctx.fillText(countText, textCenterX, countY)
-
-        // Icono de imagen a la derecha del óvalo
-        const iconCenterX = badgeX + badgeWidth - horizontalPadding - iconBoxSize / 2
-        const iconCenterY = badgeTop + badgeHeight / 2
-        const iconSize = iconBoxSize * 0.7
-        const iconImg = iconImages.get(badge.key)
-        if (iconImg) {
-          const iconX = iconCenterX - iconSize / 2
-          const iconY = iconCenterY - iconSize / 2
-          ctx.drawImage(iconImg, iconX, iconY, iconSize, iconSize)
-        }
-
-        // Restaurar alineación por defecto para el resto del canvas
-        ctx.textAlign = "left"
-        ctx.textBaseline = "top"
-
-        badgeX += badgeWidth + badgeGapX
-      }
+      const layoutTop = await drawTitleAndBadges(ctx, width, deckName, stats)
 
       // Preparar cartas a dibujar, agrupadas por tipo
       interface CardToDraw {
@@ -597,8 +635,10 @@ export function DeckManagementPanel({
         quantity: number
       }
 
+      const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
       const cardsByTypeForImage = new Map<string, CardToDraw[]>()
-      // Orden por tipo y costo ascendente
+      
+      // Orden por tipo y costo ascendente (excepto para Oros que se ordenan por cantidad)
       const deckCardsOrdered = [...deckCards].sort((a, b) => {
         const ca = cardMap.get(a.cardId)
         const cb = cardMap.get(b.cardId)
@@ -606,10 +646,22 @@ export function DeckManagementPanel({
         const ta = typeOrder.indexOf(ca.type)
         const tb = typeOrder.indexOf(cb.type)
         if (ta !== tb) return ta - tb
+        
+        // Para Oros, ordenar por cantidad (mayor a menor) y luego oro inicial al final
+        if (ca.type === "Oro" && cb.type === "Oro") {
+          // Si uno es oro inicial y el otro no, el inicial va al final
+          if (ca.isOroIni && !cb.isOroIni) return 1
+          if (!ca.isOroIni && cb.isOroIni) return -1
+          // Si ambos son del mismo tipo (inicial o normal), ordenar por cantidad
+          return b.quantity - a.quantity
+        }
+        
+        // Para otros tipos, ordenar por costo
         const costA = ca.cost ?? 0
         const costB = cb.cost ?? 0
         return costA - costB
       })
+      
       for (const deckCard of deckCardsOrdered) {
         if (deckCard.quantity <= 0) continue
         const card = cardMap.get(deckCard.cardId)
@@ -618,28 +670,48 @@ export function DeckManagementPanel({
         list.push({ card, quantity: deckCard.quantity })
         cardsByTypeForImage.set(card.type, list)
       }
+      
+      // Asegurar que los Oros estén ordenados correctamente dentro de su grupo
+      const oroGroup = cardsByTypeForImage.get("Oro")
+      if (oroGroup) {
+        const orosIniciales: CardToDraw[] = []
+        const orosNormales: CardToDraw[] = []
+        
+        // Separar oros iniciales de oros normales
+        for (const oroCard of oroGroup) {
+          if (oroCard.card.isOroIni) {
+            orosIniciales.push(oroCard)
+          } else {
+            orosNormales.push(oroCard)
+          }
+        }
+        
+        // Ordenar cada grupo por cantidad (mayor a menor)
+        orosNormales.sort((a, b) => b.quantity - a.quantity)
+        orosIniciales.sort((a, b) => b.quantity - a.quantity)
+        
+        // Reemplazar el grupo de oros con el orden correcto
+        cardsByTypeForImage.set("Oro", [...orosNormales, ...orosIniciales])
+      }
 
-      // Parámetros base de layout de cartas (antes de escalar)
+      // Parámetros base de layout de cartas
       const baseCardWidth = 100
       const baseCardHeight = 150
       const gapX = 18
       const baseGapY = 12
-      const baseStackOffset = 10 // separación horizontal entre copias apiladas
+      const baseStackOffset = 10
 
       const marginLeft = 80
       const marginRight = 80
       const usableRight = width - marginRight
 
-      // Simular layout con tamaños base para saber cuánta altura usaría
-      const layoutTop = badgeTop + 48 + 20
+      // Simular layout para calcular escala
       let simulatedCurrentY = layoutTop
-
       for (const type of typeOrder) {
         const group = cardsByTypeForImage.get(type)
         if (!group || group.length === 0) continue
 
         simulatedCurrentY += 4
-
         let rowY = simulatedCurrentY
         let currentX = marginLeft
 
@@ -651,26 +723,22 @@ export function DeckManagementPanel({
 
         for (const { quantity } of groupOrdered) {
           const stackWidth = baseCardWidth + (quantity - 1) * baseStackOffset
-
           if (currentX + stackWidth > usableRight) {
             currentX = marginLeft
             rowY += baseCardHeight + baseGapY
           }
-
           currentX += stackWidth + gapX
         }
 
         simulatedCurrentY = rowY + baseCardHeight + baseGapY
       }
 
-      // Calcular factor de escala para aprovechar la altura disponible sin desbordar
+      // Calcular factor de escala
       const availableHeight = height - layoutTop - 40
       const usedHeight = simulatedCurrentY - layoutTop
-
       let scale = 1
       if (usedHeight > 0 && availableHeight > 0) {
         const factor = availableHeight / usedHeight
-        // Solo escalar hacia arriba, hasta un límite razonable
         if (factor > 1) {
           scale = Math.min(factor, 1.4)
         }
@@ -681,29 +749,24 @@ export function DeckManagementPanel({
       const gapY = baseGapY * scale
       const stackOffset = baseStackOffset * scale
 
-      // Posición inicial para el layout real
+      // Dibujar cartas
       let currentY = layoutTop
-
       for (const type of typeOrder) {
         const group = cardsByTypeForImage.get(type)
         if (!group || group.length === 0) continue
 
-        // Antes dibujábamos un subtítulo con el nombre del tipo.
-        // Lo removemos para ganar espacio vertical.
         currentY += 4
-
-        // Posicionamiento por filas con espaciado horizontal uniforme entre conjuntos
         let rowY = currentY
         let currentX = marginLeft
+        
         const groupOrdered = [...group].sort((a, b) => {
           const costA = a.card.cost ?? 0
           const costB = b.card.cost ?? 0
           return costA - costB
         })
+        
         for (const { card, quantity } of groupOrdered) {
           const stackWidth = cardWidth + (quantity - 1) * stackOffset
-
-          // Si no cabe en la fila actual, saltar a la siguiente fila
           if (currentX + stackWidth > usableRight) {
             currentX = marginLeft
             rowY += cardHeight + gapY
@@ -713,7 +776,7 @@ export function DeckManagementPanel({
           const baseY = rowY
           for (let i = 0; i < quantity; i++) {
             const x = baseX + i * stackOffset
-            const y = baseY // solo desplazamiento horizontal, sin diagonal
+            const y = baseY
             try {
               const img = await loadImage(card.image)
               ctx.drawImage(img, x, y, cardWidth, cardHeight)
@@ -722,27 +785,238 @@ export function DeckManagementPanel({
             }
           }
 
-          // Espaciado horizontal uniforme entre el borde derecho del conjunto
-          // actual y el borde izquierdo del siguiente conjunto.
           currentX += stackWidth + gapX
         }
 
-        // avanzar Y según la última fila usada por este tipo
         currentY = rowY + cardHeight + gapY
       }
 
-      // Exportar con máxima calidad
-      const dataUrl = canvas.toDataURL("image/png", 1.0)
-      const link = document.createElement("a")
-      link.href = dataUrl
-      link.download = `${deckName || "mazo"}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toastSuccess("Imagen del mazo exportada correctamente")
+      return canvas.toDataURL("image/png", 1.0)
     } catch {
-      toastError("No se pudo generar la imagen del mazo. Intenta nuevamente.")
+      return null
     }
+  }
+
+  // Generar imagen vertical (Instagram)
+  async function generateVerticalImage(): Promise<string | null> {
+    if (typeof document === "undefined") return null
+
+    const canvas = document.createElement("canvas")
+    const width = 1080
+    const height = 1080
+    canvas.width = width
+    canvas.height = height
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = "high"
+
+    try {
+      // Dibujar fondo cortado desde la derecha
+      const layoutTop = await drawTitleAndBadges(ctx, width, deckName, stats, true)
+
+      // Crear mapa de cantidad por carta
+      const cardQuantityMap = new Map<string, number>()
+      for (const deckCard of deckCards) {
+        if (deckCard.quantity <= 0) continue
+        const card = cardMap.get(deckCard.cardId)
+        if (!card) continue
+        cardQuantityMap.set(card.id, deckCard.quantity)
+      }
+
+      // Obtener todas las cartas únicas agrupadas por tipo
+      const cardsByType = new Map<string, Array<{ card: CardType; quantity: number }>>()
+      const seenCardIds = new Set<string>()
+      
+      // Orden de tipos (oros al final)
+      const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
+      
+      // Agrupar cartas por tipo
+      for (const deckCard of deckCards) {
+        if (deckCard.quantity <= 0) continue
+        const card = cardMap.get(deckCard.cardId)
+        if (!card) continue
+        
+        // Solo agregar una vez cada carta, pero guardar la cantidad
+        if (!seenCardIds.has(card.id)) {
+          const quantity = cardQuantityMap.get(card.id) || 1
+          const type = card.type
+          
+          if (!cardsByType.has(type)) {
+            cardsByType.set(type, [])
+          }
+          cardsByType.get(type)!.push({ card, quantity })
+          seenCardIds.add(card.id)
+        }
+      }
+      
+      // Ordenar cartas dentro de cada tipo por costo, y luego ordenar por tipo (oros al final)
+      const uniqueCards: Array<{ card: CardType; quantity: number }> = []
+      
+      // Primero agregar todos los tipos excepto Oro
+      for (const type of typeOrder) {
+        if (type === "Oro") continue
+        
+        const typeCards = cardsByType.get(type) || []
+        // Ordenar por costo dentro del tipo
+        typeCards.sort((a, b) => {
+          const costA = a.card.cost ?? 0
+          const costB = b.card.cost ?? 0
+          return costA - costB
+        })
+        uniqueCards.push(...typeCards)
+      }
+      
+      // Finalmente agregar los Oros ordenados por cantidad (mayor a menor), con oro inicial al final
+      const oroCards = cardsByType.get("Oro") || []
+      const orosIniciales: Array<{ card: CardType; quantity: number }> = []
+      const orosNormales: Array<{ card: CardType; quantity: number }> = []
+      
+      // Separar oros iniciales de oros normales
+      for (const oroCard of oroCards) {
+        if (oroCard.card.isOroIni) {
+          orosIniciales.push(oroCard)
+        } else {
+          orosNormales.push(oroCard)
+        }
+      }
+      
+      // Ordenar oros normales por cantidad (mayor a menor)
+      orosNormales.sort((a, b) => b.quantity - a.quantity)
+      
+      // Ordenar oros iniciales por cantidad (mayor a menor)
+      orosIniciales.sort((a, b) => b.quantity - a.quantity)
+      
+      // Agregar primero los oros normales, luego los oros iniciales
+      uniqueCards.push(...orosNormales, ...orosIniciales)
+
+      // Calcular grid cuadrado
+      const cardCount = uniqueCards.length
+      const cols = Math.ceil(Math.sqrt(cardCount))
+      const rows = Math.ceil(cardCount / cols)
+
+      // Márgenes más generosos
+      const marginLeft = 40
+      const marginRight = 40
+      const marginBottom = 40
+      
+      // Calcular tamaño de carta para que quepa en el espacio disponible
+      const availableHeight = height - layoutTop - marginBottom
+      const availableWidth = width - marginLeft - marginRight
+      const gap = 8
+      
+      const maxCardWidth = (availableWidth - (cols - 1) * gap) / cols
+      const maxCardHeight = (availableHeight - (rows - 1) * gap) / rows
+      
+      // Calcular tamaño manteniendo proporción de carta (ancho:alto = 1:1.5)
+      // Ajustar para que quepa tanto en ancho como en alto
+      let actualCardWidth = Math.min(maxCardWidth, maxCardHeight / 1.5)
+      let actualCardHeight = actualCardWidth * 1.5
+      
+      // Si el alto calculado excede el disponible, ajustar
+      if (actualCardHeight > maxCardHeight) {
+        actualCardHeight = maxCardHeight
+        actualCardWidth = actualCardHeight / 1.5
+      }
+
+      // Centrar el grid horizontalmente
+      const totalGridWidth = cols * actualCardWidth + (cols - 1) * gap
+      const startX = (width - totalGridWidth) / 2
+      const startY = layoutTop
+
+      // Dibujar cartas en grid con contadores
+      for (let i = 0; i < uniqueCards.length; i++) {
+        const { card, quantity } = uniqueCards[i]
+        const col = i % cols
+        const row = Math.floor(i / cols)
+
+        const x = startX + col * (actualCardWidth + gap)
+        const y = startY + row * (actualCardHeight + gap)
+
+        try {
+          const img = await loadImage(card.image)
+          ctx.drawImage(img, x, y, actualCardWidth, actualCardHeight)
+          
+          // Dibujar contador si hay más de una copia
+          if (quantity > 1) {
+            // Fondo del contador (círculo más pequeño y más transparente, sin borde)
+            const counterRadius = 15
+            const counterX = x + actualCardWidth / 2
+            const counterY = y + counterRadius
+            
+            ctx.beginPath()
+            ctx.arc(counterX, counterY, counterRadius, 0, Math.PI * 2)
+            ctx.fillStyle = "rgba(0, 0, 0, 0.4)"
+            ctx.fill()
+            
+            // Texto del contador
+            ctx.fillStyle = "white"
+            ctx.font = "bold 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+            ctx.fillText(String(quantity), counterX, counterY)
+            
+            // Restaurar alineación por defecto
+            ctx.textAlign = "left"
+            ctx.textBaseline = "top"
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      return canvas.toDataURL("image/png", 1.0)
+    } catch {
+      return null
+    }
+  }
+
+  // Abrir modal de exportación
+  function handleExportImage() {
+    setShowExportModal(true)
+    setExportType("horizontal")
+    setPreviewImageUrl(null)
+  }
+
+  // Generar vista previa cuando se abre el modal o cambia el tipo
+  useEffect(() => {
+    if (!showExportModal) return
+
+    let cancelled = false
+    setIsGeneratingPreview(true)
+    setPreviewImageUrl(null)
+
+    const generatePreview = async () => {
+      const imageUrl = exportType === "horizontal" 
+        ? await generateHorizontalImage()
+        : await generateVerticalImage()
+      
+      if (!cancelled) {
+        setPreviewImageUrl(imageUrl)
+        setIsGeneratingPreview(false)
+      }
+    }
+
+    generatePreview()
+
+    return () => {
+      cancelled = true
+    }
+  }, [showExportModal, exportType])
+
+  // Descargar imagen
+  async function handleDownloadImage() {
+    if (!previewImageUrl) return
+
+    const link = document.createElement("a")
+    link.href = previewImageUrl
+    link.download = `${deckName || "mazo"}-${exportType}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toastSuccess("Imagen del mazo exportada correctamente")
   }
 
   async function openLoadDialog() {
@@ -1479,6 +1753,9 @@ export function DeckManagementPanel({
                                 onAddCard(deckCard.cardId)
                               }}
                               disabled={(() => {
+                                // Verificar límite total de 50 cartas
+                                if (stats.totalCards >= 50) return true
+                                
                                 // Verificar cantidad total considerando todas las variantes
                                 const baseId = getBaseCardId(deckCard.cardId)
                                 const totalQuantity = baseCardQuantityMap.get(baseId) || 0
@@ -1725,6 +2002,83 @@ export function DeckManagementPanel({
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowLoginDialog(false)}>
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de exportación de imagen */}
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Exportar Imagen del Mazo</DialogTitle>
+            <DialogDescription>
+              Personaliza y descarga la imagen de tu mazo
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto space-y-4">
+            {/* Selector de tipo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Formato de imagen</label>
+              <ToggleGroup
+                type="single"
+                value={exportType}
+                onValueChange={(value) => {
+                  if (value === "horizontal" || value === "vertical") {
+                    setExportType(value)
+                  }
+                }}
+                className="w-full"
+              >
+                <ToggleGroupItem value="horizontal" className="flex-1">
+                  Horizontal (1920x1080)
+                </ToggleGroupItem>
+                <ToggleGroupItem value="vertical" className="flex-1">
+                  Vertical (1080x1080) - Instagram
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            {/* Vista previa */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vista previa</label>
+              <div className="border rounded-lg p-4 bg-muted/50 flex items-center justify-center min-h-[400px]">
+                {isGeneratingPreview ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Generando vista previa...</span>
+                  </div>
+                ) : previewImageUrl ? (
+                  <div className="relative w-full flex items-center justify-center">
+                    <img
+                      src={previewImageUrl}
+                      alt="Vista previa del mazo"
+                      className="max-w-full max-h-[500px] rounded-lg shadow-lg"
+                      style={{
+                        maxHeight: exportType === "vertical" ? "500px" : "400px",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center">
+                    No se pudo generar la vista previa
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDownloadImage}
+              disabled={!previewImageUrl || isGeneratingPreview}
+            >
+              <Download className="size-4 mr-2" />
+              Descargar Imagen
             </Button>
           </DialogFooter>
         </DialogContent>

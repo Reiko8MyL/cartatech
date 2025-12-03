@@ -29,7 +29,7 @@ import type {
   SavedDeck,
   DeckFormat,
 } from "@/lib/deck-builder/types"
-import { toastSuccess } from "@/lib/toast"
+import { toastSuccess, toastError } from "@/lib/toast"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth, type User } from "@/contexts/auth-context"
 import { CardGridSkeleton } from "@/components/ui/card-grid-skeleton"
@@ -115,6 +115,14 @@ function DeckBuilderContent() {
     const card = cardLookupMap.get(cardId)
     if (!card) return
 
+    // Calcular total de cartas actual ANTES de actualizar el estado
+    const currentTotal = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
+    
+    // Verificar límite total de 50 cartas
+    if (currentTotal >= 50) {
+      return
+    }
+
     // Usar startTransition para actualizaciones no urgentes
     setDeckCards((prevDeckCards) => {
       // Búsqueda rápida con Map
@@ -137,7 +145,7 @@ function DeckBuilderContent() {
         return [...prevDeckCards, { cardId, quantity: 1 }]
       }
     })
-  }, [cardLookupMap])
+  }, [cardLookupMap, deckFormat, deckCards])
 
   const removeCardFromDeck = useCallback((cardId: string) => {
     setDeckCards((prevDeckCards) =>
