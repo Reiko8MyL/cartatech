@@ -347,9 +347,8 @@ function DeckBuilderContent() {
         toastSuccess("Mazo restaurado. Ahora puedes guardarlo.")
         
         // Detectar cartas alternativas en el mazo y establecer reemplazos
-        const { getAlternativeArtCards, getBaseCardId } = require("@/lib/deck-builder/utils")
         const altCards = getAlternativeArtCards()
-        const altCardIds = new Set(altCards.map((c) => c.id))
+        const altCardIds = new Set(altCards.map((c: Card) => c.id))
         const replacements = new Map<string, string>()
         
         for (const deckCard of temporaryDeck.cards) {
