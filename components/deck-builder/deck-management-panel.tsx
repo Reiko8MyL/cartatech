@@ -38,6 +38,7 @@ import {
   Lock,
   Calendar,
   GripVertical,
+  ArrowRight,
 } from "lucide-react"
 import type { DeckCard, DeckStats, SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import type { Card as CardType } from "@/lib/deck-builder/types"
@@ -56,12 +57,65 @@ import {
   EDITION_LOGOS,
   getPrioritizedDeckTags,
   getSavedDecksFromStorage,
+  getAlternativeArtCards,
+  getBaseCardId,
 } from "@/lib/deck-builder/utils"
 import { SaveDeckModal } from "./save-deck-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/contexts/auth-context"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { getAllCardsMetadata } from "@/lib/api/cards"
+
+/**
+ * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
+ * basándose en su tipo, características y metadatos personalizados de la base de datos.
+ * 
+ * @param card - La carta para la cual calcular la posición
+ * @param cardMetadataMap - Mapa de metadatos personalizados por cardId (opcional)
+ * @returns Porcentaje de posición Y (0% = arriba, 100% = abajo)
+ */
+function getCardBackgroundPositionY(
+  card: CardType,
+  cardMetadataMap?: Record<string, number>
+): string {
+  // Primero verificar si hay un ajuste personalizado en la base de datos
+  if (cardMetadataMap && cardMetadataMap[card.id] !== undefined) {
+    const customPosition = cardMetadataMap[card.id]
+    return `${customPosition}%`
+  }
+
+  // Si no hay ajuste personalizado, usar valores por defecto basados en el tipo
+  const typePositions: Record<string, number> = {
+    "Aliado": 20,    // Arte generalmente en la parte superior
+    "Arma": 25,      // Arte en la parte superior-media
+    "Talismán": 30,   // Arte más hacia el centro
+    "Tótem": 28,     // Similar a Talismán
+    "Oro": 35,       // Arte más hacia el centro-inferior (más espacio para texto)
+  }
+
+  // Posición base según el tipo
+  let positionY = typePositions[card.type] || 25
+
+  // Ajuste basado en la longitud del nombre
+  // Nombres largos pueden necesitar mostrar más arriba para evitar que el texto tape el arte
+  const nameLength = card.name.length
+  if (nameLength > 20) {
+    positionY -= 3 // Mover un poco hacia arriba para nombres muy largos
+  } else if (nameLength < 10) {
+    positionY += 2 // Mover un poco hacia abajo para nombres cortos
+  }
+
+  // Ajuste basado en si tiene descripción (cartas con descripción suelen tener más contenido visual abajo)
+  if (card.description && card.description.length > 50) {
+    positionY += 2 // Mover un poco hacia abajo si tiene descripción larga
+  }
+
+  // Asegurar que la posición esté en un rango válido (entre 0% y 70%)
+  positionY = Math.max(0, Math.min(70, positionY))
+
+  return `${positionY}%`
+}
 
 interface DeckManagementPanelProps {
   deckName: string
@@ -75,6 +129,9 @@ interface DeckManagementPanelProps {
   onRemoveCard: (cardId: string) => void
   deckFormat: DeckFormat
   onDeckFormatChange: (format: DeckFormat) => void
+  currentDeck?: SavedDeck | null // Mazo actual si se está editando uno existente
+  onCurrentDeckChange?: (deck: SavedDeck | null) => void // Callback para actualizar el mazo actual después de guardar
+  cardReplacements: Map<string, string> // Mapa de baseId -> alternativeCardId
 }
 
 export function DeckManagementPanel({
@@ -89,7 +146,36 @@ export function DeckManagementPanel({
   onRemoveCard,
   deckFormat,
   onDeckFormatChange,
+  currentDeck,
+  onCurrentDeckChange,
+  cardReplacements,
 }: DeckManagementPanelProps) {
+  // Debug: Log cuando currentDeck cambia
+  useEffect(() => {
+    if (currentDeck) {
+      console.log("[DeckManagementPanel] currentDeck establecido:", {
+        id: currentDeck.id,
+        name: currentDeck.name,
+        hasId: !!currentDeck.id,
+      });
+    } else {
+      console.log("[DeckManagementPanel] currentDeck es null");
+    }
+  }, [currentDeck]);
+
+  // Precargar metadatos de cartas al montar el componente
+  useEffect(() => {
+    async function loadCardMetadata() {
+      try {
+        const metadata = await getAllCardsMetadata()
+        setCardMetadataMap(metadata)
+      } catch (error) {
+        console.error("Error al cargar metadatos de cartas:", error)
+        // Continuar sin metadatos, usar valores por defecto
+      }
+    }
+    loadCardMetadata()
+  }, [])
   const { user } = useAuth()
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
@@ -105,6 +191,9 @@ export function DeckManagementPanel({
   const [showAliadosTooltip, setShowAliadosTooltip] = useState(false)
   const [showOrosTooltip, setShowOrosTooltip] = useState(false)
   const [showTotalCartasTooltip, setShowTotalCartasTooltip] = useState(false)
+  
+  // Metadatos de cartas (ajustes personalizados de posición Y)
+  const [cardMetadataMap, setCardMetadataMap] = useState<Record<string, number>>({})
   
   // Estados para el panel deslizable (solo en pantallas < 1024px)
   const [panelHeight, setPanelHeight] = useState(200) // Altura inicial en px
@@ -173,55 +262,79 @@ export function DeckManagementPanel({
     if (!user) return
 
     try {
-      // Verificar si ya existe un mazo con ese nombre para este usuario
-      // Primero intentar desde la API, luego fallback a localStorage
-      let userDecks: SavedDeck[] = []
-      try {
-        const { getUserDecks } = await import("@/lib/api/decks");
-        userDecks = await getUserDecks(user.id);
-      } catch {
-        // Fallback a localStorage si la API falla
-        userDecks = getUserDecksFromLocalStorage(user.id);
+      // Si estamos editando un mazo existente (tiene ID), actualizarlo directamente
+      const isEditing = currentDeck && currentDeck.id
+      
+      if (!isEditing) {
+        // Solo verificar duplicados si es un mazo nuevo
+        // Verificar si ya existe un mazo con ese nombre para este usuario
+        let userDecks: SavedDeck[] = []
+        try {
+          const { getUserDecks } = await import("@/lib/api/decks");
+          userDecks = await getUserDecks(user.id);
+        } catch {
+          // Fallback a localStorage si la API falla
+          userDecks = getUserDecksFromLocalStorage(user.id);
+        }
+
+        // Verificar duplicados excluyendo el mazo actual si existe
+        const exists = userDecks.some(
+          (d) => d.id !== currentDeck?.id && d.name.trim().toLowerCase() === deckData.name.trim().toLowerCase()
+        )
+
+        if (exists) {
+          const newName = typeof window !== "undefined"
+            ? window.prompt(
+                "Ya existe un mazo con ese nombre. Escribe un nombre diferente:",
+                `${deckData.name} (copia)`
+              )
+            : null
+          if (!newName || !newName.trim()) return
+          deckData.name = newName.trim()
+        }
       }
 
-      const exists = userDecks.some(
-        (d) => d.name.trim().toLowerCase() === deckData.name.trim().toLowerCase()
-      )
-
-      if (exists) {
-        const newName = typeof window !== "undefined"
-          ? window.prompt(
-              "Ya existe un mazo con ese nombre. Escribe un nombre diferente:",
-              `${deckData.name} (copia)`
-            )
-          : null
-        if (!newName || !newName.trim()) return
-        deckData.name = newName.trim()
-      }
-
-      // Para mazos nuevos, no incluir ID (será generado por la base de datos)
-      // Solo incluir ID si estamos actualizando un mazo existente
+      // Construir el objeto del mazo
+      // Si estamos editando, preservar el ID y createdAt original
       const deck: SavedDeck = {
-        // id se omite para mazos nuevos - será generado por la base de datos
+        ...(isEditing && currentDeck ? {
+          id: currentDeck.id, // Preservar ID para actualizar
+          createdAt: currentDeck.createdAt, // Preservar fecha de creación
+        } : {
+          createdAt: Date.now(), // Nueva fecha para mazos nuevos
+        }),
         name: deckData.name,
         description: deckData.description,
         cards: deckData.cards,
-        createdAt: Date.now(),
         userId: deckData.userId,
         author: deckData.author || user.username,
         isPublic: deckData.isPublic,
         publishedAt: deckData.publishedAt,
         tags: deckData.tags,
         format: deckFormat,
+        techCardId: deckData.techCardId, // Usar la carta tech del modal (puede ser undefined para eliminar)
       }
 
       // Usar la función que guarda en la API si hay usuario
+      // Esta función detectará si tiene ID y actualizará en lugar de crear
       const { saveDeckToStorage } = await import("@/lib/deck-builder/utils");
       const savedDeck = await saveDeckToStorage(deck, user.id);
 
       if (savedDeck) {
         onDeckNameChange(deckData.name)
-        toastSuccess("Mazo guardado correctamente")
+        // Actualizar currentDeck con el mazo guardado para mantener la referencia actualizada
+        if (isEditing && savedDeck.id) {
+          // El mazo se actualizó, actualizar la referencia en el componente padre
+          if (onCurrentDeckChange) {
+            onCurrentDeckChange(savedDeck)
+          }
+        } else if (!isEditing && savedDeck.id) {
+          // Si se creó un nuevo mazo y ahora tiene ID, establecerlo como currentDeck
+          if (onCurrentDeckChange) {
+            onCurrentDeckChange(savedDeck)
+          }
+        }
+        toastSuccess(isEditing ? "Mazo actualizado correctamente" : "Mazo guardado correctamente")
         // Actualizar la lista de mazos guardados desde la API
         if (user) {
           try {
@@ -280,8 +393,9 @@ export function DeckManagementPanel({
   }
 
   function handleExportList() {
+    // Usar cardMap que ya incluye las alternativas
     const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
-    const lookup = new Map(allCards.map((c) => [c.id, c]))
+    const lookup = cardMap
     const ordered = [...deckCards]
       .filter((d) => d.quantity > 0)
       .sort((a, b) => {
@@ -686,10 +800,25 @@ export function DeckManagementPanel({
     [deckCards]
   )
 
-  const cardMap = useMemo(
-    () => new Map(allCards.map((card) => [card.id, card])),
-    [allCards]
-  )
+  // Crear mapa de cartas que incluya alternativas para mostrar cartas reemplazadas en el mazo
+  const cardMap = useMemo(() => {
+    const altCards = getAlternativeArtCards()
+    const allCardsWithAlternatives = [...allCards, ...altCards]
+    return new Map(allCardsWithAlternatives.map((card) => [card.id, card]))
+  }, [allCards])
+
+  // Crear mapa de cantidad total por baseId (considerando todas las variantes)
+  const baseCardQuantityMap = useMemo(() => {
+    const baseQuantityMap = new Map<string, number>()
+    
+    for (const deckCard of deckCards) {
+      const baseId = getBaseCardId(deckCard.cardId)
+      const currentQuantity = baseQuantityMap.get(baseId) || 0
+      baseQuantityMap.set(baseId, currentQuantity + deckCard.quantity)
+    }
+    
+    return baseQuantityMap
+  }, [deckCards])
 
   // Agrupar cartas por tipo - memoizado fuera del JSX y optimizado
   const cardsByTypeGrouped = useMemo(() => {
@@ -901,8 +1030,63 @@ export function DeckManagementPanel({
         
         {/* Encabezado con nombre del mazo */}
         <div className="p-2 sm:p-3 lg:p-4 border-b space-y-3">
+        {/* Panel de mazo activo - solo se muestra cuando se está editando un mazo existente */}
+        {currentDeck && currentDeck.id && (() => {
+          console.log("[DeckManagementPanel] Renderizando panel de mazo activo:", {
+            id: currentDeck.id,
+            name: currentDeck.name,
+          });
+          const race = getDeckRace(currentDeck.cards, allCards)
+          const backgroundImage = getDeckBackgroundImage(race)
+          
+          return (
+            <div
+              className="relative rounded-lg overflow-hidden"
+              style={{
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              <div className="relative p-2 sm:p-3">
+                {/* Tag Público en la esquina superior derecha */}
+                {currentDeck.isPublic && (
+                  <div className="absolute top-2 right-2 z-10 px-1.5 py-0.5 bg-blue-500/30 backdrop-blur-sm text-white text-xs rounded">
+                    Público
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-white/90">
+                    <div className="size-2 rounded-full bg-blue-400 animate-pulse" />
+                    <span>Mazo en edición</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{currentDeck.name}</p>
+                  </div>
+                  {/* Botón para ir a la página del mazo */}
+                  <div className="ml-2 mt-0.5">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => router.push(`/mazo/${currentDeck.id}`)}
+                      className="h-5 px-1 text-[10px] font-medium bg-white/30 hover:bg-white/50 text-white shadow-md backdrop-blur-sm rounded-full border border-white/20"
+                    >
+                      <span className="hidden sm:inline">Página del Mazo</span>
+                      <span className="sm:hidden">Página</span>
+                      <ArrowRight className="size-2.5 ml-0.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+        
         <div className="flex items-center gap-2">
-          {isEditingName ? (
+          {isEditingName && !currentDeck?.id ? (
             <>
               <Input
                 value={tempName}
@@ -922,39 +1106,73 @@ export function DeckManagementPanel({
               <h2 className="text-xl font-semibold flex-1 truncate">
                 {deckName || "Mazo sin nombre"}
               </h2>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  setTempName(deckName)
-                  setIsEditingName(true)
-                }}
-              >
-                <Edit2 className="size-4" />
-              </Button>
+              {!currentDeck?.id && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    setTempName(deckName)
+                    setIsEditingName(true)
+                  }}
+                  title="Editar nombre del mazo"
+                >
+                  <Edit2 className="size-4" />
+                </Button>
+              )}
+              {currentDeck?.id && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  disabled
+                  title="El nombre del mazo se edita desde el modal de guardar"
+                  className="cursor-not-allowed"
+                >
+                  <Lock className="size-4 text-muted-foreground" />
+                </Button>
+              )}
             </>
           )}
         </div>
         {/* Selector de formato */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Formato</label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-muted-foreground">Formato</label>
+            {currentDeck?.id && (
+              <Lock className="size-3 text-muted-foreground" />
+            )}
+          </div>
           <ToggleGroup
             type="single"
             value={deckFormat}
             onValueChange={(value) => {
-              if (value) onDeckFormatChange(value as DeckFormat)
+              if (!currentDeck?.id && value) {
+                onDeckFormatChange(value as DeckFormat)
+              }
             }}
             className="w-full"
             variant="outline"
             spacing={0}
+            disabled={!!currentDeck?.id}
           >
-            <ToggleGroupItem value="RE" className="flex-1 rounded-r-none">
+            <ToggleGroupItem 
+              value="RE" 
+              className="flex-1 rounded-r-none"
+              disabled={!!currentDeck?.id}
+            >
               Racial Edición
             </ToggleGroupItem>
-            <ToggleGroupItem value="RL" className="flex-1 rounded-none border-x">
+            <ToggleGroupItem 
+              value="RL" 
+              className="flex-1 rounded-none border-x"
+              disabled={!!currentDeck?.id}
+            >
               Racial Libre
             </ToggleGroupItem>
-            <ToggleGroupItem value="LI" className="flex-1 rounded-l-none">
+            <ToggleGroupItem 
+              value="LI" 
+              className="flex-1 rounded-l-none"
+              disabled={!!currentDeck?.id}
+            >
               Formato Libre
             </ToggleGroupItem>
           </ToggleGroup>
@@ -1143,8 +1361,12 @@ export function DeckManagementPanel({
             className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
           >
             <Save className="size-3 lg:size-4" />
-            <span className="hidden lg:inline">Guardar</span>
-            <span className="lg:hidden">Guardar</span>
+            <span className="hidden lg:inline">
+              {currentDeck?.id ? "Guardar Cambios" : "Guardar"}
+            </span>
+            <span className="lg:hidden">
+              {currentDeck?.id ? "Cambios" : "Guardar"}
+            </span>
           </Button>
           <Button 
             variant="outline" 
@@ -1256,7 +1478,13 @@ export function DeckManagementPanel({
                               onClick={() => {
                                 onAddCard(deckCard.cardId)
                               }}
-                              disabled={deckCard.quantity >= (deckFormat === "RE" ? card.banListRE : deckFormat === "RL" ? card.banListRL : card.banListLI)}
+                              disabled={(() => {
+                                // Verificar cantidad total considerando todas las variantes
+                                const baseId = getBaseCardId(deckCard.cardId)
+                                const totalQuantity = baseCardQuantityMap.get(baseId) || 0
+                                const maxQuantity = deckFormat === "RE" ? card.banListRE : deckFormat === "RL" ? card.banListRL : card.banListLI
+                                return totalQuantity >= maxQuantity
+                              })()}
                             >
                               <Plus className="size-3" />
                             </Button>
@@ -1270,8 +1498,8 @@ export function DeckManagementPanel({
                                 className="absolute inset-0"
                                 style={{
                                   backgroundImage: `url(${card.image})`,
-                                  backgroundPosition: "center 23%",
-                                  backgroundSize: "200% auto",
+                                  backgroundPosition: `center ${getCardBackgroundPositionY(card, cardMetadataMap)}`,
+                                  backgroundSize: "135% auto",
                                   backgroundRepeat: "no-repeat",
                                   clipPath: "inset(5% 0% 5% 0%)",
                                   transform: "scaleX(1)",
@@ -1446,6 +1674,8 @@ export function DeckManagementPanel({
         initialName={deckName}
         deckCards={deckCards}
         deckFormat={deckFormat}
+        existingDeck={currentDeck || undefined}
+        allCards={allCards}
       />
 
       {/* Modal de confirmación de eliminación */}

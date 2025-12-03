@@ -7,6 +7,8 @@ import { CardsPanel } from "@/components/deck-builder/cards-panel"
 import { DeckManagementPanel } from "@/components/deck-builder/deck-management-panel"
 import {
   getAllCards,
+  getAlternativeArtCards,
+  getBaseCardId,
   sortCardsByEditionAndId,
   filterCards,
   calculateDeckStats,
@@ -41,16 +43,22 @@ function DeckBuilderContent() {
   // Cargar todas las cartas
   const allCards = useMemo(() => {
     const cards = getAllCards()
-    const sorted = sortCardsByEditionAndId(cards)
-    // Simular carga asíncrona para mostrar skeleton
-    setTimeout(() => setIsLoadingCards(false), 300)
-    return sorted
+    return sortCardsByEditionAndId(cards)
   }, [])
+
+  // Simular carga asíncrona para mostrar skeleton
+  useEffect(() => {
+    if (allCards.length > 0) {
+      const timer = setTimeout(() => setIsLoadingCards(false), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [allCards.length])
 
   // Estado del mazo
   const [deckName, setDeckName] = useState("Mi Mazo")
   const [deckCards, setDeckCards] = useState<DeckCard[]>([])
   const [deckFormat, setDeckFormat] = useState<DeckFormat>("RE")
+  const [currentDeck, setCurrentDeck] = useState<SavedDeck | null>(null) // Guardar el mazo completo cuando se carga desde URL
   const [hasLoadedFromUrl, setHasLoadedFromUrl] = useState(false)
   const [clearDeckDialogOpen, setClearDeckDialogOpen] = useState(false)
   const [hasLoadedTemporaryDeck, setHasLoadedTemporaryDeck] = useState(false)
@@ -95,11 +103,12 @@ function DeckBuilderContent() {
   const availableRaces = useMemo(() => getUniqueRaces(allCards), [allCards])
   const availableCosts = useMemo(() => getUniqueCosts(allCards), [allCards])
 
-  // Crear un mapa de cartas para búsqueda rápida
-  const cardLookupMap = useMemo(
-    () => new Map(allCards.map((c) => [c.id, c])),
-    [allCards]
-  )
+  // Crear un mapa de cartas para búsqueda rápida (incluyendo alternativas)
+  const cardLookupMap = useMemo(() => {
+    const altCards = getAlternativeArtCards()
+    const allCardsWithAlternatives = [...allCards, ...altCards]
+    return new Map(allCardsWithAlternatives.map((c) => [c.id, c]))
+  }, [allCards])
 
   // Funciones para gestionar el mazo - optimizadas
   const addCardToDeck = useCallback((cardId: string) => {
@@ -142,12 +151,75 @@ function DeckBuilderContent() {
     )
   }, [])
 
+  // Estado para rastrear qué cartas han sido reemplazadas por alternativas
+  const [cardReplacements, setCardReplacements] = useState<Map<string, string>>(new Map())
+
+  // Función para reemplazar una carta por otra versión (arte alternativo)
+  const replaceCardInDeck = useCallback((oldCardId: string, newCardId: string) => {
+    setDeckCards((prevDeckCards) => {
+      // Buscar la carta original en el mazo
+      const oldCardIndex = prevDeckCards.findIndex((dc) => dc.cardId === oldCardId)
+      if (oldCardIndex === -1) return prevDeckCards // No existe la carta original
+
+      const oldCardQuantity = prevDeckCards[oldCardIndex].quantity
+
+      // Buscar si la nueva carta ya existe en el mazo
+      const newCardIndex = prevDeckCards.findIndex((dc) => dc.cardId === newCardId)
+
+      // Crear nuevo array sin la carta original
+      const newDeckCards = prevDeckCards.filter((_, index) => index !== oldCardIndex)
+
+      if (newCardIndex !== -1 && newCardIndex < oldCardIndex) {
+        // La nueva carta ya existe y está antes de la original
+        // Sumar la cantidad a la existente
+        const updatedIndex = newCardIndex
+        newDeckCards[updatedIndex] = {
+          ...newDeckCards[updatedIndex],
+          quantity: newDeckCards[updatedIndex].quantity + oldCardQuantity,
+        }
+      } else if (newCardIndex !== -1 && newCardIndex > oldCardIndex) {
+        // La nueva carta ya existe pero está después de la original
+        // Ajustar el índice porque removimos la original
+        const adjustedIndex = newCardIndex - 1
+        newDeckCards[adjustedIndex] = {
+          ...newDeckCards[adjustedIndex],
+          quantity: newDeckCards[adjustedIndex].quantity + oldCardQuantity,
+        }
+      } else {
+        // La nueva carta no existe, agregarla en la posición de la original
+        newDeckCards.splice(oldCardIndex, 0, {
+          cardId: newCardId,
+          quantity: oldCardQuantity,
+        })
+      }
+
+      // Actualizar el mapa de reemplazos
+      setCardReplacements((prev) => {
+        const baseId = getBaseCardId(oldCardId)
+        const newMap = new Map(prev)
+        newMap.set(baseId, newCardId)
+        return newMap
+      })
+
+      return newDeckCards
+    })
+  }, [])
+
+  // Limpiar reemplazos cuando se borra el mazo
+  useEffect(() => {
+    if (deckCards.length === 0) {
+      setCardReplacements(new Map())
+    }
+  }, [deckCards.length])
+
   function clearDeck() {
     setClearDeckDialogOpen(true)
   }
 
   function confirmClearDeck() {
     setDeckCards([])
+    setCurrentDeck(null) // Resetear el mazo actual al limpiar
+    setDeckName("Mi Mazo") // Resetear el nombre al valor por defecto
     toastSuccess("Mazo borrado correctamente")
   }
 
@@ -155,6 +227,22 @@ function DeckBuilderContent() {
     setDeckName(deck.name)
     setDeckCards(deck.cards)
     setDeckFormat(deck.format || "RE")
+    setCurrentDeck(deck) // Guardar el mazo completo para poder actualizarlo después
+    
+    // Detectar cartas alternativas en el mazo y establecer reemplazos
+    const altCards = getAlternativeArtCards()
+    const altCardIds = new Set(altCards.map((c) => c.id))
+    const replacements = new Map<string, string>()
+    
+    for (const deckCard of deck.cards) {
+      if (altCardIds.has(deckCard.cardId)) {
+        // Esta es una carta alternativa, establecer el reemplazo
+        const baseId = getBaseCardId(deckCard.cardId)
+        replacements.set(baseId, deckCard.cardId)
+      }
+    }
+    
+    setCardReplacements(replacements)
   }
 
   // Cargar mazo desde URL si existe el parámetro load
@@ -180,10 +268,35 @@ function DeckBuilderContent() {
         }
         
         if (deckToLoad) {
+          console.log("[DeckBuilder] Mazo cargado desde URL:", {
+            id: deckToLoad.id,
+            name: deckToLoad.name,
+            hasId: !!deckToLoad.id,
+            cards: deckToLoad.cards.length,
+            format: deckToLoad.format,
+          });
           setDeckName(deckToLoad.name)
           setDeckCards(deckToLoad.cards)
           setDeckFormat(deckToLoad.format || "RE")
+          setCurrentDeck(deckToLoad) // Guardar el mazo completo con ID y metadatos
           setHasLoadedFromUrl(true)
+          
+          // Detectar cartas alternativas en el mazo y establecer reemplazos
+          const altCards = getAlternativeArtCards()
+          const altCardIds = new Set(altCards.map((c) => c.id))
+          const replacements = new Map<string, string>()
+          
+          for (const deckCard of deckToLoad.cards) {
+            if (altCardIds.has(deckCard.cardId)) {
+              // Esta es una carta alternativa, establecer el reemplazo
+              const baseId = getBaseCardId(deckCard.cardId)
+              replacements.set(baseId, deckCard.cardId)
+            }
+          }
+          
+          setCardReplacements(replacements)
+        } else {
+          console.warn("[DeckBuilder] No se encontró el mazo con ID:", loadDeckId);
         }
       }
       
@@ -201,6 +314,21 @@ function DeckBuilderContent() {
       setDeckCards(temporaryDeck.cards)
       setDeckFormat(temporaryDeck.format || "RE")
       setHasLoadedTemporaryDeck(true)
+      
+      // Detectar cartas alternativas en el mazo y establecer reemplazos
+      const altCards = getAlternativeArtCards()
+      const altCardIds = new Set(altCards.map((c) => c.id))
+      const replacements = new Map<string, string>()
+      
+      for (const deckCard of temporaryDeck.cards) {
+        if (altCardIds.has(deckCard.cardId)) {
+          // Esta es una carta alternativa, establecer el reemplazo
+          const baseId = getBaseCardId(deckCard.cardId)
+          replacements.set(baseId, deckCard.cardId)
+        }
+      }
+      
+      setCardReplacements(replacements)
     }
   }, [hasLoadedTemporaryDeck, hasLoadedFromUrl])
 
@@ -217,6 +345,22 @@ function DeckBuilderContent() {
         setDeckFormat(temporaryDeck.format || "RE")
         clearTemporaryDeck()
         toastSuccess("Mazo restaurado. Ahora puedes guardarlo.")
+        
+        // Detectar cartas alternativas en el mazo y establecer reemplazos
+        const { getAlternativeArtCards, getBaseCardId } = require("@/lib/deck-builder/utils")
+        const altCards = getAlternativeArtCards()
+        const altCardIds = new Set(altCards.map((c) => c.id))
+        const replacements = new Map<string, string>()
+        
+        for (const deckCard of temporaryDeck.cards) {
+          if (altCardIds.has(deckCard.cardId)) {
+            // Esta es una carta alternativa, establecer el reemplazo
+            const baseId = getBaseCardId(deckCard.cardId)
+            replacements.set(baseId, deckCard.cardId)
+          }
+        }
+        
+        setCardReplacements(replacements)
       }
     }
     
@@ -273,7 +417,9 @@ function DeckBuilderContent() {
                   deckCards={deckCards}
                   onAddCard={addCardToDeck}
                   onRemoveCard={removeCardFromDeck}
+                  onReplaceCard={replaceCardInDeck}
                   deckFormat={deckFormat}
+                  cardReplacements={cardReplacements}
                 />
               </div>
             )}
@@ -317,6 +463,9 @@ function DeckBuilderContent() {
                 onRemoveCard={removeCardFromDeck}
                 deckFormat={deckFormat}
                 onDeckFormatChange={setDeckFormat}
+                currentDeck={currentDeck}
+                onCurrentDeckChange={setCurrentDeck}
+                cardReplacements={cardReplacements}
               />
               </div>
             )}

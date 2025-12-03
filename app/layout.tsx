@@ -112,13 +112,14 @@ export default function RootLayout({
             <AuthProviderWrapper>
               <Navbar />
               {/* Banner superior de anuncios - Solo visible en desktop */}
-              {adsenseId && (
+              {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la sección siguiente */}
+              {/* {adsenseId && (
                 <div className="hidden lg:block w-full border-b border-border/40 bg-muted/30 py-2">
                   <div className="container mx-auto px-4">
                     <AdBanner position="top" />
                   </div>
                 </div>
-              )}
+              )} */}
               {children}
               <Toaster 
                 position="top-right"

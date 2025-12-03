@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
             key: "X-Frame-Options",
             value: "SAMEORIGIN",
           },
+          // Deshabilitar caché en desarrollo
+          ...(process.env.NODE_ENV === "development"
+            ? [
+                {
+                  key: "Cache-Control",
+                  value: "no-cache, no-store, must-revalidate",
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -32,7 +41,10 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            value:
+              process.env.NODE_ENV === "development"
+                ? "no-cache, no-store, must-revalidate"
+                : "public, max-age=31536000, immutable",
           },
         ],
       },

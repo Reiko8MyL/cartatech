@@ -4,14 +4,16 @@ import { useState, useMemo, useCallback } from "react"
 import { CardInfoModal } from "./card-info-modal"
 import { CardItem } from "./card-item"
 import type { Card, DeckCard, DeckFormat } from "@/lib/deck-builder/types"
-import { getAlternativeArtsForCard } from "@/lib/deck-builder/utils"
+import { getAlternativeArtsForCard, getBaseCardId, getAlternativeArtCards, getAllCards } from "@/lib/deck-builder/utils"
 
 interface CardsPanelProps {
   cards: Card[]
   deckCards: DeckCard[]
   onAddCard: (cardId: string) => void
   onRemoveCard: (cardId: string) => void
+  onReplaceCard: (oldCardId: string, newCardId: string) => void
   deckFormat: DeckFormat
+  cardReplacements: Map<string, string> // Mapa de baseId -> alternativeCardId
 }
 
 export function CardsPanel({
@@ -19,7 +21,9 @@ export function CardsPanel({
   deckCards,
   onAddCard,
   onRemoveCard,
+  onReplaceCard,
   deckFormat,
+  cardReplacements,
 }: CardsPanelProps) {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -29,24 +33,83 @@ export function CardsPanel({
     [deckCards]
   )
 
+  // Crear mapa de cartas alternativas para búsqueda rápida
+  const altCardsMap = useMemo(() => {
+    const altCards = getAlternativeArtCards()
+    return new Map(altCards.map((card) => [card.id, card]))
+  }, [])
+
+  // Crear mapa de IDs base para agrupar cartas originales y alternativas
+  const baseCardQuantityMap = useMemo(() => {
+    const altCardMap = new Map(Array.from(altCardsMap.keys()).map((id) => [id, getBaseCardId(id)]))
+    const baseQuantityMap = new Map<string, number>()
+    
+    for (const deckCard of deckCards) {
+      const baseId = altCardMap.get(deckCard.cardId) || getBaseCardId(deckCard.cardId)
+      const currentQuantity = baseQuantityMap.get(baseId) || 0
+      baseQuantityMap.set(baseId, currentQuantity + deckCard.quantity)
+    }
+    
+    return baseQuantityMap
+  }, [deckCards, altCardsMap])
+
+  // Función para obtener la carta a mostrar (original o alternativa si está reemplazada)
+  const getCardToDisplay = useCallback((card: Card): Card => {
+    const baseId = getBaseCardId(card.id)
+    const replacementId = cardReplacements.get(baseId)
+    
+    if (replacementId) {
+      const altCard = altCardsMap.get(replacementId)
+      if (altCard) {
+        return altCard
+      }
+    }
+    
+    return card
+  }, [cardReplacements, altCardsMap])
+
+  // Función para obtener el ID de la carta que se debe agregar al hacer clic
+  const getCardIdToAdd = useCallback((card: Card): string => {
+    const baseId = getBaseCardId(card.id)
+    const replacementId = cardReplacements.get(baseId)
+    return replacementId || card.id
+  }, [cardReplacements])
+
   const handleCardRightClick = useCallback((e: React.MouseEvent, card: Card) => {
     e.preventDefault()
-    setSelectedCard(card)
+    // Si la carta mostrada es una alternativa, encontrar la carta original para el modal
+    // Esto permite mostrar todas las opciones en el modal
+    const allMainCards = getAllCards()
+    const baseId = getBaseCardId(card.id)
+    const originalCard = allMainCards.find((c) => getBaseCardId(c.id) === baseId) || card
+    setSelectedCard(originalCard)
     setIsModalOpen(true)
   }, [])
 
-  const handleCardClick = useCallback((card: Card) => {
-    const quantity = deckCardMap.get(card.id) || 0
-    const maxQuantity = deckFormat === "RE" ? card.banListRE : deckFormat === "RL" ? card.banListRL : card.banListLI
+  const handleCardClick = useCallback((card: Card, displayedCard?: Card) => {
+    // Si se pasa displayedCard, usar esa (puede ser alternativa)
+    // Si no, usar la carta original
+    const cardToCheck = displayedCard || card
+    
+    // Obtener la carta que realmente se debe agregar (puede ser alternativa si está reemplazada)
+    const cardIdToAdd = getCardIdToAdd(card)
+    const cardToAdd = altCardsMap.get(cardIdToAdd) || cardToCheck
+    
+    // Verificar cantidad considerando todas las variantes (original + alternativas)
+    const baseId = getBaseCardId(card.id)
+    const totalQuantity = baseCardQuantityMap.get(baseId) || 0
+    const maxQuantity = deckFormat === "RE" ? cardToAdd.banListRE : deckFormat === "RL" ? cardToAdd.banListRL : cardToAdd.banListLI
 
-    if (quantity < maxQuantity) {
-      onAddCard(card.id)
+    if (totalQuantity < maxQuantity) {
+      onAddCard(cardIdToAdd)
     }
-  }, [deckCardMap, onAddCard, deckFormat])
+  }, [baseCardQuantityMap, onAddCard, deckFormat, getCardIdToAdd, altCardsMap])
 
   const getCardQuantity = useCallback((cardId: string): number => {
-    return deckCardMap.get(cardId) || 0
-  }, [deckCardMap])
+    // Retornar la cantidad total considerando todas las variantes (original + alternativas)
+    const baseId = getBaseCardId(cardId)
+    return baseCardQuantityMap.get(baseId) || 0
+  }, [baseCardQuantityMap])
 
   const getMaxQuantity = useCallback((card: Card): number => {
     return deckFormat === "RE" ? card.banListRE : deckFormat === "RL" ? card.banListRL : card.banListLI
@@ -82,24 +145,26 @@ export function CardsPanel({
 
             return (
               <div key={edition} className="space-y-3">
-                <h2 className="text-lg font-semibold sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
+                <h2 className="text-lg font-semibold sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-30 border-b border-border/50">
                   {edition}
                 </h2>
                 <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
                   {editionCards.map((card) => {
+                    // Obtener la carta a mostrar (puede ser alternativa si está reemplazada)
+                    const cardToDisplay = getCardToDisplay(card)
                     const quantity = getCardQuantity(card.id)
-                    const maxQuantity = getMaxQuantity(card)
+                    const maxQuantity = getMaxQuantity(cardToDisplay)
                     const canAddMore = quantity < maxQuantity
 
                     return (
                       <CardItem
                         key={card.id}
-                        card={card}
+                        card={cardToDisplay}
                         quantity={quantity}
                         maxQuantity={maxQuantity}
                         canAddMore={canAddMore}
-                        onCardClick={handleCardClick}
-                        onCardRightClick={handleCardRightClick}
+                        onCardClick={() => handleCardClick(card, cardToDisplay)}
+                        onCardRightClick={(e) => handleCardRightClick(e, card)}
                       />
                     )
                   })}
@@ -119,12 +184,14 @@ export function CardsPanel({
           alternativeArts={getAlternativeArtsForCard(selectedCard.id)}
           quantityInDeck={getCardQuantity(selectedCard.id)}
           maxQuantity={getMaxQuantity(selectedCard)}
-          onAddCard={() => {
-            onAddCard(selectedCard.id)
+          deckCards={deckCards}
+          onAddCard={(cardId) => {
+            onAddCard(cardId)
           }}
-          onRemoveCard={() => {
-            onRemoveCard(selectedCard.id)
+          onRemoveCard={(cardId) => {
+            onRemoveCard(cardId)
           }}
+          onReplaceCard={onReplaceCard}
         />
       )}
     </>

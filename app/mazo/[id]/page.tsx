@@ -24,6 +24,7 @@ import {
   incrementDeckView,
   getDeckViewCount,
   getDeckFormatName,
+  getAlternativeArtCards,
 } from "@/lib/deck-builder/utils"
 import { getDeckById } from "@/lib/api/decks"
 import type { SavedDeck, Card as CardType } from "@/lib/deck-builder/types"
@@ -50,6 +51,7 @@ import { trackDeckViewed, trackDeckLiked, trackDeckCopied } from "@/lib/analytic
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -102,8 +104,19 @@ export default function ViewDeckPage() {
         return
       }
 
+      console.log("[loadDeck] Mazo cargado:", {
+        id: foundDeck.id,
+        name: foundDeck.name,
+        userId: foundDeck.userId,
+        hasId: !!foundDeck.id,
+        idType: typeof foundDeck.id,
+      });
+
       setDeck(foundDeck)
-      setAllCards(getAllCards())
+      // Incluir cartas principales y alternativas
+      const mainCards = getAllCards()
+      const altCards = getAlternativeArtCards()
+      setAllCards([...mainCards, ...altCards])
       
       // Track analytics
       if (foundDeck && foundDeck.id) {
@@ -290,6 +303,13 @@ export default function ViewDeckPage() {
       return
     }
 
+    console.log("[handleEditDescription] Inicializando edición:", {
+      deckId: deck.id,
+      deckName: deck.name,
+      userId: deck.userId,
+      hasId: !!deck.id,
+    });
+
     setEditingDeck(deck)
     setEditName(deck.name)
     setEditDescription(deck.description || "")
@@ -303,13 +323,27 @@ export default function ViewDeckPage() {
   }
 
   const handleSaveEdit = async () => {
+    console.log("[handleSaveEdit] Función llamada", {
+      hasEditingDeck: !!editingDeck,
+      editName: editName,
+      hasUser: !!user,
+    });
+
     if (!editingDeck || !editName.trim() || !user) {
+      console.warn("[handleSaveEdit] Validación fallida:", {
+        editingDeck: !!editingDeck,
+        editName: editName,
+        user: !!user,
+      });
       toastError("El nombre del mazo no puede estar vacío")
       return
     }
 
+    // Asegurar que el ID y userId se preserven correctamente
     const updatedDeck: SavedDeck = {
       ...editingDeck,
+      id: editingDeck.id, // Preservar el ID explícitamente
+      userId: editingDeck.userId || user.id, // Preservar el userId
       name: editName.trim(),
       description: editDescription.trim() || undefined,
       isPublic: editIsPublic,
@@ -319,9 +353,43 @@ export default function ViewDeckPage() {
     }
 
     try {
+      console.log("[handleSaveEdit] Guardando mazo:", {
+        id: updatedDeck.id,
+        name: updatedDeck.name,
+        userId: updatedDeck.userId,
+        user: user.id,
+        originalDeckId: deck?.id,
+      });
+      
+      // Validar que el ID esté presente antes de guardar
+      if (!updatedDeck.id) {
+        console.error("[handleSaveEdit] ERROR: El mazo no tiene ID, no se puede actualizar");
+        toastError("Error: El mazo no tiene ID. No se puede actualizar.");
+        return;
+      }
+      
       // Guardar en la base de datos si hay usuario, o en localStorage como fallback
       const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      
+      console.log("[handleSaveEdit] Resultado de saveDeckToStorage:", {
+        savedDeck,
+        savedDeckId: savedDeck?.id,
+        originalId: updatedDeck.id,
+        idsMatch: savedDeck?.id === updatedDeck.id,
+      });
+      
       if (savedDeck) {
+        // Verificar que el ID se haya preservado
+        if (savedDeck.id !== updatedDeck.id) {
+          console.error("[handleSaveEdit] ERROR: El ID cambió después de guardar!", {
+            originalId: updatedDeck.id,
+            newId: savedDeck.id,
+          });
+          toastError("Error: El ID del mazo cambió. Esto no debería pasar.");
+          return;
+        }
+        
+        console.log("[handleSaveEdit] Mazo guardado exitosamente en la base de datos con el mismo ID");
         setDeck(savedDeck)
         setEditingDeck(null)
         setEditName("")
@@ -330,6 +398,7 @@ export default function ViewDeckPage() {
         setEditTags([])
         toastSuccess("Mazo actualizado correctamente")
       } else {
+        console.warn("[handleSaveEdit] saveDeckToStorage retornó null, usando fallback a localStorage");
         // Fallback a localStorage si falla la API
         saveDeckToLocalStorage(updatedDeck)
         setDeck(updatedDeck)
@@ -341,16 +410,21 @@ export default function ViewDeckPage() {
         toastSuccess("Mazo actualizado correctamente (guardado local)")
       }
     } catch (error) {
-      console.error("Error al guardar mazo:", error)
-      // Fallback a localStorage si hay error
-      saveDeckToLocalStorage(updatedDeck)
+      console.error("[handleSaveEdit] Error al guardar mazo:", error)
+      // Mostrar el error al usuario
+      if (error instanceof Error) {
+        toastError(`Error al guardar: ${error.message}`)
+      } else {
+        toastError("Error al guardar el mazo")
+      }
+      // NO hacer fallback a localStorage si hay error - el mazo ya existe en la base de datos
+      // Solo actualizar el estado local con los cambios que el usuario hizo
       setDeck(updatedDeck)
       setEditingDeck(null)
       setEditName("")
       setEditDescription("")
       setEditIsPublic(false)
       setEditTags([])
-      toastSuccess("Mazo actualizado correctamente (guardado local)")
     }
   }
 
@@ -432,61 +506,104 @@ export default function ViewDeckPage() {
   const handleSelectTechCard = async (cardId: string) => {
     if (!deck || !user || deck.userId !== user.id) return
 
+    // Validar que el mazo tenga ID antes de actualizar
+    if (!deck.id) {
+      console.error("[handleSelectTechCard] ERROR: El mazo no tiene ID");
+      toastError("Error: El mazo no tiene ID. No se puede actualizar.");
+      return;
+    }
+
+    // Asegurar que el ID y userId se preserven correctamente
     const updatedDeck: SavedDeck = {
       ...deck,
+      id: deck.id, // Preservar el ID explícitamente
+      userId: deck.userId || user.id, // Preservar el userId
       techCardId: cardId,
     }
 
     try {
+      console.log("[handleSelectTechCard] Actualizando carta tech:", {
+        deckId: updatedDeck.id,
+        techCardId: cardId,
+      });
+
       // Guardar en la base de datos si hay usuario, o en localStorage como fallback
       const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      
       if (savedDeck) {
+        // Verificar que el ID se haya preservado
+        if (savedDeck.id !== updatedDeck.id) {
+          console.error("[handleSelectTechCard] ERROR: El ID cambió después de guardar!");
+          toastError("Error: El ID del mazo cambió.");
+          return;
+        }
+        
         setDeck(savedDeck)
         setTechCardSelectorOpen(false)
         toastSuccess("La Carta Tech ha sido actualizada")
       } else {
+        console.warn("[handleSelectTechCard] saveDeckToStorage retornó null");
         // Fallback a localStorage si falla la API
         saveDeckToLocalStorage(updatedDeck)
         setDeck(updatedDeck)
         setTechCardSelectorOpen(false)
-        toastSuccess("La Carta Tech ha sido actualizada")
+        toastSuccess("La Carta Tech ha sido actualizada (guardado local)")
       }
     } catch (error) {
-      console.error("Error al guardar carta tech:", error)
-      // Fallback a localStorage si hay error
-      saveDeckToLocalStorage(updatedDeck)
-      setDeck(updatedDeck)
-      setTechCardSelectorOpen(false)
-      toastSuccess("La Carta Tech ha sido actualizada (guardado local)")
+      console.error("[handleSelectTechCard] Error al guardar carta tech:", error)
+      toastError("Error al actualizar la carta tech")
+      // NO hacer fallback - el mazo ya existe en la base de datos
     }
   }
 
   const handleRemoveTechCard = async () => {
     if (!deck || !user || deck.userId !== user.id) return
 
+    // Validar que el mazo tenga ID antes de actualizar
+    if (!deck.id) {
+      console.error("[handleRemoveTechCard] ERROR: El mazo no tiene ID");
+      toastError("Error: El mazo no tiene ID. No se puede actualizar.");
+      return;
+    }
+
+    // Asegurar que el ID y userId se preserven correctamente
+    // Usar null explícitamente en lugar de undefined para que Prisma lo actualice correctamente
     const updatedDeck: SavedDeck = {
       ...deck,
-      techCardId: undefined,
+      id: deck.id, // Preservar el ID explícitamente
+      userId: deck.userId || user.id, // Preservar el userId
+      techCardId: null as any, // null explícito para eliminar la carta tech
     }
 
     try {
+      console.log("[handleRemoveTechCard] Eliminando carta tech:", {
+        deckId: updatedDeck.id,
+      });
+
       // Guardar en la base de datos si hay usuario, o en localStorage como fallback
       const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      
       if (savedDeck) {
+        // Verificar que el ID se haya preservado
+        if (savedDeck.id !== updatedDeck.id) {
+          console.error("[handleRemoveTechCard] ERROR: El ID cambió después de guardar!");
+          toastError("Error: El ID del mazo cambió.");
+          return;
+        }
+        
         setDeck(savedDeck)
         toastSuccess("La Carta Tech ha sido eliminada")
       } else {
+        console.warn("[handleRemoveTechCard] saveDeckToStorage retornó null");
         // Fallback a localStorage si falla la API
         saveDeckToLocalStorage(updatedDeck)
         setDeck(updatedDeck)
-        toastSuccess("La Carta Tech ha sido eliminada")
+        toastSuccess("La Carta Tech ha sido eliminada (guardado local)")
       }
     } catch (error) {
-      console.error("Error al eliminar carta tech:", error)
-      // Fallback a localStorage si hay error
-      saveDeckToLocalStorage(updatedDeck)
-      setDeck(updatedDeck)
-      toastSuccess("La Carta Tech ha sido eliminada (guardado local)")
+      console.error("[handleRemoveTechCard] Error al eliminar carta tech:", error)
+      toastError("Error al eliminar la carta tech")
+      // NO hacer fallback - el mazo ya existe en la base de datos
     }
   }
 
@@ -917,6 +1034,9 @@ export default function ViewDeckPage() {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Editar Descripción del Mazo</DialogTitle>
+              <DialogDescription>
+                Modifica el nombre, descripción, tags y visibilidad de tu mazo.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
@@ -1000,11 +1120,11 @@ export default function ViewDeckPage() {
           <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Seleccionar La Carta Tech</DialogTitle>
+              <DialogDescription>
+                Selecciona una carta de tu mazo para destacarla como "La Carta Tech"
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <p className="text-sm text-muted-foreground mb-4">
-                Selecciona una carta de tu mazo para destacarla como "La Carta Tech"
-              </p>
               <div className="space-y-6">
                 {(() => {
                   // Agrupar cartas por tipo

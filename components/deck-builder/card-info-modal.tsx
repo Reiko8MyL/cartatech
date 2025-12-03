@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import {
   Dialog,
@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Plus, Minus } from "lucide-react"
-import type { Card } from "@/lib/deck-builder/types"
+import type { Card, DeckCard } from "@/lib/deck-builder/types"
 import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
+import { toastSuccess } from "@/lib/toast"
 
 interface CardInfoModalProps {
   card: Card | null
@@ -21,8 +22,10 @@ interface CardInfoModalProps {
   alternativeArts: Card[]
   quantityInDeck: number
   maxQuantity: number
-  onAddCard: () => void
-  onRemoveCard: () => void
+  deckCards: DeckCard[]
+  onAddCard: (cardId: string) => void
+  onRemoveCard: (cardId: string) => void
+  onReplaceCard: (oldCardId: string, newCardId: string) => void
 }
 
 export function CardInfoModal({
@@ -32,8 +35,10 @@ export function CardInfoModal({
   alternativeArts,
   quantityInDeck,
   maxQuantity,
+  deckCards,
   onAddCard,
   onRemoveCard,
+  onReplaceCard,
 }: CardInfoModalProps) {
   if (!card) return null
 
@@ -43,6 +48,87 @@ export function CardInfoModal({
   useEffect(() => {
     setDisplayImage(card.image)
   }, [card.id, card.image])
+
+  // Encontrar qué carta alternativa está siendo mostrada actualmente
+  const selectedAlternativeCard = alternativeArts.find((altCard) => altCard.image === displayImage)
+  const isShowingAlternative = selectedAlternativeCard !== undefined && displayImage !== card.image
+
+  // Encontrar qué carta está realmente en el mazo (original o alternativa)
+  const cardInDeck = useMemo(() => {
+    // Buscar si la carta original está en el mazo
+    const originalInDeck = deckCards.find((dc) => dc.cardId === card.id)
+    if (originalInDeck && originalInDeck.quantity > 0) {
+      return { cardId: card.id, quantity: originalInDeck.quantity }
+    }
+    // Si no está la original, buscar alternativas
+    for (const altCard of alternativeArts) {
+      const altInDeck = deckCards.find((dc) => dc.cardId === altCard.id)
+      if (altInDeck && altInDeck.quantity > 0) {
+        return { cardId: altCard.id, quantity: altInDeck.quantity }
+      }
+    }
+    return null
+  }, [deckCards, card.id, alternativeArts])
+
+  // Función para agregar carta (agrega la alternativa si está seleccionada, sino la original)
+  const handleAddCard = () => {
+    if (isShowingAlternative && selectedAlternativeCard) {
+      // Si se está mostrando una alternativa, agregar esa alternativa
+      if (cardInDeck && cardInDeck.cardId !== selectedAlternativeCard.id) {
+        // Si hay una carta diferente en el mazo (original), reemplazarla primero
+        // Esto mantendrá la cantidad y cambiará a la alternativa
+        onReplaceCard(cardInDeck.cardId, selectedAlternativeCard.id)
+        // Luego agregar una copia adicional de la alternativa
+        // Usar un pequeño delay para asegurar que el reemplazo se complete primero
+        setTimeout(() => {
+          onAddCard(selectedAlternativeCard.id)
+        }, 50)
+      } else {
+        // Si no hay carta o ya es la misma alternativa, agregar normalmente
+        onAddCard(selectedAlternativeCard.id)
+      }
+    } else {
+      // Si se está mostrando la original, agregar la original
+      onAddCard(card.id)
+    }
+  }
+
+  // Función para eliminar carta (elimina la que está realmente en el mazo)
+  const handleRemoveCard = () => {
+    if (!cardInDeck) return
+    onRemoveCard(cardInDeck.cardId)
+  }
+
+  // Función para reemplazar la carta en el mazo por la alternativa
+  const handleReplaceCard = () => {
+    if (!selectedAlternativeCard) return
+    if (quantityInDeck === 0) {
+      toastSuccess("No hay cartas en el mazo para reemplazar")
+      return
+    }
+
+    // Encontrar qué carta está en el mazo para reemplazarla
+    const cardToReplace = cardInDeck?.cardId || card.id
+    onReplaceCard(cardToReplace, selectedAlternativeCard.id)
+  }
+
+  // Función para reemplazar la carta alternativa por la versión original
+  const handleReplaceToOriginal = () => {
+    if (!cardInDeck) return
+    if (quantityInDeck === 0) {
+      toastSuccess("No hay cartas en el mazo para reemplazar")
+      return
+    }
+
+    // Reemplazar la alternativa por la original
+    onReplaceCard(cardInDeck.cardId, card.id)
+  }
+
+  // Determinar si la alternativa mostrada está en el mazo
+  const isAlternativeInDeck = isShowingAlternative && selectedAlternativeCard && cardInDeck?.cardId === selectedAlternativeCard.id
+  
+  // Determinar si hay una alternativa en el mazo (aunque se esté mostrando la original)
+  const hasAlternativeInDeck = !isShowingAlternative && cardInDeck && cardInDeck.cardId !== card.id && alternativeArts.some(alt => alt.id === cardInDeck.cardId)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -96,7 +182,7 @@ export function CardInfoModal({
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={onRemoveCard}
+                    onClick={handleRemoveCard}
                     disabled={quantityInDeck === 0}
                     aria-label={`Quitar una copia de ${card.name}`}
                   >
@@ -108,7 +194,7 @@ export function CardInfoModal({
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={onAddCard}
+                    onClick={handleAddCard}
                     disabled={quantityInDeck >= maxQuantity}
                     aria-label={`Agregar una copia de ${card.name}`}
                   >
@@ -127,6 +213,32 @@ export function CardInfoModal({
                   aria-label="Volver al arte original de la carta"
                 >
                   Volver al arte original
+                </Button>
+              )}
+
+              {/* Botón para usar la versión alternativa en el mazo (solo si NO está ya en el mazo) */}
+              {isShowingAlternative && quantityInDeck > 0 && !isAlternativeInDeck && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={handleReplaceCard}
+                  aria-label={`Usar esta versión de ${selectedAlternativeCard?.name} en el mazo`}
+                >
+                  Usar esta versión en el Mazo
+                </Button>
+              )}
+
+              {/* Botón para usar la versión original en el mazo (cuando hay una alternativa en el mazo) */}
+              {quantityInDeck > 0 && (isAlternativeInDeck || hasAlternativeInDeck) && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={handleReplaceToOriginal}
+                  aria-label="Usar versión original en el mazo"
+                >
+                  Usar versión original en el Mazo
                 </Button>
               )}
             </div>

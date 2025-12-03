@@ -106,6 +106,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Si el mazo tiene un ID, NO crear uno nuevo - debería usar PUT en su lugar
+    if (deck.id) {
+      console.warn(`[POST /api/decks] Intento de crear mazo con ID existente: ${deck.id}. Debería usar PUT en su lugar.`);
+      return NextResponse.json(
+        { error: "No se puede crear un mazo con un ID existente. Use PUT para actualizar." },
+        { status: 400 }
+      );
+    }
+
     // Verificar que el usuario existe
     const user = await prisma.user.findUnique({
       where: { id: userId },

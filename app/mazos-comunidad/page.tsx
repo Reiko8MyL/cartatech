@@ -360,11 +360,12 @@ function MazosComunidadPage() {
     <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Sidebar de anuncios en desktop */}
-        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
+        {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la sección siguiente */}
+        {/* {process.env.NEXT_PUBLIC_ADSENSE_ID && (
           <div className="hidden lg:block fixed right-4 top-24 w-48 z-10">
             <AdSidebar />
           </div>
-        )}
+        )} */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -571,7 +572,8 @@ function MazosComunidadPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300">
             {filteredDecks.map((deck, index) => {
               // Insertar anuncio inline cada 6 mazos
-              const shouldShowAd = index > 0 && index % 6 === 0 && process.env.NEXT_PUBLIC_ADSENSE_ID
+              // DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la línea siguiente y el bloque de anuncio
+              // const shouldShowAd = index > 0 && index % 6 === 0 && process.env.NEXT_PUBLIC_ADSENSE_ID
               const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
               const publishedDate = deck.publishedAt
                 ? new Date(deck.publishedAt)
@@ -584,11 +586,12 @@ function MazosComunidadPage() {
 
               return (
                 <Fragment key={`deck-wrapper-${deck.id}`}>
-                  {shouldShowAd && (
+                  {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar el bloque siguiente */}
+                  {/* {shouldShowAd && (
                     <div className="hidden lg:flex col-span-full justify-center my-4">
                       <AdInline />
                     </div>
-                  )}
+                  )} */}
                   <Card className="flex flex-col overflow-hidden group">
                   <div
                     className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"

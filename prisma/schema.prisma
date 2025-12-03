@@ -181,3 +181,14 @@ model Notification {
   @@map("notifications")
 }
 
+model CardMetadata {
+  id              String   @id @default(cuid())
+  cardId          String   @unique // ID de la carta (ej: "MYL-0001")
+  backgroundPositionY Int?  // Posición Y personalizada (porcentaje, ej: 20, 25, 30)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([cardId])
+  @@map("card_metadata")
+}
+

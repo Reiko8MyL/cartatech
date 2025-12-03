@@ -102,7 +102,10 @@ export function calculateDeckStats(
   deckCards: DeckCard[],
   allCards: Card[]
 ): DeckStats {
-  const cardMap = new Map(allCards.map((card) => [card.id, card]));
+  // Incluir cartas alternativas en el mapa para que las estadísticas las consideren
+  const altCards = getAlternativeArtCards();
+  const allCardsWithAlternatives = [...allCards, ...altCards];
+  const cardMap = new Map(allCardsWithAlternatives.map((card) => [card.id, card]));
   let totalCards = 0;
   let totalCost = 0;
   let totalCardsForAverage = 0; // Cartas excluyendo Oro para el cálculo del promedio

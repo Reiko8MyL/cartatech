@@ -1,6 +1,7 @@
 import { SavedDeck, DeckCard } from "@/lib/deck-builder/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// En desarrollo, usar ruta relativa. En producción, usar la URL completa si está configurada
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? "" : "");
 
 /**
  * Obtiene los mazos del usuario desde la API
@@ -67,19 +68,70 @@ export async function getDeckById(deckId: string): Promise<SavedDeck | null> {
  */
 export async function saveDeck(userId: string, deck: SavedDeck): Promise<SavedDeck | null> {
   try {
-    // Verificar si el ID es un UUID válido (formato de Prisma)
-    // Los UUIDs tienen el formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 caracteres)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const isUpdate = deck.id && uuidRegex.test(deck.id);
-    
-    const url = isUpdate && deck.id
-      ? `${API_BASE_URL}/api/decks/${deck.id}`
-      : `${API_BASE_URL}/api/decks`;
-    
-    const method = isUpdate ? "PUT" : "POST";
+    console.log("[saveDeck] Iniciando guardado de mazo:", {
+      deckId: deck.id,
+      deckName: deck.name,
+      userId: userId,
+      hasId: !!deck.id,
+      idType: typeof deck.id,
+    });
 
-    const response = await fetch(url, {
-      method,
+    // Si el mazo tiene un ID, SIEMPRE intentar actualizarlo primero (PUT)
+    // Esto evita crear duplicados cuando se edita un mazo existente
+    // Solo si la actualización falla con 404 (mazo no existe), entonces crear uno nuevo
+    if (deck.id) {
+      console.log(`[saveDeck] Intentando actualizar mazo con ID: ${deck.id}`);
+      
+      const updateResponse = await fetch(`${API_BASE_URL}/api/decks/${deck.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId, deck }),
+      });
+
+      const updateResponseText = await updateResponse.text();
+      let updateData: any;
+      
+      try {
+        updateData = updateResponseText ? JSON.parse(updateResponseText) : {};
+      } catch (parseError) {
+        console.error("Error al parsear respuesta JSON de actualización:", parseError);
+        console.error("Respuesta recibida:", updateResponseText);
+        throw new Error("Error del servidor. La respuesta no es válida.");
+      }
+
+      if (updateResponse.ok) {
+        console.log(`[saveDeck] Mazo actualizado exitosamente. Respuesta:`, updateData);
+        if (updateData.deck) {
+          return updateData.deck;
+        } else {
+          console.error("[saveDeck] La respuesta no contiene el objeto deck:", updateData);
+          throw new Error("La respuesta del servidor no contiene el mazo actualizado");
+        }
+      }
+
+      // Si el mazo no existe (404), crear uno nuevo
+      if (updateResponse.status === 404) {
+        console.warn(`[saveDeck] Mazo con ID ${deck.id} no encontrado, creando uno nuevo`);
+        // Continuar con la creación más abajo
+      } else {
+        // Otro error, lanzar excepción - NO crear duplicado
+        const errorMessage = updateData?.error || updateData?.message || "Error al actualizar mazo";
+        console.error("[saveDeck] Error en respuesta de actualización:", {
+          status: updateResponse.status,
+          statusText: updateResponse.statusText,
+          error: errorMessage,
+          data: updateData,
+        });
+        throw new Error(errorMessage);
+      }
+    }
+    
+    // Crear nuevo mazo (solo si no tiene ID o si la actualización falló con 404)
+    console.log("[saveDeck] Creando nuevo mazo (no tiene ID o actualización falló con 404)");
+    const createResponse = await fetch(`${API_BASE_URL}/api/decks`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
@@ -87,7 +139,7 @@ export async function saveDeck(userId: string, deck: SavedDeck): Promise<SavedDe
     });
 
     // Leer el texto de la respuesta primero para poder reutilizarlo
-    const responseText = await response.text();
+    const responseText = await createResponse.text();
     
     // Intentar parsear como JSON
     let data: any;
@@ -99,11 +151,11 @@ export async function saveDeck(userId: string, deck: SavedDeck): Promise<SavedDe
       throw new Error("Error del servidor. La respuesta no es válida.");
     }
 
-    if (!response.ok) {
+    if (!createResponse.ok) {
       const errorMessage = data?.error || data?.message || "Error al guardar mazo";
       console.error("Error en respuesta:", {
-        status: response.status,
-        statusText: response.statusText,
+        status: createResponse.status,
+        statusText: createResponse.statusText,
         error: errorMessage,
         data: data,
       });

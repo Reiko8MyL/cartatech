@@ -83,6 +83,14 @@ export async function PUT(
     // Verificar que el mazo existe y pertenece al usuario
     const existingDeck = await prisma.deck.findUnique({
       where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
     });
 
     if (!existingDeck) {
@@ -100,6 +108,9 @@ export async function PUT(
     }
 
     // Actualizar mazo
+    // Si techCardId es undefined, establecerlo a null explícitamente para eliminar la carta tech
+    const techCardIdValue = deck.techCardId !== undefined ? deck.techCardId : null;
+    
     const updatedDeck = await prisma.deck.update({
       where: { id },
       data: {
@@ -109,8 +120,16 @@ export async function PUT(
         format: deck.format || "RE",
         isPublic: deck.isPublic || false,
         publishedAt: deck.publishedAt ? new Date(deck.publishedAt) : null,
-        techCardId: deck.techCardId,
+        techCardId: techCardIdValue,
         tags: deck.tags || [],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
       },
     });
 
@@ -136,6 +155,7 @@ export async function PUT(
         format: updatedDeck.format,
         createdAt: updatedDeck.createdAt.getTime(),
         userId: updatedDeck.userId,
+        author: updatedDeck.user.username,
         isPublic: updatedDeck.isPublic,
         publishedAt: updatedDeck.publishedAt?.getTime(),
         techCardId: updatedDeck.techCardId,

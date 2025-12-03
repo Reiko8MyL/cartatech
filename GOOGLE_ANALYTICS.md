@@ -249,3 +249,4 @@ clearUserProperties();
 2. Verifica que `window.gtag` esté disponible
 3. Revisa la consola del navegador por errores de JavaScript
 
+
