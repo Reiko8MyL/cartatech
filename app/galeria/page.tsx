@@ -19,7 +19,7 @@ import {
   getUniqueCosts,
   getAlternativeArtsForCard,
 } from "@/lib/deck-builder/utils"
-import type { Card, DeckFilters } from "@/lib/deck-builder/types"
+import type { Card, DeckCard, DeckFilters } from "@/lib/deck-builder/types"
 
 const COLLECTION_STORAGE_KEY = "myl_collection"
 
@@ -423,15 +423,19 @@ function GaleriaContent() {
             isCollectionMode && collectedCards.has(selectedCard.id) ? 1 : 0
           }
           maxQuantity={isCollectionMode ? 1 : selectedCard.banListRE}
-          onAddCard={() => {
+          deckCards={[]}
+          onAddCard={(cardId: string) => {
             if (isCollectionMode) {
-              toggleCardCollection(selectedCard.id)
+              toggleCardCollection(cardId)
             }
           }}
-          onRemoveCard={() => {
+          onRemoveCard={(cardId: string) => {
             if (isCollectionMode) {
-              toggleCardCollection(selectedCard.id)
+              toggleCardCollection(cardId)
             }
+          }}
+          onReplaceCard={(_oldCardId: string, _newCardId: string) => {
+            // No disponible en modo galería
           }}
         />
       )}
