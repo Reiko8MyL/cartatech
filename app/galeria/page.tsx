@@ -197,7 +197,6 @@ function GaleriaContent() {
   // Estado del modal
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
 
   // Funciones para manejar el modo colección (solo si el usuario está autenticado)
   const toggleCardCollection = useCallback(async (cardId: string) => {
@@ -314,7 +313,7 @@ function GaleriaContent() {
       <ErrorBoundary>
         <div className="flex-1 border rounded-lg bg-card overflow-hidden">
           <div className="h-full overflow-y-auto">
-            {isLoading ? (
+            {isLoadingCardsFromAPI || isLoading ? (
               <CardGridSkeleton count={12} columns={6} />
             ) : (
               <div className="space-y-4 sm:space-y-6 p-2 sm:p-3 lg:p-4 animate-in fade-in duration-300">
