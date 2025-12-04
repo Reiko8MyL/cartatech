@@ -10,9 +10,11 @@ import { getBaseCardId } from "@/lib/deck-builder/utils";
  * Solo accesible para administradores
  */
 export async function POST(request: NextRequest) {
+  let cardId: string | undefined;
   try {
     const body = await request.json();
     const { userId, card } = body;
+    cardId = card?.id;
 
     if (!userId) {
       return NextResponse.json(
@@ -223,7 +225,7 @@ export async function POST(request: NextRequest) {
       const prismaError = error as any;
       if (prismaError.code === "P2002") {
         return NextResponse.json(
-          { error: `La carta con ID ${body.card?.id} ya existe` },
+          { error: `La carta con ID ${cardId || "desconocido"} ya existe` },
           { status: 400 }
         );
       }
