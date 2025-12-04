@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
+import { hasModeratorAccess } from "@/lib/auth/authorization"
 
 // PUT - Actualizar un comentario
 export async function PUT(
@@ -38,11 +39,20 @@ export async function PUT(
       )
     }
 
+    // Verificar permisos: el usuario debe ser el dueño O moderador/admin
     if (comment.userId !== userId) {
-      return NextResponse.json(
-        { error: "No tienes permiso para editar este comentario" },
-        { status: 403 }
-      )
+      // Verificar si el usuario es moderador o admin
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      })
+
+      if (!hasModeratorAccess(user?.role)) {
+        return NextResponse.json(
+          { error: "No tienes permiso para editar este comentario" },
+          { status: 403 }
+        )
+      }
     }
 
     // Actualizar el comentario
@@ -126,11 +136,20 @@ export async function DELETE(
       )
     }
 
+    // Verificar permisos: el usuario debe ser el dueño O moderador/admin
     if (comment.userId !== userId) {
-      return NextResponse.json(
-        { error: "No tienes permiso para eliminar este comentario" },
-        { status: 403 }
-      )
+      // Verificar si el usuario es moderador o admin
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      })
+
+      if (!hasModeratorAccess(user?.role)) {
+        return NextResponse.json(
+          { error: "No tienes permiso para eliminar este comentario" },
+          { status: 403 }
+        )
+      }
     }
 
     // Eliminar el comentario (las respuestas se eliminan en cascada)

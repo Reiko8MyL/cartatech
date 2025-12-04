@@ -49,11 +49,13 @@ export async function POST(request: NextRequest) {
         username,
         email: email.toLowerCase(),
         password: hashedPassword,
+        // role se asigna automáticamente como "USER" por el default en el schema
       },
       select: {
         id: true,
         username: true,
         email: true,
+        role: true,
         createdAt: true,
       },
     });
