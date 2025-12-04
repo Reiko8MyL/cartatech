@@ -40,6 +40,7 @@ import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { AdInline } from "@/components/ads/ad-inline"
 import { AdSidebar } from "@/components/ads/ad-sidebar"
+import { Pagination } from "@/components/ui/pagination"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -73,6 +74,13 @@ function MazosComunidadPage() {
     favorites: "",
     liked: "",
   })
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pagination, setPagination] = useState<{
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  } | null>(null)
   
   // Actualizar filtros cuando cambie el parámetro de búsqueda en la URL
   useEffect(() => {
@@ -131,15 +139,20 @@ function MazosComunidadPage() {
     setIsLoading(true)
     const loadDecks = async () => {
       try {
-        // Intentar cargar desde la API primero
+        // Intentar cargar desde la API primero (cargar todos para aplicar filtros en cliente)
         const { getPublicDecksFromStorage } = await import("@/lib/deck-builder/utils");
-        const decks = await getPublicDecksFromStorage();
-        setPublicDecks(decks);
+        // Cargar todos los mazos (página 1 con límite alto) para aplicar filtros en cliente
+        const result = await getPublicDecksFromStorage(1, 1000);
+        setPublicDecks(result.decks);
+        if (result.pagination) {
+          setPagination(result.pagination);
+        }
       } catch (error) {
         console.error("Error al cargar mazos públicos desde API:", error);
         // Fallback a localStorage si la API falla
         const decks = getPublicDecksFromLocalStorage();
         setPublicDecks(decks);
+        setPagination(null);
       } finally {
         setIsLoading(false);
       }
@@ -227,7 +240,21 @@ function MazosComunidadPage() {
     })
 
     return filtered
-  }, [decksWithMetadata, filters, sortBy, sortDirection])
+  }, [decksWithMetadata, filters, sortBy, sortDirection, user])
+
+  // Paginación en el cliente (después de filtros)
+  const ITEMS_PER_PAGE = 12
+  const totalFilteredPages = Math.ceil(filteredDecks.length / ITEMS_PER_PAGE)
+  const paginatedDecks = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    const end = start + ITEMS_PER_PAGE
+    return filteredDecks.slice(start, end)
+  }, [filteredDecks, currentPage])
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filters, sortBy, sortDirection])
 
   // Obtener valores únicos para los filtros
   const availableRaces = useMemo(() => {
@@ -571,7 +598,7 @@ function MazosComunidadPage() {
           </Card>
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300">
-            {filteredDecks.map((deck, index) => {
+            {paginatedDecks.map((deck, index) => {
               // Insertar anuncio inline cada 6 mazos
               // DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la línea siguiente y el bloque de anuncio
               // const shouldShowAd = index > 0 && index % 6 === 0 && process.env.NEXT_PUBLIC_ADSENSE_ID
@@ -723,7 +750,7 @@ function MazosComunidadPage() {
           </div>
         ) : (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {filteredDecks.map((deck) => {
+            {paginatedDecks.map((deck) => {
               const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
               const publishedDate = deck.publishedAt
                 ? new Date(deck.publishedAt)
@@ -869,6 +896,21 @@ function MazosComunidadPage() {
                 </Card>
               )
             })}
+          </div>
+        )}
+        
+        {/* Paginación */}
+        {totalFilteredPages > 1 && (
+          <div className="mt-8 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalFilteredPages}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                // Scroll al inicio de la lista
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
           </div>
         )}
       </div>

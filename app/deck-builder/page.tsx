@@ -141,7 +141,12 @@ function DeckBuilderContent() {
         newDeckCards[existingIndex] = { cardId, quantity: currentQuantity + 1 }
         return newDeckCards
       } else {
-        // Agregar nuevo
+        // Agregar nuevo - tracking de analytics
+        if (typeof window !== "undefined") {
+          import("@/lib/analytics/events").then(({ trackCardAddedToDeck }) => {
+            trackCardAddedToDeck(cardId, card.name);
+          });
+        }
         return [...prevDeckCards, { cardId, quantity: 1 }]
       }
     })

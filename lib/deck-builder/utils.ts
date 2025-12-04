@@ -489,34 +489,81 @@ export function getUniqueCosts(cards: Card[]): number[] {
 /**
  * Obtiene mazos de un usuario específico. Usa API si está disponible.
  */
-export async function getUserDecksFromStorage(userId: string): Promise<SavedDeck[]> {
-  if (typeof window === "undefined") return [];
+/**
+ * Obtiene mazos del usuario. Usa API si está disponible.
+ * @param userId - ID del usuario
+ * @param page - Número de página (default: 1)
+ * @param limit - Cantidad de mazos por página (default: 12)
+ */
+export async function getUserDecksFromStorage(
+  userId: string,
+  page: number = 1,
+  limit: number = 12
+): Promise<{ decks: SavedDeck[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }> {
+  if (typeof window === "undefined") return { decks: [] };
   
   // Intentar usar API primero
   try {
     const { getUserDecks } = await import("@/lib/api/decks");
-    return await getUserDecks(userId);
+    const result = await getUserDecks(userId, page, limit);
+    return {
+      decks: result.data,
+      pagination: result.pagination,
+    };
   } catch {
-    // Fallback a localStorage
+    // Fallback a localStorage (sin paginación)
     const allDecks = getSavedDecksFromLocalStorage();
-    return allDecks.filter((deck) => deck.userId === userId);
+    const userDecks = allDecks.filter((deck) => deck.userId === userId);
+    // Aplicar paginación manualmente en el cliente
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    return {
+      decks: userDecks.slice(start, end),
+      pagination: {
+        page,
+        limit,
+        total: userDecks.length,
+        totalPages: Math.ceil(userDecks.length / limit),
+      },
+    };
   }
 }
 
 /**
  * Obtiene mazos públicos. Usa API si está disponible.
+ * @param page - Número de página (default: 1)
+ * @param limit - Cantidad de mazos por página (default: 12)
  */
-export async function getPublicDecksFromStorage(): Promise<SavedDeck[]> {
-  if (typeof window === "undefined") return [];
+export async function getPublicDecksFromStorage(
+  page: number = 1,
+  limit: number = 12
+): Promise<{ decks: SavedDeck[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }> {
+  if (typeof window === "undefined") return { decks: [] };
   
   // Intentar usar API primero
   try {
     const { getPublicDecks } = await import("@/lib/api/decks");
-    return await getPublicDecks();
+    const result = await getPublicDecks(page, limit);
+    return {
+      decks: result.data,
+      pagination: result.pagination,
+    };
   } catch {
-    // Fallback a localStorage
+    // Fallback a localStorage (sin paginación)
     const allDecks = getSavedDecksFromLocalStorage();
-    return allDecks.filter((deck) => deck.isPublic === true);
+    const publicDecks = allDecks.filter((deck) => deck.isPublic === true);
+    // Aplicar paginación manualmente en el cliente
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    return {
+      decks: publicDecks.slice(start, end),
+      pagination: {
+        page,
+        limit,
+        total: publicDecks.length,
+        totalPages: Math.ceil(publicDecks.length / limit),
+      },
+    };
   }
 }
 
@@ -1028,10 +1075,27 @@ export async function toggleFavoriteDeck(deckId: string, userId: string): Promis
   // Intentar usar API primero
   try {
     const { toggleFavoriteDeck: apiToggleFavorite } = await import("@/lib/api/favorites");
-    return await apiToggleFavorite(userId, deckId);
+    const isFavorite = await apiToggleFavorite(userId, deckId);
+    
+    // Tracking de analytics solo cuando se agrega a favoritos
+    if (isFavorite) {
+      const { trackDeckFavorited } = await import("@/lib/analytics/events");
+      trackDeckFavorited(deckId);
+    }
+    
+    return isFavorite;
   } catch {
     // Fallback a localStorage
-    return toggleFavoriteDeckLocalStorage(deckId, userId);
+    const isFavorite = toggleFavoriteDeckLocalStorage(deckId, userId);
+    
+    // Tracking de analytics solo cuando se agrega a favoritos
+    if (isFavorite && typeof window !== "undefined") {
+      import("@/lib/analytics/events").then(({ trackDeckFavorited }) => {
+        trackDeckFavorited(deckId);
+      });
+    }
+    
+    return isFavorite;
   }
 }
 

@@ -28,7 +28,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.cl"),
   title: {
     default: "Carta Tech - MyL Deck Builder",
     template: "%s | Carta Tech - MyL Deck Builder",

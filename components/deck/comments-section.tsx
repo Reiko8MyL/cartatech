@@ -10,6 +10,7 @@ import { getDeckComments, createComment, updateComment, deleteComment, type Comm
 import { toastSuccess, toastError } from "@/lib/toast"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Pagination } from "@/components/ui/pagination"
 
 interface CommentsSectionProps {
   deckId: string
@@ -27,16 +28,24 @@ export function CommentsSection({ deckId, deckName }: CommentsSectionProps) {
   const [editContent, setEditContent] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pagination, setPagination] = useState<{
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  } | null>(null)
 
   useEffect(() => {
     loadComments()
-  }, [deckId])
+  }, [deckId, currentPage])
 
   const loadComments = async () => {
     setIsLoading(true)
     try {
-      const loadedComments = await getDeckComments(deckId)
-      setComments(loadedComments)
+      const result = await getDeckComments(deckId, currentPage, 10)
+      setComments(result.comments)
+      setPagination(result.pagination)
     } catch (error) {
       console.error("Error al cargar comentarios:", error)
       toastError("Error al cargar comentarios")
@@ -69,7 +78,12 @@ export function CommentsSection({ deckId, deckName }: CommentsSectionProps) {
     try {
       const comment = await createComment(deckId, newComment.trim(), user.id)
       if (comment) {
+        // Tracking de analytics
+        const { trackDeckCommented } = await import("@/lib/analytics/events");
+        trackDeckCommented(deckId, newComment.trim().length);
+        
         setNewComment("")
+        setCurrentPage(1) // Volver a la primera página para ver el nuevo comentario
         await loadComments()
         toastSuccess("Comentario publicado")
       }
@@ -87,6 +101,7 @@ export function CommentsSection({ deckId, deckName }: CommentsSectionProps) {
       if (comment) {
         setReplyContent("")
         setReplyingTo(null)
+        // No cambiar de página al responder, solo recargar comentarios
         await loadComments()
         toastSuccess("Respuesta publicada")
       }
@@ -157,11 +172,11 @@ export function CommentsSection({ deckId, deckName }: CommentsSectionProps) {
 
   return (
     <>
-      <Card>
+      <Card id="comments-section">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            Comentarios ({comments.length})
+            Comentarios {pagination ? `(${pagination.total})` : `(${comments.length})`}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -361,6 +376,24 @@ export function CommentsSection({ deckId, deckName }: CommentsSectionProps) {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+          
+          {/* Paginación */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  // Scroll al inicio de los comentarios
+                  const commentsSection = document.getElementById("comments-section");
+                  if (commentsSection) {
+                    commentsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+              />
             </div>
           )}
         </CardContent>

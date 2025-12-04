@@ -29,10 +29,26 @@ export async function GET(
       )
     }
 
-    // Obtener comentarios (solo comentarios principales, no respuestas)
+    // Parámetros de paginación
+    const searchParams = request.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+    const skip = (page - 1) * limit;
+
+    // Obtener total de comentarios principales para paginación
     // Manejar el caso donde la tabla no existe aún (migración pendiente)
-    let comments = []
+    let total = 0;
+    let comments = [];
+    
     try {
+      total = await prisma.comment.count({
+        where: {
+          deckId: id,
+          parentId: null, // Solo comentarios principales
+        },
+      });
+
+      // Obtener comentarios (solo comentarios principales, no respuestas) con paginación
       comments = await prisma.comment.findMany({
         where: {
           deckId: id,
@@ -62,6 +78,8 @@ export async function GET(
         orderBy: {
           createdAt: "desc",
         },
+        skip,
+        take: limit,
       })
     } catch (dbError: any) {
       // Si la tabla no existe (varios códigos de error posibles), retornar array vacío
@@ -79,7 +97,15 @@ export async function GET(
         if (process.env.NODE_ENV === "development") {
           console.warn("Tabla de comentarios no existe. Ejecuta las migraciones de Prisma:", dbError?.message)
         }
-        return NextResponse.json({ comments: [] })
+        return NextResponse.json({ 
+          comments: [],
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0,
+          },
+        })
       }
       // Re-lanzar otros errores
       throw dbError
@@ -97,7 +123,15 @@ export async function GET(
       })),
     }))
 
-    return NextResponse.json({ comments: formattedComments })
+    return NextResponse.json({ 
+      comments: formattedComments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    })
   } catch (error) {
     // Loggear solo en desarrollo para debugging
     if (process.env.NODE_ENV === "development") {
@@ -113,7 +147,15 @@ export async function GET(
 
     // SIEMPRE retornar array vacío - los comentarios son opcionales y no deben afectar UX
     // No retornar error 500 para evitar errores en la consola del navegador
-    return NextResponse.json({ comments: [] })
+    return NextResponse.json({ 
+      comments: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      },
+    })
   }
 }
 

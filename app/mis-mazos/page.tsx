@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
+import { Pagination } from "@/components/ui/pagination"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race"
@@ -69,6 +70,7 @@ export default function MisMazosPage() {
   const [deckToDelete, setDeckToDelete] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [favorites, setFavorites] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Cargar todas las cartas desde la API con cache
   const { cards: allCards } = useCards(false)
@@ -79,12 +81,13 @@ export default function MisMazosPage() {
       // Cargar mazos desde la API
       const loadDecks = async () => {
         try {
-          // Intentar cargar desde la API
+          // Intentar cargar desde la API (cargar todos para aplicar filtros en cliente)
           const { getUserDecksFromStorage } = await import("@/lib/deck-builder/utils");
-          const userDecks = await getUserDecksFromStorage(user.id);
+          // Cargar todos los mazos (página 1 con límite alto) para aplicar filtros en cliente
+          const result = await getUserDecksFromStorage(user.id, 1, 1000);
           
           // Asegurar que los mazos tengan el autor si no lo tienen
-          const decksWithAuthor = userDecks.map((deck) => ({
+          const decksWithAuthor = result.decks.map((deck) => ({
             ...deck,
             author: deck.author || user.username,
           }))
@@ -186,6 +189,20 @@ export default function MisMazosPage() {
 
     return filtered
   }, [decksWithMetadata, filters, sortBy, sortDirection])
+
+  // Paginación en el cliente (después de filtros)
+  const ITEMS_PER_PAGE = 12
+  const totalFilteredPages = Math.ceil(filteredDecks.length / ITEMS_PER_PAGE)
+  const paginatedDecks = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    const end = start + ITEMS_PER_PAGE
+    return filteredDecks.slice(start, end)
+  }, [filteredDecks, currentPage])
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filters, sortBy, sortDirection])
 
   // Obtener valores únicos para los filtros
   const availableRaces = useMemo(() => {
@@ -547,7 +564,7 @@ export default function MisMazosPage() {
           </Card>
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300">
-            {filteredDecks.map((deck) => {
+            {paginatedDecks.map((deck) => {
               const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
               const createdDate = new Date(deck.createdAt)
               const formattedDate = createdDate.toLocaleDateString("es-ES", {
@@ -679,7 +696,7 @@ export default function MisMazosPage() {
           </div>
         ) : (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {filteredDecks.map((deck) => {
+            {paginatedDecks.map((deck) => {
               const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
               const createdDate = new Date(deck.createdAt)
               const formattedDate = createdDate.toLocaleDateString("es-ES", {
@@ -813,6 +830,21 @@ export default function MisMazosPage() {
               )
             })}
           </div>
+          )}
+          
+          {/* Paginación */}
+          {totalFilteredPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalFilteredPages}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  // Scroll al inicio de la lista
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </div>
           )}
         </ErrorBoundary>
 

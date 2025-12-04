@@ -1429,6 +1429,7 @@ export default function ViewDeckPage() {
                 url={deck.id ? `/mazo/${deck.id}` : ""}
                 title={deck.name}
                 description={deck.description}
+                deckId={deck.id}
               />
             </>
           )}
@@ -1606,6 +1607,8 @@ export default function ViewDeckPage() {
                           fill
                           className="object-contain p-1"
                           sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, (max-width: 1280px) 16vw, 12vw"
+                          loading="lazy"
+                          decoding="async"
                         />
                         
                         {/* Overlay con información al hacer hover */}

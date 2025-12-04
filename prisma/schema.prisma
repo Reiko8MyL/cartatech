@@ -52,6 +52,7 @@ model Deck {
   versions    DeckVersion[]
   likes       DeckLike[]
   comments    Comment[]
+  shareCodes  ShareCode[]
 
   @@index([userId])
   @@index([isPublic])
@@ -225,5 +226,22 @@ model Card {
   @@index([edition])
   @@index([isCosmetic])
   @@map("cards")
+}
+
+model ShareCode {
+  id          String   @id @default(cuid())
+  code        String   @unique // Código corto único (ej: "abc123")
+  deckId      String
+  clickCount  Int      @default(0) // Contador de clics para analytics
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime? // Fecha de expiración opcional
+
+  // Relaciones
+  deck        Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([deckId])
+  @@index([createdAt])
+  @@map("share_codes")
 }
 

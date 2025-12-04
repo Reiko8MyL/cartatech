@@ -66,6 +66,9 @@ import { useAuth } from "@/contexts/auth-context"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { getAllCardsMetadata } from "@/lib/api/cards"
+import { DeckHeader } from "./deck-header"
+import { DeckStatsSection } from "./deck-stats-section"
+import { DeckActionsBar } from "./deck-actions-bar"
 
 /**
  * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
@@ -178,8 +181,6 @@ export function DeckManagementPanel({
   }, [])
   const { user } = useAuth()
   const router = useRouter()
-  const [isEditingName, setIsEditingName] = useState(false)
-  const [tempName, setTempName] = useState(deckName)
   const [showLoadDialog, setShowLoadDialog] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
@@ -188,9 +189,6 @@ export function DeckManagementPanel({
   const [copied, setCopied] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deckToDelete, setDeckToDelete] = useState<string | null>(null)
-  const [showAliadosTooltip, setShowAliadosTooltip] = useState(false)
-  const [showOrosTooltip, setShowOrosTooltip] = useState(false)
-  const [showTotalCartasTooltip, setShowTotalCartasTooltip] = useState(false)
   
   // Estados para el modal de exportación
   const [showExportModal, setShowExportModal] = useState(false)
@@ -212,16 +210,6 @@ export function DeckManagementPanel({
   // Alturas mínima y máxima del panel
   const MIN_HEIGHT = 120 // Solo muestra el header cuando está colapsado
   const getMaxHeight = () => typeof window !== "undefined" ? window.innerHeight * 0.85 : 800
-
-  function handleSaveName() {
-    onDeckNameChange(tempName)
-    setIsEditingName(false)
-  }
-
-  function handleCancelEdit() {
-    setTempName(deckName)
-    setIsEditingName(false)
-  }
 
   function handleCopyCode() {
     const code = generateDeckCode(deckCards)
@@ -327,6 +315,22 @@ export function DeckManagementPanel({
       const savedDeck = await saveDeckToStorage(deck, user.id);
 
       if (savedDeck) {
+        // Tracking de analytics
+        const { trackDeckCreated, trackDeckSaved, trackDeckPublished } = await import("@/lib/analytics/events");
+        
+        if (!isEditing && savedDeck.id) {
+          // Mazo nuevo creado
+          trackDeckCreated(savedDeck.name, savedDeck.id);
+        } else if (isEditing) {
+          // Mazo existente guardado/actualizado
+          trackDeckSaved(savedDeck.id, savedDeck.name, savedDeck.isPublic || false);
+        }
+        
+        // Si se publicó el mazo
+        if (deckData.isPublic && deckData.publishedAt && savedDeck.id) {
+          trackDeckPublished(savedDeck.id, savedDeck.name);
+        }
+        
         onDeckNameChange(deckData.name)
         // Actualizar currentDeck con el mazo guardado para mantener la referencia actualizada
         if (isEditing && savedDeck.id) {
@@ -378,9 +382,17 @@ export function DeckManagementPanel({
     if (!deckToDelete || !user) return
 
     try {
+      // Obtener información del mazo antes de eliminarlo para analytics
+      const deckToDeleteObj = savedDecks.find(d => d.id === deckToDelete);
+      const deckName = deckToDeleteObj?.name || "Mazo sin nombre";
+      
       // Usar la función que elimina de la API si hay usuario
       const { deleteDeckFromStorage } = await import("@/lib/deck-builder/utils")
       await deleteDeckFromStorage(deckToDelete, user.id)
+      
+      // Tracking de analytics
+      const { trackDeckDeleted } = await import("@/lib/analytics/events");
+      trackDeckDeleted(deckToDelete, deckName);
       
       // Recargar la lista de mazos
       const decks = await getSavedDecksFromStorage(user.id)
@@ -398,7 +410,7 @@ export function DeckManagementPanel({
     }
   }
 
-  function handleExportList() {
+  async function handleExportList() {
     // Usar cardMap que ya incluye las alternativas
     const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
     const lookup = cardMap
@@ -423,6 +435,16 @@ export function DeckManagementPanel({
     }
     const blob = new Blob([lines.join("\n")], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
+    
+    // Tracking de analytics (no bloqueante)
+    if (currentDeck?.id) {
+      import("@/lib/analytics/events").then(({ trackDeckExported }) => {
+        trackDeckExported(currentDeck.id, "list");
+      }).catch(() => {
+        // Silenciar errores de analytics
+      });
+    }
+    
     const a = document.createElement("a")
     a.href = url
     a.download = `${deckName || "mazo"}.txt`
@@ -1016,6 +1038,13 @@ export function DeckManagementPanel({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    
+    // Tracking de analytics
+    if (currentDeck?.id) {
+      const { trackDeckExported } = await import("@/lib/analytics/events");
+      trackDeckExported(currentDeck.id, "image");
+    }
+    
     toastSuccess("Imagen del mazo exportada correctamente")
   }
 
@@ -1305,389 +1334,30 @@ export function DeckManagementPanel({
         )}
         
         {/* Encabezado con nombre del mazo */}
-        <div className="p-2 sm:p-3 lg:p-4 border-b space-y-3">
-        {/* Panel de mazo activo - solo se muestra cuando se está editando un mazo existente */}
-        {currentDeck && currentDeck.id && (() => {
-          console.log("[DeckManagementPanel] Renderizando panel de mazo activo:", {
-            id: currentDeck.id,
-            name: currentDeck.name,
-          });
-          const race = getDeckRace(currentDeck.cards, allCards)
-          const backgroundImage = getDeckBackgroundImage(race)
-          
-          return (
-            <div
-              className="relative rounded-lg overflow-hidden"
-              style={{
-                backgroundImage: `url(${backgroundImage})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-              <div className="relative p-2 sm:p-3">
-                {/* Tag Público en la esquina superior derecha */}
-                {currentDeck.isPublic && (
-                  <div className="absolute top-2 right-2 z-10 px-1.5 py-0.5 bg-blue-500/30 backdrop-blur-sm text-white text-xs rounded">
-                    Público
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-white/90">
-                    <div className="size-2 rounded-full bg-blue-400 animate-pulse" />
-                    <span>Mazo en edición</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{currentDeck.name}</p>
-                  </div>
-                  {/* Botón para ir a la página del mazo */}
-                  <div className="ml-2 mt-0.5">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => router.push(`/mazo/${currentDeck.id}`)}
-                      className="h-5 px-1 text-[10px] font-medium bg-white/30 hover:bg-white/50 text-white shadow-md backdrop-blur-sm rounded-full border border-white/20"
-                    >
-                      <span className="hidden sm:inline">Página del Mazo</span>
-                      <span className="sm:hidden">Página</span>
-                      <ArrowRight className="size-2.5 ml-0.5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
-        
-        <div className="flex items-center gap-2">
-          {isEditingName && !currentDeck?.id ? (
-            <>
-              <Input
-                value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                className="flex-1"
-                autoFocus
-              />
-              <Button size="icon" variant="ghost" onClick={handleSaveName}>
-                <Check className="size-4" />
-              </Button>
-              <Button size="icon" variant="ghost" onClick={handleCancelEdit}>
-                <X className="size-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <h2 className="text-xl font-semibold flex-1 truncate">
-                {deckName || "Mazo sin nombre"}
-              </h2>
-              {!currentDeck?.id && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    setTempName(deckName)
-                    setIsEditingName(true)
-                  }}
-                  title="Editar nombre del mazo"
-                >
-                  <Edit2 className="size-4" />
-                </Button>
-              )}
-              {currentDeck?.id && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled
-                  title="El nombre del mazo se edita desde el modal de guardar"
-                  className="cursor-not-allowed"
-                >
-                  <Lock className="size-4 text-muted-foreground" />
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-        {/* Selector de formato */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-muted-foreground">Formato</label>
-            {currentDeck?.id && (
-              <Lock className="size-3 text-muted-foreground" />
-            )}
-          </div>
-          <ToggleGroup
-            type="single"
-            value={deckFormat}
-            onValueChange={(value) => {
-              if (!currentDeck?.id && value) {
-                onDeckFormatChange(value as DeckFormat)
-              }
-            }}
-            className="w-full"
-            variant="outline"
-            spacing={0}
-            disabled={!!currentDeck?.id}
-          >
-            <ToggleGroupItem 
-              value="RE" 
-              className="flex-1 rounded-r-none"
-              disabled={!!currentDeck?.id}
-            >
-              Racial Edición
-            </ToggleGroupItem>
-            <ToggleGroupItem 
-              value="RL" 
-              className="flex-1 rounded-none border-x"
-              disabled={!!currentDeck?.id}
-            >
-              Racial Libre
-            </ToggleGroupItem>
-            <ToggleGroupItem 
-              value="LI" 
-              className="flex-1 rounded-l-none"
-              disabled={!!currentDeck?.id}
-            >
-              Formato Libre
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-      </div>
+        <DeckHeader
+          deckName={deckName}
+          onDeckNameChange={onDeckNameChange}
+          deckFormat={deckFormat}
+          onDeckFormatChange={onDeckFormatChange}
+          currentDeck={currentDeck}
+          allCards={allCards}
+        />
 
-      {/* Estadísticas */}
-      <div className="p-2 sm:p-3 lg:p-4 border-b space-y-2">
-        <h3 className="text-sm font-semibold">Estadísticas</h3>
-        <div className="space-y-1.5 text-sm">
-          <div className="flex gap-4">
-            <div className="relative inline-flex items-center gap-0.5">
-              <span className="text-muted-foreground">Total cartas: </span>
-              <span
-                className={`font-medium ${
-                  stats.totalCards === 50
-                    ? "text-green-600 dark:text-green-500"
-                    : stats.totalCards < 50
-                    ? "text-destructive"
-                    : ""
-                }`}
-              >
-                {stats.totalCards}
-              </span>
-              {stats.totalCards < 50 && (
-                <div className="relative inline-block">
-                  <button
-                    type="button"
-                    className="text-destructive hover:text-destructive/80 transition-colors text-[0.7rem] leading-none align-super"
-                    onMouseEnter={() => setShowTotalCartasTooltip(true)}
-                    onMouseLeave={() => setShowTotalCartasTooltip(false)}
-                    onClick={() => setShowTotalCartasTooltip(!showTotalCartasTooltip)}
-                    aria-label="Información sobre Total de Cartas"
-                  >
-                    (?)
-                  </button>
-                  {showTotalCartasTooltip && (
-                    <div
-                      className="absolute bottom-full left-0 mb-2 z-50"
-                      onMouseEnter={() => setShowTotalCartasTooltip(true)}
-                      onMouseLeave={() => setShowTotalCartasTooltip(false)}
-                    >
-                      <div className="bg-popover text-popover-foreground text-xs rounded-none border shadow-md px-3 py-2 w-[140px] whitespace-normal break-words">
-                        El mazo necesita 50 cartas
-                        <div className="absolute top-full left-4 -mt-1">
-                          <div className="border-4 border-transparent border-t-popover" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Coste promedio: </span>
-              <span className="font-medium">{stats.averageCost}</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-1 text-center">
-            {/* Aliados */}
-            <span className="text-xs relative inline-flex items-center gap-0.5">
-              Aliados:{" "}
-              <span
-                className={`font-semibold ${
-                  stats.totalCards === 50
-                    ? (stats.cardsByType["Aliado"] || 0) >= 16
-                      ? "text-green-600 dark:text-green-500"
-                      : "text-destructive"
-                    : ""
-                }`}
-              >
-                {stats.cardsByType["Aliado"] || 0}
-              </span>
-              {stats.totalCards === 50 &&
-                (stats.cardsByType["Aliado"] || 0) < 16 && (
-                  <div className="relative inline-block">
-                    <button
-                      type="button"
-                      className="text-destructive hover:text-destructive/80 transition-colors text-[0.7rem] leading-none align-super"
-                      onMouseEnter={() => setShowAliadosTooltip(true)}
-                      onMouseLeave={() => setShowAliadosTooltip(false)}
-                      onClick={() => setShowAliadosTooltip(!showAliadosTooltip)}
-                      aria-label="Información sobre Aliados"
-                    >
-                      (?)
-                    </button>
-                    {showAliadosTooltip && (
-                      <div
-                        className="absolute bottom-full left-0 mb-2 z-50"
-                        onMouseEnter={() => setShowAliadosTooltip(true)}
-                        onMouseLeave={() => setShowAliadosTooltip(false)}
-                      >
-                        <div className="bg-popover text-popover-foreground text-xs rounded-none border shadow-md px-3 py-2 w-[140px] whitespace-normal break-words">
-                          El mínimo de Aliados por mazo es de 16
-                          <div className="absolute top-full left-4 -mt-1">
-                            <div className="border-4 border-transparent border-t-popover" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-            </span>
-            <span className="text-xs">
-              Arma: <span className="font-semibold">{stats.cardsByType["Arma"] || 0}</span>
-            </span>
-            <span className="text-xs">
-              Talismán: <span className="font-semibold">{stats.cardsByType["Talismán"] || 0}</span>
-            </span>
-            <span className="text-xs">
-              Tótem: <span className="font-semibold">{stats.cardsByType["Tótem"] || 0}</span>
-            </span>
-            {/* Oros */}
-            <span className="text-xs relative inline-flex items-center gap-0.5">
-              Oros:{" "}
-              <span
-                className={`font-semibold ${
-                  stats.totalCards === 50
-                    ? stats.hasOroIni
-                      ? "text-green-600 dark:text-green-500"
-                      : "text-destructive"
-                    : ""
-                }`}
-              >
-                {stats.cardsByType["Oro"] || 0}
-              </span>
-              {stats.totalCards === 50 && !stats.hasOroIni && (
-                <div className="relative inline-block">
-                    <button
-                      type="button"
-                      className="text-destructive hover:text-destructive/80 transition-colors text-[0.7rem] leading-none align-super"
-                      onMouseEnter={() => setShowOrosTooltip(true)}
-                      onMouseLeave={() => setShowOrosTooltip(false)}
-                      onClick={() => setShowOrosTooltip(!showOrosTooltip)}
-                      aria-label="Información sobre Oros"
-                    >
-                      (?)
-                    </button>
-                  {showOrosTooltip && (
-                    <div
-                      className="absolute bottom-full right-0 mb-2 z-50"
-                      onMouseEnter={() => setShowOrosTooltip(true)}
-                      onMouseLeave={() => setShowOrosTooltip(false)}
-                    >
-                      <div className="bg-popover text-popover-foreground text-xs rounded-none border shadow-md px-3 py-2 w-[140px] whitespace-normal break-words">
-                        Agrega un Oro Inicial (Sin habilidad)
-                        <div className="absolute top-full right-4 -mt-1">
-                          <div className="border-4 border-transparent border-t-popover" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
+        {/* Estadísticas */}
+        <DeckStatsSection stats={stats} />
 
-      {/* Botones de acción */}
-      <div className="p-2 sm:p-3 lg:p-4 border-b space-y-2">
-        <div className="flex flex-row gap-1 overflow-x-auto lg:grid lg:grid-cols-2 lg:gap-2 lg:overflow-visible">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyCode}
-            className="lg:w-full flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
-          >
-            {copied ? (
-              <>
-                <Check className="size-3 lg:size-4" />
-                <span className="hidden lg:inline">Copiado</span>
-              </>
-            ) : (
-              <>
-                <Copy className="size-3 lg:size-4" />
-                <span className="hidden lg:inline">Código TTS</span>
-                <span className="lg:hidden">TTS</span>
-              </>
-            )}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleSaveDeck}
-            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
-          >
-            <Save className="size-3 lg:size-4" />
-            <span className="hidden lg:inline">
-              {currentDeck?.id ? "Guardar Cambios" : "Guardar"}
-            </span>
-            <span className="lg:hidden">
-              {currentDeck?.id ? "Cambios" : "Guardar"}
-            </span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={openLoadDialog}
-            disabled={!user}
-            title={!user ? "Debes iniciar sesión para cargar mazos" : ""}
-            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
-          >
-            <Loader2 className="size-3 lg:size-4" />
-            <span className="hidden lg:inline">Cargar</span>
-            <span className="lg:hidden">Cargar</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClearDeck}
-            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 text-destructive lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
-          >
-            <Trash2 className="size-3 lg:size-4" />
-            <span className="hidden lg:inline">Borrar</span>
-            <span className="lg:hidden">Borrar</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExportImage}
-            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
-          >
-            <Download className="size-3 lg:size-4" />
-            <span className="hidden lg:inline">Exportar imagen</span>
-            <span className="lg:hidden">Exp. Img</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExportList}
-            className="flex-shrink-0 text-[10px] px-1.5 h-7 gap-0.5 lg:text-sm lg:px-3 lg:h-8 lg:gap-1.5"
-          >
-            <FileText className="size-3 lg:size-4" />
-            <span className="hidden lg:inline">Exportar lista</span>
-            <span className="lg:hidden">Exp. List</span>
-          </Button>
-        </div>
-      </div>
+        {/* Botones de acción */}
+        <DeckActionsBar
+          copied={copied}
+          currentDeck={currentDeck}
+          user={user}
+          onCopyCode={handleCopyCode}
+          onSave={handleSaveDeck}
+          onLoad={openLoadDialog}
+          onClear={onClearDeck}
+          onExportImage={handleExportImage}
+          onExportList={handleExportList}
+        />
 
       {/* Lista de cartas del mazo */}
       <div 

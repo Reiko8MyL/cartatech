@@ -15,12 +15,28 @@ export interface Comment {
   replies?: Comment[]
 }
 
-// Obtener comentarios de un mazo
-export async function getDeckComments(deckId: string): Promise<Comment[]> {
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedCommentsResponse {
+  comments: Comment[];
+  pagination: PaginationInfo;
+}
+
+// Obtener comentarios de un mazo con paginación
+export async function getDeckComments(
+  deckId: string,
+  page: number = 1,
+  limit: number = 10
+): Promise<PaginatedCommentsResponse> {
   try {
     const url = API_BASE_URL 
-      ? `${API_BASE_URL}/api/decks/${deckId}/comments`
-      : `/api/decks/${deckId}/comments`
+      ? `${API_BASE_URL}/api/decks/${deckId}/comments?page=${page}&limit=${limit}`
+      : `/api/decks/${deckId}/comments?page=${page}&limit=${limit}`
     
     // Usar fetch con manejo silencioso de errores
     const response = await fetch(url, {
@@ -34,15 +50,47 @@ export async function getDeckComments(deckId: string): Promise<Comment[]> {
     if (!response || !response.ok) {
       // Retornar array vacío para cualquier error (no crítico)
       // Los comentarios son opcionales y no deben afectar la UX
-      return []
+      return {
+        comments: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+        },
+      };
     }
 
-    const data = await response.json().catch(() => ({ comments: [] }))
-    return data.comments || []
+    const data = await response.json().catch(() => ({ 
+      comments: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      },
+    }))
+    return {
+      comments: data.comments || [],
+      pagination: data.pagination || {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   } catch (error) {
     // Completamente silencioso - no loggear nada
     // Los comentarios son una característica opcional
-    return []
+    return {
+      comments: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   }
 }
 

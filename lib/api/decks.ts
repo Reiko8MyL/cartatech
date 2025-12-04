@@ -3,41 +3,96 @@ import { SavedDeck, DeckCard } from "@/lib/deck-builder/types";
 // En desarrollo, usar ruta relativa. En producción, usar la URL completa si está configurada
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? "" : "");
 
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: PaginationInfo;
+}
+
 /**
- * Obtiene los mazos del usuario desde la API
+ * Obtiene los mazos del usuario desde la API con paginación
  */
-export async function getUserDecks(userId: string): Promise<SavedDeck[]> {
+export async function getUserDecks(
+  userId: string,
+  page: number = 1,
+  limit: number = 12
+): Promise<PaginatedResponse<SavedDeck>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/decks?userId=${userId}`);
+    const response = await fetch(
+      `${API_BASE_URL}/api/decks?userId=${userId}&page=${page}&limit=${limit}`
+    );
     
     if (!response.ok) {
       throw new Error("Error al obtener mazos");
     }
 
     const data = await response.json();
-    return data.decks || [];
+    return {
+      data: data.decks || [],
+      pagination: data.pagination || {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   } catch (error) {
     console.error("Error al obtener mazos del usuario:", error);
-    return [];
+    return {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   }
 }
 
 /**
- * Obtiene los mazos públicos desde la API
+ * Obtiene los mazos públicos desde la API con paginación
  */
-export async function getPublicDecks(): Promise<SavedDeck[]> {
+export async function getPublicDecks(
+  page: number = 1,
+  limit: number = 12
+): Promise<PaginatedResponse<SavedDeck>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/decks?publicOnly=true`);
+    const response = await fetch(
+      `${API_BASE_URL}/api/decks?publicOnly=true&page=${page}&limit=${limit}`
+    );
     
     if (!response.ok) {
       throw new Error("Error al obtener mazos públicos");
     }
 
     const data = await response.json();
-    return data.decks || [];
+    return {
+      data: data.decks || [],
+      pagination: data.pagination || {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   } catch (error) {
     console.error("Error al obtener mazos públicos:", error);
-    return [];
+    return {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   }
 }
 

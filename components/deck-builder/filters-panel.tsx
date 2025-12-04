@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -46,6 +47,55 @@ export function FiltersPanel({
   availableRaces,
   availableCosts,
 }: FiltersPanelProps) {
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const previousFiltersRef = useRef<DeckFilters>(filters)
+
+  // Tracking de búsqueda con debounce
+  useEffect(() => {
+    if (filters.search && filters.search !== previousFiltersRef.current.search) {
+      // Limpiar timeout anterior
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+      
+      // Trackear después de 500ms de inactividad
+      searchTimeoutRef.current = setTimeout(() => {
+        import("@/lib/analytics/events").then(({ trackCardSearched }) => {
+          trackCardSearched(filters.search);
+        });
+      }, 500);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [filters.search])
+
+  // Tracking de filtros cuando cambian
+  useEffect(() => {
+    const prev = previousFiltersRef.current
+    const hasFilterChanged = 
+      prev.edition !== filters.edition ||
+      prev.type !== filters.type ||
+      prev.race !== filters.race ||
+      prev.cost !== filters.cost
+
+    if (hasFilterChanged && (filters.edition || filters.type || filters.race || filters.cost)) {
+      import("@/lib/analytics/events").then(({ trackCardFiltered }) => {
+        trackCardFiltered({
+          edition: filters.edition || undefined,
+          type: filters.type || undefined,
+          race: filters.race || undefined,
+          cost: filters.cost || undefined,
+        });
+      });
+    }
+
+    previousFiltersRef.current = filters
+  }, [filters.edition, filters.type, filters.race, filters.cost])
+
   function updateFilter<K extends keyof DeckFilters>(
     key: K,
     value: DeckFilters[K]

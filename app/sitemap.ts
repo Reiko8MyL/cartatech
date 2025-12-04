@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cartatech.com'
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cartatech.cl'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Obtener mazos públicos para el sitemap

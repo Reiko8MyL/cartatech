@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.com"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.cl"
 const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764381679/logo_CT_2_txcqch.webp"
 
 interface MetadataOptions {
@@ -71,6 +71,7 @@ export function generateMetadata({
     },
   }
 }
+
 
 
 

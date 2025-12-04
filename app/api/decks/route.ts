@@ -10,7 +10,19 @@ export async function GET(request: NextRequest) {
     const publicOnly = searchParams.get("publicOnly") === "true";
 
     if (publicOnly) {
-      // Obtener solo mazos públicos
+      // Parámetros de paginación
+      const page = parseInt(searchParams.get("page") || "1", 10);
+      const limit = parseInt(searchParams.get("limit") || "12", 10);
+      const skip = (page - 1) * limit;
+
+      // Obtener total de mazos públicos para paginación
+      const total = await prisma.deck.count({
+        where: {
+          isPublic: true,
+        },
+      });
+
+      // Obtener solo mazos públicos con paginación
       const decks = await prisma.deck.findMany({
         where: {
           isPublic: true,
@@ -26,6 +38,8 @@ export async function GET(request: NextRequest) {
         orderBy: {
           publishedAt: "desc",
         },
+        skip,
+        take: limit,
       });
 
       const formattedDecks = decks.map((deck: any) => ({
@@ -46,6 +60,12 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         decks: formattedDecks,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       });
     }
 
@@ -56,7 +76,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener mazos del usuario
+    // Parámetros de paginación
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "12", 10);
+    const skip = (page - 1) * limit;
+
+    // Obtener total de mazos del usuario para paginación
+    const total = await prisma.deck.count({
+      where: {
+        userId,
+      },
+    });
+
+    // Obtener mazos del usuario con paginación
     const decks = await prisma.deck.findMany({
       where: {
         userId,
@@ -64,6 +96,8 @@ export async function GET(request: NextRequest) {
       orderBy: {
         updatedAt: "desc",
       },
+      skip,
+      take: limit,
     });
 
     const formattedUserDecks = decks.map((deck: any) => ({
@@ -83,6 +117,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       decks: formattedUserDecks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("Error al obtener mazos:", error);
