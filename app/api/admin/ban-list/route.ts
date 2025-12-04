@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
           type: card.type,
           edition: card.edition,
           image: card.image,
+          isUnique: card.isUnique,
           banListRE: card.banListRE,
           banListRL: card.banListRL,
           banListLI: card.banListLI,

@@ -42,6 +42,7 @@ interface BanListCard {
   type: string;
   edition: string;
   image: string;
+  isUnique: boolean;
   banListRE: number;
   banListRL: number;
   banListLI: number;
@@ -96,10 +97,20 @@ export default function AdminBanListPage() {
         return value !== 3;
       });
 
+      // Filtrar cartas únicas con banList = 1 (es mecánica del juego, no parte de la ban list)
+      const withoutUniqueOnes = restrictedCards.filter((card: BanListCard) => {
+        const value = getBanListValue(card);
+        // Si es única y tiene banList = 1, no mostrarla
+        if (card.isUnique && value === 1) {
+          return false;
+        }
+        return true;
+      });
+
       // En formato RE, filtrar edición Drácula
       const filtered = format === "RE"
-        ? restrictedCards.filter((card: BanListCard) => card.edition !== "Drácula")
-        : restrictedCards;
+        ? withoutUniqueOnes.filter((card: BanListCard) => card.edition !== "Drácula")
+        : withoutUniqueOnes;
 
       setCards(filtered);
     } catch (error) {
@@ -228,6 +239,7 @@ export default function AdminBanListPage() {
       type: card.type,
       edition: card.edition,
       image: card.image,
+      isUnique: card.isUnique || false,
       banListRE: format === "RE" ? 0 : card.banListRE || 3,
       banListRL: format === "RL" ? 0 : card.banListRL || 3,
       banListLI: format === "LI" ? 0 : card.banListLI || 3,
@@ -398,7 +410,7 @@ export default function AdminBanListPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-6 gap-4">
                       {groupCards.map((card) => {
                         const currentValue = pendingChanges.get(card.id) ?? getBanListValue(card);
                         const hasPendingChange = pendingChanges.has(card.id);
@@ -553,7 +565,7 @@ export default function AdminBanListPage() {
                   className="pl-10"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-6 gap-3 max-h-[60vh] overflow-y-auto">
                 {availableCardsToAdd.map((card) => {
                   const baseId = card.id.split("-").slice(0, 2).join("-");
                   return (
