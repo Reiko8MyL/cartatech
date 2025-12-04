@@ -278,35 +278,99 @@ function DeckBuilderContent() {
         }
         
         if (deckToLoad) {
-          console.log("[DeckBuilder] Mazo cargado desde URL:", {
-            id: deckToLoad.id,
-            name: deckToLoad.name,
-            hasId: !!deckToLoad.id,
-            cards: deckToLoad.cards.length,
-            format: deckToLoad.format,
-          });
-          setDeckName(deckToLoad.name)
-          setDeckCards(deckToLoad.cards)
-          setDeckFormat(deckToLoad.format || "RE")
-          setCurrentDeck(deckToLoad) // Guardar el mazo completo con ID y metadatos
-          setHasLoadedFromUrl(true)
+          // Verificar si el usuario actual es el creador del mazo
+          const isOwner = user && deckToLoad.userId && user.id === deckToLoad.userId
           
-          // Detectar cartas alternativas en el mazo y establecer reemplazos
-          // allCards ya incluye alternativas, buscar por isCosmetic
-          const altCardIds = new Set(
-            allCards.filter((c) => c.isCosmetic).map((c) => c.id)
-          )
-          const replacements = new Map<string, string>()
-          
-          for (const deckCard of deckToLoad.cards) {
-            if (altCardIds.has(deckCard.cardId)) {
-              // Esta es una carta alternativa, establecer el reemplazo
-              const baseId = getBaseCardId(deckCard.cardId)
-              replacements.set(baseId, deckCard.cardId)
+          // Si el usuario NO es el creador (o no está autenticado), crear una copia sin ID para que se guarde como nuevo mazo
+          if (!isOwner && deckToLoad.id) {
+            console.log("[DeckBuilder] Usuario no es el creador, creando copia del mazo:", {
+              originalId: deckToLoad.id,
+              originalName: deckToLoad.name,
+              userId: user?.id,
+              deckOwnerId: deckToLoad.userId,
+            });
+            
+            // Crear una copia del mazo sin ID y con nombre modificado
+            const copiedDeck: SavedDeck = {
+              ...deckToLoad,
+              id: undefined, // Eliminar el ID para que se guarde como nuevo mazo
+              name: `${deckToLoad.name} (Copia)`, // Agregar "(Copia)" al nombre
+              description: undefined, // Resetear descripción
+              userId: user?.id || "", // Asignar al usuario actual
+              author: undefined, // Resetear autor (será el usuario actual al guardar)
+              isPublic: false, // Por defecto, las copias son privadas
+              publishedAt: undefined, // Eliminar fecha de publicación
+              techCardId: undefined, // Resetear carta tech
+              tags: undefined, // Resetear tags
+              viewCount: 0, // Resetear contador de vistas
             }
+            
+            console.log("[DeckBuilder] Copia del mazo creada:", {
+              name: copiedDeck.name,
+              hasId: !!copiedDeck.id,
+              cards: copiedDeck.cards.length,
+              format: copiedDeck.format,
+            });
+            
+            setDeckName(copiedDeck.name)
+            setDeckCards(copiedDeck.cards)
+            setDeckFormat(copiedDeck.format || "RE")
+            setCurrentDeck(copiedDeck) // Guardar la copia sin ID
+            setHasLoadedFromUrl(true)
+            
+            // Detectar cartas alternativas en el mazo y establecer reemplazos
+            const altCardIds = new Set(
+              allCards.filter((c) => c.isCosmetic).map((c) => c.id)
+            )
+            const replacements = new Map<string, string>()
+            
+            for (const deckCard of copiedDeck.cards) {
+              if (altCardIds.has(deckCard.cardId)) {
+                const baseId = getBaseCardId(deckCard.cardId)
+                replacements.set(baseId, deckCard.cardId)
+              }
+            }
+            
+            setCardReplacements(replacements)
+            
+            // Mostrar mensaje informativo
+            if (user) {
+              toastSuccess("Mazo copiado. Puedes editarlo y guardarlo como tu propio mazo.")
+            } else {
+              toastSuccess("Mazo copiado. Inicia sesión para guardarlo como tu propio mazo.")
+            }
+          } else {
+            // El usuario es el creador, cargar el mazo normalmente para edición
+            console.log("[DeckBuilder] Mazo cargado desde URL:", {
+              id: deckToLoad.id,
+              name: deckToLoad.name,
+              hasId: !!deckToLoad.id,
+              cards: deckToLoad.cards.length,
+              format: deckToLoad.format,
+              isOwner,
+            });
+            
+            setDeckName(deckToLoad.name)
+            setDeckCards(deckToLoad.cards)
+            setDeckFormat(deckToLoad.format || "RE")
+            setCurrentDeck(deckToLoad) // Guardar el mazo completo con ID y metadatos
+            setHasLoadedFromUrl(true)
+            
+            // Detectar cartas alternativas en el mazo y establecer reemplazos
+            const altCardIds = new Set(
+              allCards.filter((c) => c.isCosmetic).map((c) => c.id)
+            )
+            const replacements = new Map<string, string>()
+            
+            for (const deckCard of deckToLoad.cards) {
+              if (altCardIds.has(deckCard.cardId)) {
+                const baseId = getBaseCardId(deckCard.cardId)
+                replacements.set(baseId, deckCard.cardId)
+              }
+            }
+            
+            setCardReplacements(replacements)
           }
-          
-          setCardReplacements(replacements)
         } else {
           console.warn("[DeckBuilder] No se encontró el mazo con ID:", loadDeckId);
         }
@@ -314,7 +378,7 @@ function DeckBuilderContent() {
       
       loadDeck()
     }
-  }, [searchParams, hasLoadedFromUrl])
+  }, [searchParams, hasLoadedFromUrl, user, allCards])
 
   // Cargar mazo temporal al iniciar (solo una vez)
   useEffect(() => {
