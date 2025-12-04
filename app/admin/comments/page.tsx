@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AdminGuard } from "@/components/admin/admin-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { Loader2, Trash2, MessageSquare } from "lucide-react";
+import { Loader2, Trash2, MessageSquare, RefreshCw, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { toastSuccess, toastError } from "@/lib/toast";
 
 interface Comment {
   id: string;
   content: string;
   createdAt: number;
+  parentId: string | null;
   user: {
     id: string;
     username: string;
@@ -26,13 +28,43 @@ export default function AdminCommentsPage() {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const loadComments = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/comments?userId=${user.id}&limit=50`
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al cargar comentarios");
+      }
+
+      const data = await response.json();
+      setComments(data.comments || []);
+    } catch (error) {
+      console.error("Error al cargar comentarios:", error);
+      toastError("Error al cargar comentarios");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
-    // TODO: Implementar API para obtener comentarios recientes
-    // Por ahora, mostramos un placeholder
-    setIsLoading(false);
-  }, []);
+    loadComments();
+  }, [loadComments]);
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    await loadComments();
+  }
 
   async function handleDeleteComment(commentId: string) {
     if (!user?.id) return;
@@ -58,6 +90,7 @@ export default function AdminCommentsPage() {
       }
 
       toastSuccess("Comentario eliminado exitosamente");
+      // Remover el comentario de la lista
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (error) {
       console.error("Error al eliminar comentario:", error);
@@ -74,11 +107,23 @@ export default function AdminCommentsPage() {
   return (
     <AdminGuard requiredRole="MODERATOR">
       <div className="container mx-auto p-6 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Moderación de Comentarios</h1>
-          <p className="text-muted-foreground">
-            Revisa y gestiona los comentarios de la comunidad
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Moderación de Comentarios</h1>
+            <p className="text-muted-foreground">
+              Revisa y gestiona los comentarios de la comunidad
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isLoading}
+          >
+            <RefreshCw
+              className={`size-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Actualizar
+          </Button>
         </div>
 
         {isLoading ? (
@@ -104,12 +149,28 @@ export default function AdminCommentsPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg">
-                        {comment.user.username}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        En mazo: {comment.deck.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">
+                          {comment.user.username}
+                        </CardTitle>
+                        {comment.parentId && (
+                          <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded">
+                            Respuesta
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-muted-foreground">
+                          En mazo: {comment.deck.name}
+                        </p>
+                        <Link
+                          href={`/mazo/${comment.deck.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="size-3 text-muted-foreground hover:text-foreground" />
+                        </Link>
+                      </div>
                     </div>
                     <Button
                       variant="destructive"
