@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { hasAdminAccess } from "@/lib/auth/authorization";
-import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
-import { getAllCards, getAlternativeArtCards, getBaseCardId } from "@/lib/deck-builder/utils";
+import { getBaseCardId } from "@/lib/deck-builder/utils";
+import { updateCardBanList } from "@/lib/deck-builder/cards-db";
 
 /**
  * GET - Obtener todas las cartas con su ban list actual
@@ -45,9 +44,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener todas las cartas (principales y alternativas)
-    const allCards = getAllCards();
-    const altCards = getAlternativeArtCards();
+    // Obtener todas las cartas desde BD
+    const allCards = await prisma.card.findMany({
+      where: { isCosmetic: false },
+      orderBy: { id: "asc" },
+    });
+    
+    const altCards = await prisma.card.findMany({
+      where: { isCosmetic: true },
+      orderBy: { id: "asc" },
+    });
 
     // Agrupar cartas por ID base para mostrar solo las principales
     // pero incluir información de cuántas alternativas tienen
@@ -170,109 +176,43 @@ export async function PUT(request: NextRequest) {
     // Obtener ID base de la carta
     const baseId = getBaseCardId(cardId);
 
-    // En producción (Vercel), el sistema de archivos es de solo lectura
-    // Necesitamos usar un enfoque diferente o indicar que esto solo funciona en desarrollo
-    if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") {
+    // Verificar que la carta existe
+    const cardExists = await prisma.card.findUnique({
+      where: { id: baseId },
+      select: { id: true },
+    });
+
+    if (!cardExists) {
       return NextResponse.json(
         {
-          error:
-            "La actualización de ban list desde la interfaz web solo está disponible en desarrollo. " +
-            "En producción, por favor actualiza los archivos cards.js y AAcards.js manualmente o usa un sistema de gestión de archivos.",
-        },
-        { status: 503 }
-      );
-    }
-
-    // Leer archivos de cartas
-    const cardsPath = join(process.cwd(), "lib", "data", "cards.js");
-    const aacardsPath = join(process.cwd(), "lib", "data", "AAcards.js");
-
-    let cardsContent: string;
-    let aacardsContent: string;
-
-    try {
-      cardsContent = readFileSync(cardsPath, "utf-8");
-      aacardsContent = readFileSync(aacardsPath, "utf-8");
-    } catch (readError) {
-      console.error("Error al leer archivos:", readError);
-      return NextResponse.json(
-        {
-          error: "Error al leer archivos de cartas",
-          ...(process.env.NODE_ENV === "development" && {
-            details:
-              readError instanceof Error ? readError.message : String(readError),
-          }),
-        },
-        { status: 500 }
-      );
-    }
-
-    // Escapar caracteres especiales para regex
-    const escapedBaseId = baseId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const banListField = `banList${format}`;
-
-    // Actualizar carta principal en cards.js
-    // El formato es: { id: "MYL-XXXX", name: "...", ... banListRE: 1, ... }
-    // Necesitamos un regex que busque el campo banList específico después del id
-    // El problema es que las cartas están en una sola línea, así que necesitamos buscar el patrón completo
-    const cardRegex = new RegExp(
-      `(\\{[^}]*id:\\s*"${escapedBaseId}"[^}]*${banListField}:\\s*)(\\d+)([^}]*\\})`,
-      "g"
-    );
-    
-    const originalCardsContent = cardsContent;
-    const matches = cardsContent.match(cardRegex);
-    
-    if (!matches || matches.length === 0) {
-      console.error(`No se encontró la carta ${baseId} con campo ${banListField} en cards.js`);
-      console.error(`Buscando: id: "${baseId}" con ${banListField}`);
-      return NextResponse.json(
-        {
-          error: `No se encontró la carta ${baseId} con campo ${banListField} en cards.js`,
-          ...(process.env.NODE_ENV === "development" && {
-            details: `Regex usado: ${cardRegex.source}`,
-          }),
+          error: `No se encontró la carta ${baseId}`,
         },
         { status: 404 }
       );
     }
-    
-    cardsContent = cardsContent.replace(cardRegex, `$1${value}$3`);
 
-    // Actualizar todas las versiones alternativas en AAcards.js
-    // El formato es: { id: "MYL-XXXX-XX", name: "...", ... banListRE: 1, ... }
-    const altCardRegex = new RegExp(
-      `(\\{[^}]*id:\\s*"${escapedBaseId}-[^"]*"[^}]*${banListField}:\\s*)(\\d+)([^}]*\\})`,
-      "g"
-    );
-    
-    const altMatches = aacardsContent.match(altCardRegex);
-    if (altMatches && altMatches.length > 0) {
-      aacardsContent = aacardsContent.replace(altCardRegex, `$1${value}$3`);
-    }
-
-    // Escribir archivos actualizados
+    // Actualizar ban list usando la función helper
     try {
-      writeFileSync(cardsPath, cardsContent, "utf-8");
-      writeFileSync(aacardsPath, aacardsContent, "utf-8");
-    } catch (writeError) {
-      console.error("Error al escribir archivos:", writeError);
+      const result = await updateCardBanList(baseId, format, value);
+      
+      return NextResponse.json({
+        success: true,
+        message: `Ban list actualizada para ${baseId} y todas sus versiones alternativas`,
+        updated: result.updated,
+      });
+    } catch (dbError) {
+      console.error("Error al actualizar ban list en BD:", dbError);
       return NextResponse.json(
         {
-          error: "Error al escribir archivos de cartas",
+          error: "Error al actualizar ban list en la base de datos",
           ...(process.env.NODE_ENV === "development" && {
             details:
-              writeError instanceof Error ? writeError.message : String(writeError),
+              dbError instanceof Error ? dbError.message : String(dbError),
           }),
         },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({
-      success: true,
-      message: `Ban list actualizada para ${baseId} y todas sus versiones alternativas`,
-    });
   } catch (error) {
     console.error("Error al actualizar ban list:", error);
 

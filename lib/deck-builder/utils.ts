@@ -1,10 +1,13 @@
 import type { Card, DeckCard, DeckFilters, DeckStats, SavedDeck, DeckFormat } from "./types";
 
-// Importar los datos de las cartas
+// Importar los datos de las cartas (fallback)
 // @ts-ignore - Los archivos JS no tienen tipos
 import { CARDS } from "../data/cards.js";
 // @ts-ignore
 import { AAcards } from "../data/AAcards.js";
+
+// Importar funciones de BD con fallback
+import { getAllCardsFromDB, getAlternativeArtCardsFromDB, clearCardsCache } from "./cards-db";
 
 // Logos de ediciones
 export const EDITION_LOGOS: Record<string, string> = {
@@ -20,13 +23,96 @@ export const EDITION_LOGOS: Record<string, string> = {
     "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764388786/Dr_3Fcula_Logo_kfnuue.webp",
 };
 
+// Cache síncrono para uso inmediato (se actualiza desde BD en background)
+let syncCardsCache: Card[] | null = null;
+let syncAltCardsCache: Card[] | null = null;
+
+// Inicializar cache con archivos JS (fallback inmediato)
+if (typeof window === "undefined") {
+  // Solo en servidor, inicializar cache
+  syncCardsCache = CARDS as Card[];
+  syncAltCardsCache = AAcards as Card[];
+  
+  // En background, intentar cargar desde BD
+  if (typeof require !== "undefined") {
+    getAllCardsFromDB().then((cards) => {
+      syncCardsCache = cards;
+    }).catch(() => {
+      // Si falla, mantener archivos JS
+    });
+    
+    getAlternativeArtCardsFromDB().then((cards) => {
+      syncAltCardsCache = cards;
+    }).catch(() => {
+      // Si falla, mantener archivos JS
+    });
+  }
+}
+
+/**
+ * Obtiene todas las cartas principales
+ * En servidor: intenta BD primero, fallback a archivos JS
+ * En cliente: usa cache o archivos JS
+ */
 export function getAllCards(): Card[] {
+  // En cliente, siempre usar archivos JS (más rápido)
+  if (typeof window !== "undefined") {
+    return CARDS as Card[];
+  }
+  
+  // En servidor, intentar usar cache de BD si está disponible
+  if (syncCardsCache) {
+    return syncCardsCache;
+  }
+  
+  // Fallback a archivos JS
   return CARDS as Card[];
 }
 
+/**
+ * Obtiene todas las cartas alternativas
+ * En servidor: intenta BD primero, fallback a archivos JS
+ * En cliente: usa cache o archivos JS
+ */
 export function getAlternativeArtCards(): Card[] {
+  // En cliente, siempre usar archivos JS (más rápido)
+  if (typeof window !== "undefined") {
+    return AAcards as Card[];
+  }
+  
+  // En servidor, intentar usar cache de BD si está disponible
+  if (syncAltCardsCache) {
+    return syncAltCardsCache;
+  }
+  
+  // Fallback a archivos JS
   return AAcards as Card[];
 }
+
+/**
+ * Función async para obtener cartas desde BD (para APIs)
+ */
+export async function getAllCardsAsync(): Promise<Card[]> {
+  try {
+    return await getAllCardsFromDB();
+  } catch (error) {
+    return CARDS as Card[];
+  }
+}
+
+/**
+ * Función async para obtener cartas alternativas desde BD (para APIs)
+ */
+export async function getAlternativeArtCardsAsync(): Promise<Card[]> {
+  try {
+    return await getAlternativeArtCardsFromDB();
+  } catch (error) {
+    return AAcards as Card[];
+  }
+}
+
+// Exportar función para limpiar cache
+export { clearCardsCache };
 
 export function getBaseCardId(cardId: string): string {
   // Extrae el ID base (MYL-XXXX) de IDs con variantes (MYL-XXXX-XX)

@@ -193,3 +193,37 @@ model CardMetadata {
   @@map("card_metadata")
 }
 
+model Card {
+  id                String   @id // ID de la carta (ej: "MYL-0001" o "MYL-0001-01")
+  name              String
+  type              String   // "Aliado", "Arma", "Talismán", "Tótem", "Oro"
+  cost              Int?     // Coste de la carta (null para Oro y Tótem)
+  power             Int?     // Fuerza de la carta (null para Talismán, Tótem, Oro)
+  race              String?  // Raza (null para Talismán, Tótem, Oro)
+  isCosmetic        Boolean  @default(false) // true para cartas con arte alternativo
+  isRework          Boolean  @default(false)
+  isUnique          Boolean  @default(false)
+  edition           String
+  banListRE         Int      @default(3) // 0=BAN, 1=Max 1, 2=Max 2, 3=Libre
+  banListRL         Int      @default(3)
+  banListLI         Int      @default(3)
+  isOroIni          Boolean  @default(false)
+  image             String
+  description       String   @default("")
+  baseCardId        String?  // ID base para cartas alternativas (ej: "MYL-0001" para "MYL-0001-01")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relación con carta base (para cartas alternativas)
+  baseCard          Card?    @relation("CardAlternatives", fields: [baseCardId], references: [id], onDelete: Cascade)
+  alternativeCards  Card[]   @relation("CardAlternatives")
+
+  @@index([id])
+  @@index([baseCardId])
+  @@index([name])
+  @@index([type])
+  @@index([edition])
+  @@index([isCosmetic])
+  @@map("cards")
+}
+
