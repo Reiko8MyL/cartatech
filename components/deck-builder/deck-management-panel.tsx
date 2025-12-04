@@ -265,7 +265,8 @@ export function DeckManagementPanel({
         let userDecks: SavedDeck[] = []
         try {
           const { getUserDecks } = await import("@/lib/api/decks");
-          userDecks = await getUserDecks(user.id);
+          const response = await getUserDecks(user.id);
+          userDecks = response.data || [];
         } catch {
           // Fallback a localStorage si la API falla
           userDecks = getUserDecksFromLocalStorage(user.id);
