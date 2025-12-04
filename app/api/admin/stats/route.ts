@@ -1,0 +1,172 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
+import { hasModeratorAccess } from "@/lib/auth/authorization";
+
+/**
+ * GET - Obtener estadísticas para el dashboard de administración
+ * Solo accesible para moderadores y administradores
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "userId es requerido" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el usuario es moderador o admin
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    if (!hasModeratorAccess(user.role)) {
+      return NextResponse.json(
+        {
+          error:
+            "No tienes permiso para realizar esta acción. Se requiere rol de moderador o administrador.",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Obtener estadísticas
+    const [
+      totalUsers,
+      totalDecks,
+      totalPublicDecks,
+      totalComments,
+      recentComments,
+      recentUsers,
+      recentDecks,
+    ] = await Promise.all([
+      // Total de usuarios
+      prisma.user.count().catch(() => 0),
+      // Total de mazos
+      prisma.deck.count().catch(() => 0),
+      // Total de mazos públicos
+      prisma.deck.count({ where: { isPublic: true } }).catch(() => 0),
+      // Total de comentarios
+      prisma.comment.count().catch(() => 0),
+      // Comentarios de las últimas 24 horas
+      prisma.comment
+        .count({
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            },
+          },
+        })
+        .catch(() => 0),
+      // Usuarios recientes (últimos 5)
+      prisma.user
+        .findMany({
+          take: 5,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            role: true,
+            createdAt: true,
+          },
+        })
+        .catch(() => []),
+      // Mazos recientes (últimos 5)
+      prisma.deck
+        .findMany({
+          take: 5,
+          orderBy: { createdAt: "desc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        })
+        .catch(() => []),
+    ]);
+
+    // Calcular crecimiento de usuarios (últimos 7 días)
+    const usersLast7Days = await prisma.user
+      .count({
+        where: {
+          createdAt: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      })
+      .catch(() => 0);
+
+    // Calcular crecimiento de mazos (últimos 7 días)
+    const decksLast7Days = await prisma.deck
+      .count({
+        where: {
+          createdAt: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      })
+      .catch(() => 0);
+
+    // Formatear datos
+    const formattedRecentUsers = recentUsers.map((u: any) => ({
+      ...u,
+      createdAt: u.createdAt.getTime(),
+    }));
+
+    const formattedRecentDecks = recentDecks.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      isPublic: d.isPublic,
+      viewCount: d.viewCount,
+      createdAt: d.createdAt.getTime(),
+      user: d.user,
+    }));
+
+    return NextResponse.json({
+      stats: {
+        totalUsers,
+        totalDecks,
+        totalPublicDecks,
+        totalComments,
+        recentComments,
+        usersLast7Days,
+        decksLast7Days,
+      },
+      recentUsers: formattedRecentUsers,
+      recentDecks: formattedRecentDecks,
+    });
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error);
+
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
+    return NextResponse.json(
+      {
+        error: "Error al obtener estadísticas",
+        ...(process.env.NODE_ENV === "development" && {
+          details: error instanceof Error ? error.message : String(error),
+        }),
+      },
+      { status: 500 }
+    );
+  }
+}
+
