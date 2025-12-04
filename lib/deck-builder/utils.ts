@@ -6,8 +6,8 @@ import { CARDS } from "../data/cards.js";
 // @ts-ignore
 import { AAcards } from "../data/AAcards.js";
 
-// Importar funciones de BD con fallback
-import { getAllCardsFromDB, getAlternativeArtCardsFromDB, clearCardsCache } from "./cards-db";
+// NO importar cards-db directamente aquí porque contiene Prisma que no funciona en el cliente
+// Las funciones de BD se importan dinámicamente solo cuando se necesitan en el servidor
 
 // Logos de ediciones
 export const EDITION_LOGOS: Record<string, string> = {
@@ -33,18 +33,23 @@ if (typeof window === "undefined") {
   syncCardsCache = CARDS as Card[];
   syncAltCardsCache = AAcards as Card[];
   
-  // En background, intentar cargar desde BD
+  // En background, intentar cargar desde BD usando importación dinámica
+  // Esto evita que Prisma se incluya en el bundle del cliente
   if (typeof require !== "undefined") {
-    getAllCardsFromDB().then((cards) => {
-      syncCardsCache = cards;
+    import("./cards-db").then(({ getAllCardsFromDB, getAlternativeArtCardsFromDB }) => {
+      getAllCardsFromDB().then((cards) => {
+        syncCardsCache = cards;
+      }).catch(() => {
+        // Si falla, mantener archivos JS
+      });
+      
+      getAlternativeArtCardsFromDB().then((cards) => {
+        syncAltCardsCache = cards;
+      }).catch(() => {
+        // Si falla, mantener archivos JS
+      });
     }).catch(() => {
-      // Si falla, mantener archivos JS
-    });
-    
-    getAlternativeArtCardsFromDB().then((cards) => {
-      syncAltCardsCache = cards;
-    }).catch(() => {
-      // Si falla, mantener archivos JS
+      // Si falla la importación, mantener archivos JS
     });
   }
 }
@@ -91,9 +96,17 @@ export function getAlternativeArtCards(): Card[] {
 
 /**
  * Función async para obtener cartas desde BD (para APIs)
+ * Solo funciona en servidor, usa importación dinámica para evitar incluir Prisma en el cliente
  */
 export async function getAllCardsAsync(): Promise<Card[]> {
+  // En cliente, retornar archivos JS directamente
+  if (typeof window !== "undefined") {
+    return CARDS as Card[];
+  }
+
   try {
+    // Importación dinámica solo en servidor
+    const { getAllCardsFromDB } = await import("./cards-db");
     return await getAllCardsFromDB();
   } catch (error) {
     return CARDS as Card[];
@@ -102,17 +115,39 @@ export async function getAllCardsAsync(): Promise<Card[]> {
 
 /**
  * Función async para obtener cartas alternativas desde BD (para APIs)
+ * Solo funciona en servidor, usa importación dinámica para evitar incluir Prisma en el cliente
  */
 export async function getAlternativeArtCardsAsync(): Promise<Card[]> {
+  // En cliente, retornar archivos JS directamente
+  if (typeof window !== "undefined") {
+    return AAcards as Card[];
+  }
+
   try {
+    // Importación dinámica solo en servidor
+    const { getAlternativeArtCardsFromDB } = await import("./cards-db");
     return await getAlternativeArtCardsFromDB();
   } catch (error) {
     return AAcards as Card[];
   }
 }
 
-// Exportar función para limpiar cache
-export { clearCardsCache };
+/**
+ * Limpia el cache de cartas (solo en servidor)
+ * Usa importación dinámica para evitar incluir Prisma en el cliente
+ */
+export async function clearCardsCache(): Promise<void> {
+  if (typeof window !== "undefined") {
+    return; // No hacer nada en cliente
+  }
+
+  try {
+    const { clearCardsCache: clearCache } = await import("./cards-db");
+    clearCache();
+  } catch (error) {
+    // Si falla, no hacer nada
+  }
+}
 
 export function getBaseCardId(cardId: string): string {
   // Extrae el ID base (MYL-XXXX) de IDs con variantes (MYL-XXXX-XX)
