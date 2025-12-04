@@ -73,9 +73,11 @@ function DeckBuilderContent() {
     cost: "",
   })
 
-  // Filtrar cartas según los filtros
+  // Filtrar cartas según los filtros (solo cartas originales, no alternativas)
   const filteredCards = useMemo(() => {
-    return filterCards(allCards, filters)
+    // Filtrar solo cartas originales (no isCosmetic)
+    const originalCardsOnly = allCards.filter((card) => !card.isCosmetic)
+    return filterCards(originalCardsOnly, filters)
   }, [allCards, filters])
 
   // Calcular estadísticas del mazo - optimizado

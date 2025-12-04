@@ -205,6 +205,11 @@ export default function AdminBanListPage() {
       const data = await response.json();
       toastSuccess(data.message || `${updates.length} carta(s) actualizada(s) exitosamente`);
       setPendingChanges(new Map());
+      
+      // Limpiar cache del cliente para que los cambios se reflejen en el deck builder
+      const { clearCardsCache } = await import("@/hooks/use-cards");
+      clearCardsCache();
+      
       // Recargar la lista (las que se marcaron como 3 ya no aparecerán)
       await loadBanList();
     } catch (error) {

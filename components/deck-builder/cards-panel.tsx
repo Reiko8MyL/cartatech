@@ -4,7 +4,8 @@ import { useState, useMemo, useCallback } from "react"
 import { CardInfoModal } from "./card-info-modal"
 import { CardItem } from "./card-item"
 import type { Card, DeckCard, DeckFormat } from "@/lib/deck-builder/types"
-import { getAlternativeArtsForCard, getBaseCardId, getAlternativeArtCards, getAllCards } from "@/lib/deck-builder/utils"
+import { getAlternativeArtsForCard, getBaseCardId } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 
 interface CardsPanelProps {
   cards: Card[]
@@ -28,16 +29,24 @@ export function CardsPanel({
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Cargar cartas alternativas desde la API con cache (solo cuando se necesiten)
+  const { cards: allCardsWithAlternatives } = useCards(true) // Incluir alternativas
+  
+  // Filtrar solo cartas originales (no alternativas) de las cartas recibidas
+  const originalCards = useMemo(() => {
+    return cards.filter((card) => !card.isCosmetic)
+  }, [cards])
+
+  // Crear mapa de cartas alternativas para búsqueda rápida (desde la BD)
+  const altCardsMap = useMemo(() => {
+    const altCards = allCardsWithAlternatives.filter((card) => card.isCosmetic)
+    return new Map(altCards.map((card) => [card.id, card]))
+  }, [allCardsWithAlternatives])
+
   const deckCardMap = useMemo(
     () => new Map(deckCards.map((dc) => [dc.cardId, dc.quantity])),
     [deckCards]
   )
-
-  // Crear mapa de cartas alternativas para búsqueda rápida
-  const altCardsMap = useMemo(() => {
-    const altCards = getAlternativeArtCards()
-    return new Map(altCards.map((card) => [card.id, card]))
-  }, [])
 
   // Crear mapa de IDs base para agrupar cartas originales y alternativas
   const baseCardQuantityMap = useMemo(() => {
@@ -79,12 +88,12 @@ export function CardsPanel({
     e.preventDefault()
     // Si la carta mostrada es una alternativa, encontrar la carta original para el modal
     // Esto permite mostrar todas las opciones en el modal
-    const allMainCards = getAllCards()
     const baseId = getBaseCardId(card.id)
-    const originalCard = allMainCards.find((c) => getBaseCardId(c.id) === baseId) || card
+    // Buscar la carta original en las cartas recibidas (que ya están filtradas a originales)
+    const originalCard = originalCards.find((c) => getBaseCardId(c.id) === baseId) || card
     setSelectedCard(originalCard)
     setIsModalOpen(true)
-  }, [])
+  }, [originalCards])
 
   const handleCardClick = useCallback((card: Card, displayedCard?: Card) => {
     // Si se pasa displayedCard, usar esa (puede ser alternativa)
@@ -123,17 +132,17 @@ export function CardsPanel({
     return deckFormat === "RE" ? card.banListRE : deckFormat === "RL" ? card.banListRL : card.banListLI
   }, [deckFormat])
 
-  // Agrupar cartas por edición - memoizado
+  // Agrupar cartas por edición - memoizado (solo cartas originales)
   const cardsByEdition = useMemo(() => {
     const map = new Map<string, Card[]>()
-    for (const card of cards) {
+    for (const card of originalCards) {
       if (!map.has(card.edition)) {
         map.set(card.edition, [])
       }
       map.get(card.edition)!.push(card)
     }
     return map
-  }, [cards])
+  }, [originalCards])
 
   const editionOrder = [
     "Espada Sagrada",

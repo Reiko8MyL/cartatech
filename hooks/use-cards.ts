@@ -10,12 +10,15 @@ let globalCardsCache: Card[] | null = null;
 let globalAltCardsCache: Card[] | null = null;
 let isLoadingCache = false;
 let cachePromise: Promise<Card[]> | null = null;
+let cacheVersion = 0; // Versión del cache para forzar recarga
 
 /**
  * Hook para obtener todas las cartas desde la API con cache
  * Incluye fallback automático a archivos JS si la API falla
  */
 export function useCards(includeAlternatives: boolean = false) {
+  const [cacheVersionState, setCacheVersionState] = useState(cacheVersion);
+  
   const [cards, setCards] = useState<Card[]>(() => {
     // Inicializar con cache si está disponible
     if (includeAlternatives && globalAltCardsCache) {
@@ -36,13 +39,32 @@ export function useCards(includeAlternatives: boolean = false) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Escuchar cambios en la versión del cache
   useEffect(() => {
-    // Si ya tenemos cache, no recargar
-    if (includeAlternatives && globalAltCardsCache) {
+    const checkCacheVersion = () => {
+      if (cacheVersion !== cacheVersionState) {
+        setCacheVersionState(cacheVersion);
+        // Forzar recarga limpiando el cache local
+        if (includeAlternatives) {
+          globalAltCardsCache = null;
+        } else {
+          globalCardsCache = null;
+        }
+      }
+    };
+    
+    // Verificar cada segundo si el cache fue invalidado
+    const interval = setInterval(checkCacheVersion, 1000);
+    return () => clearInterval(interval);
+  }, [includeAlternatives, cacheVersionState]);
+
+  useEffect(() => {
+    // Si ya tenemos cache y la versión es correcta, no recargar
+    if (includeAlternatives && globalAltCardsCache && cacheVersionState === cacheVersion) {
       setIsLoading(false);
       return;
     }
-    if (!includeAlternatives && globalCardsCache) {
+    if (!includeAlternatives && globalCardsCache && cacheVersionState === cacheVersion) {
       setIsLoading(false);
       return;
     }
@@ -89,18 +111,20 @@ export function useCards(includeAlternatives: boolean = false) {
         cachePromise = null;
         // Mantener fallback a archivos JS
       });
-  }, [includeAlternatives]);
+  }, [includeAlternatives, cacheVersionState]);
 
   return { cards, isLoading, error };
 }
 
 /**
  * Función para limpiar el cache (útil después de actualizaciones)
+ * Incrementa la versión del cache para forzar recarga en todos los componentes
  */
 export function clearCardsCache() {
   globalCardsCache = null;
   globalAltCardsCache = null;
   isLoadingCache = false;
   cachePromise = null;
+  cacheVersion++; // Incrementar versión para forzar recarga
 }
 
