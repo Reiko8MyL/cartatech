@@ -400,10 +400,10 @@ export async function getSavedDecksFromStorage(userId?: string): Promise<SavedDe
   if (userId) {
     try {
       const { getUserDecks } = await import("@/lib/api/decks");
-      const decks = await getUserDecks(userId);
+      const result = await getUserDecks(userId);
       // Si la API devuelve mazos, usarlos
-      if (decks && decks.length >= 0) {
-        return decks;
+      if (result && result.data && result.data.length >= 0) {
+        return result.data;
       }
     } catch (error) {
       console.warn("Error al obtener mazos de la API, usando localStorage:", error);
