@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { getAllCardsMetadata, updateCardMetadata, getCardMetadata } from "@/lib/api/cards"
-import { getAllCards, getAlternativeArtCards } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { Card as CardType } from "@/lib/deck-builder/types"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { Search, Save, RotateCcw, Loader2, Filter } from "lucide-react"
@@ -35,15 +35,14 @@ export default function AjustarCartasPage() {
   const previewRef = useRef<HTMLDivElement>(null)
 
   // Cargar cartas y metadatos al montar
+  const { cards: allCardsFromAPI, isLoading: isLoadingCards } = useCards(true) // Incluir alternativas
+  
   useEffect(() => {
     async function loadData() {
       setIsLoading(true)
       try {
-        // Cargar cartas principales y alternativas
-        const mainCards = getAllCards()
-        const altCards = getAlternativeArtCards()
-        const allCardsCombined = [...mainCards, ...altCards]
-        setAllCards(allCardsCombined)
+        // Las cartas ya se cargan desde useCards
+        setAllCards(allCardsFromAPI)
         
         const metadata = await getAllCardsMetadata()
         setMetadataMap(metadata)
@@ -54,8 +53,11 @@ export default function AjustarCartasPage() {
         setIsLoading(false)
       }
     }
-    loadData()
-  }, [])
+    
+    if (!isLoadingCards && allCardsFromAPI.length > 0) {
+      loadData()
+    }
+  }, [allCardsFromAPI, isLoadingCards])
 
   // Filtrar y ordenar cartas
   const filteredAndSortedCards = useMemo(() => {

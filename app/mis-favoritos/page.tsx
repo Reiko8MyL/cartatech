@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link"
 import {
   getFavoriteDecks,
-  getAllCards,
   getDeckRace,
   getDeckEdition,
   getDeckBackgroundImage,
@@ -21,6 +20,7 @@ import {
   toggleFavoriteDeck,
   getUserFavoriteDecksFromLocalStorage,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { SavedDeck } from "@/lib/deck-builder/types"
 import { Globe, Eye, Grid3x3, List, Search, X, ArrowUp, ArrowDown, Calendar, Heart, Copy, Star } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -60,7 +60,8 @@ export default function MisFavoritosPage() {
   const [favorites, setFavorites] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const allCards = useMemo(() => getAllCards(), [])
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCards } = useCards(false)
 
   // Cargar favoritos y likes al iniciar
   useEffect(() => {

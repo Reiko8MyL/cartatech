@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link"
 import {
   getUserDecksFromLocalStorage,
-  getAllCards,
   getDeckRace,
   getDeckEdition,
   getDeckBackgroundImage,
@@ -22,6 +21,7 @@ import {
   getPrioritizedDeckTags,
   getDeckFormatName,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import { Globe, Lock, Trash2, Edit2, Eye, Grid3x3, List, Search, X, ArrowUpDown, ArrowUp, ArrowDown, Copy, Star, Heart } from "lucide-react"
 import { toastSuccess, toastError } from "@/lib/toast"
@@ -70,7 +70,8 @@ export default function MisMazosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [favorites, setFavorites] = useState<string[]>([])
 
-  const allCards = useMemo(() => getAllCards(), [])
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCards } = useCards(false)
 
   useEffect(() => {
     if (user) {

@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/auth-context"
 import { CardGridSkeleton } from "@/components/ui/card-grid-skeleton"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import {
-  getAllCards,
   sortCardsByEditionAndId,
   filterCards,
   getUniqueEditions,
@@ -19,6 +18,7 @@ import {
   getUniqueCosts,
   getAlternativeArtsForCard,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { Card, DeckCard, DeckFilters } from "@/lib/deck-builder/types"
 
 const COLLECTION_STORAGE_KEY = "myl_collection"
@@ -101,14 +101,21 @@ function GaleriaContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
-  // Cargar todas las cartas
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCardsRaw, isLoading: isLoadingCardsFromAPI } = useCards(false) // Solo principales para galería
   const allCards = useMemo(() => {
-    const cards = getAllCards()
-    const sorted = sortCardsByEditionAndId(cards)
-    // Simular carga asíncrona para mostrar skeleton
-    setTimeout(() => setIsLoading(false), 300)
-    return sorted
-  }, [])
+    return sortCardsByEditionAndId(allCardsRaw)
+  }, [allCardsRaw])
+  
+  const [isLoading, setIsLoading] = useState(true)
+  
+  // Actualizar estado de carga
+  useEffect(() => {
+    if (!isLoadingCardsFromAPI && allCards.length > 0) {
+      const timer = setTimeout(() => setIsLoading(false), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoadingCardsFromAPI, allCards.length])
 
   // Leer el parámetro de búsqueda de la URL
   const searchFromUrl = searchParams.get("search") || ""

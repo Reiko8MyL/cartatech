@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { getAllCards, sortCardsByEditionAndId } from "@/lib/deck-builder/utils"
+import { sortCardsByEditionAndId } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { Card, DeckFormat } from "@/lib/deck-builder/types"
 import { BanListSection } from "@/components/ban-list/ban-list-section"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -82,7 +83,8 @@ function getBanListCards(allCards: Card[], format: DeckFormat): BanListCategory[
 
 export default function BanListPage() {
   const [selectedFormat, setSelectedFormat] = useState<DeckFormat>("RE")
-  const allCards = getAllCards()
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCards } = useCards(false)
   const banListCategories = getBanListCards(allCards, selectedFormat)
 
   const totalBanned = banListCategories.reduce(

@@ -1,6 +1,80 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 /**
+ * Obtiene todas las cartas principales desde la API
+ * Incluye fallback a archivos JS si la API falla
+ */
+export async function getAllCardsFromAPI(includeAlternatives: boolean = false): Promise<any[]> {
+  try {
+    const url = API_BASE_URL 
+      ? `${API_BASE_URL}/api/cards?includeAlternatives=${includeAlternatives}`
+      : `/api/cards?includeAlternatives=${includeAlternatives}`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store", // Siempre obtener datos frescos desde la BD
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const cards = data.cards || [];
+    
+    // Si se incluyen alternativas, combinarlas
+    if (includeAlternatives && data.alternativeCards) {
+      return [...cards, ...data.alternativeCards];
+    }
+    
+    return cards;
+  } catch (error) {
+    console.error("Error al obtener cartas desde API, usando fallback:", error);
+    // Fallback a archivos JS
+    if (typeof window !== "undefined") {
+      const { getAllCards, getAlternativeArtCards } = await import("@/lib/deck-builder/utils");
+      const mainCards = getAllCards();
+      if (includeAlternatives) {
+        const altCards = getAlternativeArtCards();
+        return [...mainCards, ...altCards];
+      }
+      return mainCards;
+    }
+    return [];
+  }
+}
+
+/**
+ * Obtiene una carta específica por ID desde la API
+ */
+export async function getCardFromAPI(cardId: string): Promise<any | null> {
+  try {
+    const url = API_BASE_URL 
+      ? `${API_BASE_URL}/api/cards/${encodeURIComponent(cardId)}`
+      : `/api/cards/${encodeURIComponent(cardId)}`;
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.card || null;
+  } catch (error) {
+    console.error(`Error al obtener carta ${cardId} desde API:`, error);
+    return null;
+  }
+}
+
+/**
  * Obtiene los metadatos de una carta específica
  */
 export async function getCardMetadata(cardId: string): Promise<{ backgroundPositionY: number | null } | null> {

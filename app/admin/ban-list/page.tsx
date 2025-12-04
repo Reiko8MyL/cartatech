@@ -33,8 +33,8 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toastSuccess, toastError } from "@/lib/toast";
 import type { DeckFormat } from "@/lib/deck-builder/types";
-import { getAllCards } from "@/lib/deck-builder/utils";
 import type { Card as CardType } from "@/lib/deck-builder/types";
+import { useCards } from "@/hooks/use-cards";
 
 interface BanListCard {
   id: string;
@@ -67,13 +67,8 @@ export default function AdminBanListPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addSearchTerm, setAddSearchTerm] = useState("");
-  const [allCardsData, setAllCardsData] = useState<CardType[]>([]);
-
-  // Cargar todas las cartas para el diálogo de agregar
-  useEffect(() => {
-    const cards = getAllCards();
-    setAllCardsData(cards);
-  }, []);
+  // Cargar todas las cartas desde la API con cache para el diálogo de agregar
+  const { cards: allCardsData } = useCards(false);
 
   async function loadBanList() {
     if (!user?.id) {

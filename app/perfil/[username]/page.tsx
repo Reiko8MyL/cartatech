@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getUserProfile, type UserProfile } from "@/lib/api/users"
-import { getAllCards, getDeckRace, getDeckEdition, getDeckBackgroundImage, EDITION_LOGOS, getDeckFormatName } from "@/lib/deck-builder/utils"
+import { getDeckRace, getDeckEdition, getDeckBackgroundImage, EDITION_LOGOS, getDeckFormatName } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { DeckFormat } from "@/lib/deck-builder/types"
 import { Eye, Calendar, Heart, Globe, User, ArrowLeft } from "lucide-react"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
@@ -20,12 +21,13 @@ export default function UserProfilePage() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [allCards, setAllCards] = useState<any[]>([])
+  
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCards } = useCards(false)
 
   useEffect(() => {
     if (username) {
       loadProfile()
-      setAllCards(getAllCards())
     }
   }, [username])
 

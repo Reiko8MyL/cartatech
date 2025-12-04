@@ -6,8 +6,6 @@ import { FiltersPanel } from "@/components/deck-builder/filters-panel"
 import { CardsPanel } from "@/components/deck-builder/cards-panel"
 import { DeckManagementPanel } from "@/components/deck-builder/deck-management-panel"
 import {
-  getAllCards,
-  getAlternativeArtCards,
   getBaseCardId,
   sortCardsByEditionAndId,
   filterCards,
@@ -21,6 +19,7 @@ import {
   getTemporaryDeck,
   clearTemporaryDeck,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import { getDeckById } from "@/lib/api/decks"
 import type {
   Card,
@@ -40,19 +39,19 @@ function DeckBuilderContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
-  // Cargar todas las cartas
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCardsRaw, isLoading: isLoadingCardsFromAPI } = useCards(true) // Incluir alternativas
   const allCards = useMemo(() => {
-    const cards = getAllCards()
-    return sortCardsByEditionAndId(cards)
-  }, [])
+    return sortCardsByEditionAndId(allCardsRaw)
+  }, [allCardsRaw])
 
-  // Simular carga asíncrona para mostrar skeleton
+  // Actualizar estado de carga
   useEffect(() => {
-    if (allCards.length > 0) {
+    if (!isLoadingCardsFromAPI && allCards.length > 0) {
       const timer = setTimeout(() => setIsLoadingCards(false), 300)
       return () => clearTimeout(timer)
     }
-  }, [allCards.length])
+  }, [isLoadingCardsFromAPI, allCards.length])
 
   // Estado del mazo
   const [deckName, setDeckName] = useState("Mi Mazo")
@@ -104,10 +103,9 @@ function DeckBuilderContent() {
   const availableCosts = useMemo(() => getUniqueCosts(allCards), [allCards])
 
   // Crear un mapa de cartas para búsqueda rápida (incluyendo alternativas)
+  // allCards ya incluye alternativas porque useCards(true) las incluye
   const cardLookupMap = useMemo(() => {
-    const altCards = getAlternativeArtCards()
-    const allCardsWithAlternatives = [...allCards, ...altCards]
-    return new Map(allCardsWithAlternatives.map((c) => [c.id, c]))
+    return new Map(allCards.map((c) => [c.id, c]))
   }, [allCards])
 
   // Funciones para gestionar el mazo - optimizadas
@@ -238,8 +236,10 @@ function DeckBuilderContent() {
     setCurrentDeck(deck) // Guardar el mazo completo para poder actualizarlo después
     
     // Detectar cartas alternativas en el mazo y establecer reemplazos
-    const altCards = getAlternativeArtCards()
-    const altCardIds = new Set(altCards.map((c) => c.id))
+    // allCards ya incluye alternativas, buscar por isCosmetic
+    const altCardIds = new Set(
+      allCards.filter((c) => c.isCosmetic).map((c) => c.id)
+    )
     const replacements = new Map<string, string>()
     
     for (const deckCard of deck.cards) {
@@ -290,8 +290,10 @@ function DeckBuilderContent() {
           setHasLoadedFromUrl(true)
           
           // Detectar cartas alternativas en el mazo y establecer reemplazos
-          const altCards = getAlternativeArtCards()
-          const altCardIds = new Set(altCards.map((c) => c.id))
+          // allCards ya incluye alternativas, buscar por isCosmetic
+          const altCardIds = new Set(
+            allCards.filter((c) => c.isCosmetic).map((c) => c.id)
+          )
           const replacements = new Map<string, string>()
           
           for (const deckCard of deckToLoad.cards) {
@@ -324,8 +326,10 @@ function DeckBuilderContent() {
       setHasLoadedTemporaryDeck(true)
       
       // Detectar cartas alternativas en el mazo y establecer reemplazos
-      const altCards = getAlternativeArtCards()
-      const altCardIds = new Set(altCards.map((c) => c.id))
+      // allCards ya incluye alternativas, buscar por isCosmetic
+      const altCardIds = new Set(
+        allCards.filter((c) => c.isCosmetic).map((c) => c.id)
+      )
       const replacements = new Map<string, string>()
       
       for (const deckCard of temporaryDeck.cards) {
@@ -355,8 +359,10 @@ function DeckBuilderContent() {
         toastSuccess("Mazo restaurado. Ahora puedes guardarlo.")
         
         // Detectar cartas alternativas en el mazo y establecer reemplazos
-        const altCards = getAlternativeArtCards()
-        const altCardIds = new Set(altCards.map((c: Card) => c.id))
+        // allCards ya incluye alternativas, buscar por isCosmetic
+        const altCardIds = new Set(
+          allCards.filter((c) => c.isCosmetic).map((c) => c.id)
+        )
         const replacements = new Map<string, string>()
         
         for (const deckCard of temporaryDeck.cards) {

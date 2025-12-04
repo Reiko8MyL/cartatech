@@ -7,7 +7,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  getAllCards,
   getSavedDecksFromLocalStorage,
   calculateDeckStats,
   getDeckRace,
@@ -24,10 +23,10 @@ import {
   incrementDeckView,
   getDeckViewCount,
   getDeckFormatName,
-  getAlternativeArtCards,
   generateDeckCode,
   getBaseCardId,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import { getDeckById } from "@/lib/api/decks"
 import type { SavedDeck, Card as CardType } from "@/lib/deck-builder/types"
 import { DECK_TAGS } from "@/lib/deck-builder/types"
@@ -74,8 +73,10 @@ export default function ViewDeckPage() {
   const { user } = useAuth()
   const deckId = params.id as string
 
+  // Cargar todas las cartas desde la API con cache (incluyendo alternativas)
+  const { cards: allCards } = useCards(true)
+
   const [deck, setDeck] = useState<SavedDeck | null>(null)
-  const [allCards, setAllCards] = useState<CardType[]>([])
   const [likes, setLikes] = useState<Record<string, string[]>>({})
   const [viewCount, setViewCount] = useState<number>(0)
   const [editingDeck, setEditingDeck] = useState<SavedDeck | null>(null)
@@ -125,10 +126,6 @@ export default function ViewDeckPage() {
       });
 
       setDeck(foundDeck)
-      // Incluir cartas principales y alternativas
-      const mainCards = getAllCards()
-      const altCards = getAlternativeArtCards()
-      setAllCards([...mainCards, ...altCards])
       
       // Track analytics
       if (foundDeck && foundDeck.id) {

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/auth-context"
 import { Eye, EyeOff } from "lucide-react"
-import { getAllCards, getAlternativeArtCards, getTemporaryDeck } from "@/lib/deck-builder/utils"
+import { getTemporaryDeck } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import { Spinner } from "@/components/ui/spinner"
 
 export default function InicioSesionPage() {
@@ -22,15 +23,18 @@ export default function InicioSesionPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  // Cargar cartas para contar (incluyendo alternativas)
+  const { cards: allCards } = useCards(true)
+  
   // Contar cartas para mostrar en la lista de características
   const cardCounts = useMemo(() => {
-    const baseCards = getAllCards()
-    const altArtCards = getAlternativeArtCards()
+    const baseCards = allCards.filter(c => !c.isCosmetic)
+    const altArtCards = allCards.filter(c => c.isCosmetic)
     return {
       base: baseCards.length,
       variants: altArtCards.length,
     }
-  }, [])
+  }, [allCards])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

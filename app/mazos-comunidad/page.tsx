@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link"
 import {
   getPublicDecksFromLocalStorage,
-  getAllCards,
   getDeckRace,
   getDeckEdition,
   getDeckBackgroundImage,
@@ -24,6 +23,7 @@ import {
   getPrioritizedDeckTags,
   getDeckFormatName,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import type { SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import { Globe, Eye, Grid3x3, List, Search, X, ArrowUp, ArrowDown, Calendar, Heart, Copy, Star } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -92,7 +92,8 @@ function MazosComunidadPage() {
   const [loadingLikes, setLoadingLikes] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
 
-  const allCards = useMemo(() => getAllCards(), [])
+  // Cargar todas las cartas desde la API con cache
+  const { cards: allCards } = useCards(false)
 
   // Cargar likes y favoritos al iniciar
   useEffect(() => {
