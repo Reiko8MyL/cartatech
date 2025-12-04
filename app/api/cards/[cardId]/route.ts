@@ -11,8 +11,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ cardId: string }> }
 ) {
+  let cardId: string | undefined;
+  
   try {
-    const { cardId } = await params;
+    const paramsData = await params;
+    cardId = paramsData.cardId;
 
     if (!cardId) {
       return NextResponse.json(
@@ -49,7 +52,7 @@ export async function GET(
       ...(alternativeCards.length > 0 && { alternativeCards }),
     });
   } catch (error) {
-    console.error(`Error al obtener carta ${cardId}:`, error);
+    console.error(`Error al obtener carta ${cardId || "desconocida"}:`, error);
     
     return NextResponse.json(
       {
