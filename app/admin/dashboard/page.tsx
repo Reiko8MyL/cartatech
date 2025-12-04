@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Loader2,
   Shield,
   MessageSquare,
@@ -26,9 +33,12 @@ import {
   Calendar,
   ArrowUpRight,
   Plus,
+  BarChart3,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 interface AdminStats {
   totalUsers: number;
@@ -36,8 +46,10 @@ interface AdminStats {
   totalPublicDecks: number;
   totalComments: number;
   recentComments: number;
-  usersLast7Days: number;
-  decksLast7Days: number;
+  usersInRange: number;
+  decksInRange: number;
+  commentsInRange: number;
+  timeRange: string;
 }
 
 interface RecentUser {
@@ -58,7 +70,18 @@ interface RecentDeck {
     id: string;
     username: string;
   };
+  cardImage?: string | null;
+  cardName?: string | null;
 }
+
+type TimeRange = "7" | "30" | "90" | "all";
+
+const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  "7": "Últimos 7 días",
+  "30": "Últimos 30 días",
+  "90": "Últimos 90 días",
+  all: "Todos los tiempos",
+};
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -67,6 +90,7 @@ export default function AdminDashboardPage() {
   const [recentDecks, setRecentDecks] = useState<RecentDeck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>("7");
 
   async function loadStats() {
     if (!user?.id) {
@@ -75,7 +99,9 @@ export default function AdminDashboardPage() {
     }
 
     try {
-      const response = await fetch(`/api/admin/stats?userId=${user.id}`);
+      const response = await fetch(
+        `/api/admin/stats?userId=${user.id}&timeRange=${timeRange}`
+      );
 
       if (!response.ok) {
         throw new Error("Error al cargar estadísticas");
@@ -95,11 +121,15 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadStats();
-  }, [user]);
+  }, [user, timeRange]);
 
   async function handleRefresh() {
     setIsRefreshing(true);
     await loadStats();
+  }
+
+  function handleTimeRangeChange(value: string) {
+    setTimeRange(value as TimeRange);
   }
 
   const getRoleBadgeColor = (role: string) => {
@@ -113,19 +143,26 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const getTimeRangeLabel = () => {
+    return TIME_RANGE_LABELS[timeRange];
+  };
+
   return (
     <AdminGuard requiredRole="MODERATOR">
-      <div className="container mx-auto p-6 max-w-7xl">
+      <div className="container mx-auto p-4 md:p-6 max-w-7xl">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Panel de Administración</h1>
-            <p className="text-muted-foreground">
-              Bienvenido, {user?.username}. Gestiona el contenido y los usuarios
-              de la plataforma.
+        <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">
+              Panel de Administración
+            </h1>
+            <p className="text-2xl md:text-4xl lg:text-5xl font-black text-primary animate-pulse">
+              Ahora tengo el poder <span className="uppercase">ABSOLUTO</span>
+              <br />
+              y me la <span className="uppercase">PELA</span>!
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {user?.role === "ADMIN" && (
               <Badge
                 variant="outline"
@@ -146,6 +183,7 @@ export default function AdminDashboardPage() {
             )}
             <Button
               variant="outline"
+              size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing || isLoading}
             >
@@ -163,58 +201,89 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <>
+            {/* Selector de rango de tiempo */}
+            <Card className="mb-6">
+              <CardContent className="py-3">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="size-4 text-muted-foreground" />
+                    <span className="text-xs sm:text-sm font-medium">
+                      Rango de tiempo para estadísticas:
+                    </span>
+                  </div>
+                  <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+                    <SelectTrigger className="w-full sm:w-[200px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">Últimos 7 días</SelectItem>
+                      <SelectItem value="30">Últimos 30 días</SelectItem>
+                      <SelectItem value="90">Últimos 90 días</SelectItem>
+                      <SelectItem value="all">Todos los tiempos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Estadísticas principales */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <Card className="border-l-4 border-l-blue-500">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 md:mb-8">
+              <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Total Usuarios
                   </CardTitle>
-                  <Users className="size-4 text-muted-foreground" />
+                  <div className="size-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Users className="size-5 text-blue-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-3xl font-bold mb-2">
                     {stats?.totalUsers || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <TrendingUp className="size-3" />
                     <span>
-                      +{stats?.usersLast7Days || 0} en los últimos 7 días
+                      {stats?.usersInRange || 0} en {getTimeRangeLabel().toLowerCase()}
                     </span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-green-500">
+              <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Mazos</CardTitle>
-                  <FileText className="size-4 text-muted-foreground" />
+                  <div className="size-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <FileText className="size-5 text-green-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-3xl font-bold mb-2">
                     {stats?.totalDecks || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <TrendingUp className="size-3" />
                     <span>
-                      +{stats?.decksLast7Days || 0} en los últimos 7 días
+                      {stats?.decksInRange || 0} en {getTimeRangeLabel().toLowerCase()}
                     </span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-purple-500">
+              <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Mazos Públicos
                   </CardTitle>
-                  <Globe className="size-4 text-muted-foreground" />
+                  <div className="size-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <Globe className="size-5 text-purple-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-3xl font-bold mb-2">
                     {stats?.totalPublicDecks || 0}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground">
                     {stats?.totalDecks
                       ? Math.round(
                           (stats.totalPublicDecks / stats.totalDecks) * 100
@@ -225,45 +294,57 @@ export default function AdminDashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-orange-500">
+              <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     Total Comentarios
                   </CardTitle>
-                  <MessageSquare className="size-4 text-muted-foreground" />
+                  <div className="size-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <MessageSquare className="size-5 text-orange-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
+                  <div className="text-3xl font-bold mb-2">
                     {stats?.totalComments || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                    <MessageSquare className="size-3" />
-                    <span>
-                      {stats?.recentComments || 0} en las últimas 24 horas
-                    </span>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MessageSquare className="size-3" />
+                      <span>
+                        {stats?.recentComments || 0} en las últimas 24 horas
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="size-3" />
+                      <span>
+                        {stats?.commentsInRange || 0} en {getTimeRangeLabel().toLowerCase()}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Contenido principal */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 md:mb-8">
               {/* Usuarios recientes */}
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Usuarios Recientes</CardTitle>
+                      <CardTitle className="text-lg">Usuarios Recientes</CardTitle>
                       <CardDescription>
                         Últimos usuarios registrados
                       </CardDescription>
                     </div>
-                    <Users className="size-5 text-muted-foreground" />
+                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="size-5 text-primary" />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {recentUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-sm text-muted-foreground text-center py-8">
                       No hay usuarios recientes
                     </p>
                   ) : (
@@ -273,12 +354,12 @@ export default function AdminDashboardPage() {
                           key={recentUser.id}
                           className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                               <Users className="size-5 text-primary" />
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">
                                 {recentUser.username}
                               </p>
                               <p className="text-xs text-muted-foreground">
@@ -295,7 +376,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <Badge
                             variant="outline"
-                            className={getRoleBadgeColor(recentUser.role)}
+                            className={`${getRoleBadgeColor(recentUser.role)} shrink-0 ml-2`}
                           >
                             {recentUser.role}
                           </Badge>
@@ -307,21 +388,23 @@ export default function AdminDashboardPage() {
               </Card>
 
               {/* Mazos recientes */}
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Mazos Recientes</CardTitle>
+                      <CardTitle className="text-lg">Mazos Recientes</CardTitle>
                       <CardDescription>
                         Últimos mazos creados en la plataforma
                       </CardDescription>
                     </div>
-                    <FileText className="size-5 text-muted-foreground" />
+                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <FileText className="size-5 text-primary" />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {recentDecks.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-sm text-muted-foreground text-center py-8">
                       No hay mazos recientes
                     </p>
                   ) : (
@@ -330,12 +413,31 @@ export default function AdminDashboardPage() {
                         <Link
                           key={deck.id}
                           href={`/mazo/${deck.id}`}
-                          className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                          className="block p-3 rounded-lg border bg-card hover:bg-muted/50 transition-all hover:shadow-sm group"
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {/* Imagen de la carta */}
+                            {deck.cardImage ? (
+                              <div className="relative size-16 rounded-lg overflow-hidden border border-border shrink-0 bg-muted">
+                                <Image
+                                  src={deck.cardImage}
+                                  alt={deck.cardName || "Carta del mazo"}
+                                  fill
+                                  className="object-contain p-1"
+                                  sizes="64px"
+                                  loading="lazy"
+                                />
+                              </div>
+                            ) : (
+                              <div className="size-16 rounded-lg border border-border bg-muted flex items-center justify-center shrink-0">
+                                <FileText className="size-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            
+                            {/* Información del mazo */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium text-sm truncate">
+                                <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">
                                   {deck.name}
                                 </p>
                                 {deck.isPublic ? (
@@ -344,8 +446,8 @@ export default function AdminDashboardPage() {
                                   <Lock className="size-3 text-gray-500 shrink-0" />
                                 )}
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>por {deck.user.username}</span>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                                <span className="truncate">por {deck.user.username}</span>
                                 <span>•</span>
                                 <div className="flex items-center gap-1">
                                   <Eye className="size-3" />
@@ -353,7 +455,8 @@ export default function AdminDashboardPage() {
                                 </div>
                               </div>
                             </div>
-                            <ArrowUpRight className="size-4 text-muted-foreground shrink-0 ml-2" />
+                            
+                            <ArrowUpRight className="size-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
                           </div>
                         </Link>
                       ))}
@@ -366,9 +469,9 @@ export default function AdminDashboardPage() {
             {/* Accesos rápidos */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Link href="/admin/comments">
-                <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
                       <MessageSquare className="size-5" />
                       Moderar Comentarios
                     </CardTitle>
@@ -390,9 +493,9 @@ export default function AdminDashboardPage() {
               {user?.role === "ADMIN" && (
                 <>
                   <Link href="/admin/agregar-carta">
-                    <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
                           <Plus className="size-5" />
                           Agregar Nueva Carta
                         </CardTitle>
@@ -407,9 +510,9 @@ export default function AdminDashboardPage() {
                   </Link>
 
                   <Link href="/admin/ban-list">
-                    <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
                           <Settings className="size-5" />
                           Gestionar Ban List
                         </CardTitle>
@@ -424,9 +527,9 @@ export default function AdminDashboardPage() {
                   </Link>
 
                   <Link href="/admin/users">
-                    <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
                           <Users className="size-5" />
                           Gestionar Usuarios
                         </CardTitle>
@@ -448,9 +551,9 @@ export default function AdminDashboardPage() {
               )}
 
               <Link href="/admin/ajustar-cartas">
-                <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
                       <Settings className="size-5" />
                       Ajustar Cartas
                     </CardTitle>

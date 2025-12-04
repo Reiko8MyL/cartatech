@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
+    const timeRange = searchParams.get("timeRange") || "7"; // 7, 30, 90, all
 
     if (!userId) {
       return NextResponse.json(
@@ -39,6 +40,25 @@ export async function GET(request: NextRequest) {
         },
         { status: 403 }
       );
+    }
+
+    // Calcular fecha de inicio según el rango de tiempo
+    let startDate: Date | null = null;
+    const now = Date.now();
+    switch (timeRange) {
+      case "7":
+        startDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "30":
+        startDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "90":
+        startDate = new Date(now - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case "all":
+      default:
+        startDate = null; // Todos los registros
+        break;
     }
 
     // Obtener estadísticas
@@ -83,7 +103,7 @@ export async function GET(request: NextRequest) {
           },
         })
         .catch(() => []),
-      // Mazos recientes (últimos 5)
+      // Mazos recientes (últimos 5) con información de cartas
       prisma.deck
         .findMany({
           take: 5,
@@ -100,41 +120,102 @@ export async function GET(request: NextRequest) {
         .catch(() => []),
     ]);
 
-    // Calcular crecimiento de usuarios (últimos 7 días)
-    const usersLast7Days = await prisma.user
-      .count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          },
-        },
-      })
-      .catch(() => 0);
+    // Calcular crecimiento según el rango de tiempo seleccionado
+    const usersInRange = startDate
+      ? await prisma.user
+          .count({
+            where: {
+              createdAt: {
+                gte: startDate,
+              },
+            },
+          })
+          .catch(() => 0)
+      : totalUsers;
 
-    // Calcular crecimiento de mazos (últimos 7 días)
-    const decksLast7Days = await prisma.deck
-      .count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          },
-        },
+    const decksInRange = startDate
+      ? await prisma.deck
+          .count({
+            where: {
+              createdAt: {
+                gte: startDate,
+              },
+            },
+          })
+          .catch(() => 0)
+      : totalDecks;
+
+    const commentsInRange = startDate
+      ? await prisma.comment
+          .count({
+            where: {
+              createdAt: {
+                gte: startDate,
+              },
+            },
+          })
+          .catch(() => 0)
+      : totalComments;
+
+    // Obtener información de cartas para los mazos recientes
+    const formattedRecentDecks = await Promise.all(
+      recentDecks.map(async (d: any) => {
+        let cardImage: string | null = null;
+        let cardName: string | null = null;
+
+        // Intentar obtener la imagen de la carta tech primero
+        if (d.techCardId) {
+          try {
+            const techCard = await prisma.card.findUnique({
+              where: { id: d.techCardId },
+              select: { image: true, name: true },
+            });
+            if (techCard) {
+              cardImage = techCard.image;
+              cardName = techCard.name;
+            }
+          } catch (error) {
+            // Ignorar errores al obtener la carta tech
+          }
+        }
+
+        // Si no hay carta tech, obtener la primera carta del mazo
+        if (!cardImage && d.cards) {
+          try {
+            const cards = d.cards as Array<{ cardId: string; quantity: number }>;
+            if (cards.length > 0) {
+              const firstCardId = cards[0].cardId;
+              const firstCard = await prisma.card.findUnique({
+                where: { id: firstCardId },
+                select: { image: true, name: true },
+              });
+              if (firstCard) {
+                cardImage = firstCard.image;
+                cardName = firstCard.name;
+              }
+            }
+          } catch (error) {
+            // Ignorar errores al obtener la primera carta
+          }
+        }
+
+        return {
+          id: d.id,
+          name: d.name,
+          isPublic: d.isPublic,
+          viewCount: d.viewCount,
+          createdAt: d.createdAt.getTime(),
+          user: d.user,
+          cardImage,
+          cardName,
+        };
       })
-      .catch(() => 0);
+    );
 
     // Formatear datos
     const formattedRecentUsers = recentUsers.map((u: any) => ({
       ...u,
       createdAt: u.createdAt.getTime(),
-    }));
-
-    const formattedRecentDecks = recentDecks.map((d: any) => ({
-      id: d.id,
-      name: d.name,
-      isPublic: d.isPublic,
-      viewCount: d.viewCount,
-      createdAt: d.createdAt.getTime(),
-      user: d.user,
     }));
 
     return NextResponse.json({
@@ -144,8 +225,10 @@ export async function GET(request: NextRequest) {
         totalPublicDecks,
         totalComments,
         recentComments,
-        usersLast7Days,
-        decksLast7Days,
+        usersInRange,
+        decksInRange,
+        commentsInRange,
+        timeRange,
       },
       recentUsers: formattedRecentUsers,
       recentDecks: formattedRecentDecks,
