@@ -322,7 +322,7 @@ export function DeckManagementPanel({
         if (!isEditing && savedDeck.id) {
           // Mazo nuevo creado
           trackDeckCreated(savedDeck.name, savedDeck.id);
-        } else if (isEditing) {
+        } else if (isEditing && savedDeck.id) {
           // Mazo existente guardado/actualizado
           trackDeckSaved(savedDeck.id, savedDeck.name, savedDeck.isPublic || false);
         }
@@ -439,8 +439,9 @@ export function DeckManagementPanel({
     
     // Tracking de analytics (no bloqueante)
     if (currentDeck?.id) {
+      const deckId = currentDeck.id;
       import("@/lib/analytics/events").then(({ trackDeckExported }) => {
-        trackDeckExported(currentDeck.id, "list");
+        trackDeckExported(deckId, "list");
       }).catch(() => {
         // Silenciar errores de analytics
       });
