@@ -1,4 +1,3 @@
-import { CARDS } from "@/lib/data/cards"
 import type { Card } from "@/lib/deck-builder/types"
 
 export interface Vote {
@@ -24,11 +23,45 @@ export interface RaceVotingData {
 }
 
 /**
- * Obtiene todas las razas únicas de los aliados
+ * Obtiene todas las razas únicas de los aliados desde la API
  */
-export function getAllRaces(): string[] {
+export async function getAllRaces(): Promise<string[]> {
+  try {
+    // Intentar obtener desde la API
+    const { getAllCardsFromAPI } = await import("@/lib/api/cards");
+    const cards = await getAllCardsFromAPI(false); // Solo principales
+    
+    const races = new Set<string>()
+    cards.forEach((card) => {
+      if (card.type === "Aliado" && card.race) {
+        races.add(card.race)
+      }
+    })
+    return Array.from(races).sort()
+  } catch (error) {
+    console.error("Error al obtener razas desde API, usando fallback:", error);
+    // Fallback a archivos JS
+    const { getAllCards } = await import("@/lib/deck-builder/utils");
+    const cards = getAllCards();
+    const races = new Set<string>()
+    cards.forEach((card) => {
+      if (card.type === "Aliado" && card.race) {
+        races.add(card.race)
+      }
+    })
+    return Array.from(races).sort()
+  }
+}
+
+/**
+ * Obtiene todas las razas únicas de los aliados (versión síncrona para compatibilidad)
+ * Usa fallback a archivos JS
+ */
+export function getAllRacesSync(): string[] {
+  const { getAllCards } = require("@/lib/deck-builder/utils");
+  const cards = getAllCards();
   const races = new Set<string>()
-  CARDS.forEach((card) => {
+  cards.forEach((card: Card) => {
     if (card.type === "Aliado" && card.race) {
       races.add(card.race)
     }
@@ -37,11 +70,37 @@ export function getAllRaces(): string[] {
 }
 
 /**
- * Obtiene todos los aliados de una raza específica
+ * Obtiene todos los aliados de una raza específica desde la API
  */
-export function getAlliesByRace(race: string): Card[] {
-  return CARDS.filter(
-    (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
+export async function getAlliesByRace(race: string): Promise<Card[]> {
+  try {
+    // Intentar obtener desde la API
+    const { getAllCardsFromAPI } = await import("@/lib/api/cards");
+    const cards = await getAllCardsFromAPI(false); // Solo principales
+    
+    return cards.filter(
+      (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
+    )
+  } catch (error) {
+    console.error("Error al obtener aliados desde API, usando fallback:", error);
+    // Fallback a archivos JS
+    const { getAllCards } = await import("@/lib/deck-builder/utils");
+    const cards = getAllCards();
+    return cards.filter(
+      (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
+    )
+  }
+}
+
+/**
+ * Obtiene todos los aliados de una raza específica (versión síncrona para compatibilidad)
+ * Usa fallback a archivos JS
+ */
+export function getAlliesByRaceSync(race: string): Card[] {
+  const { getAllCards } = require("@/lib/deck-builder/utils");
+  const cards = getAllCards();
+  return cards.filter(
+    (card: Card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
   )
 }
 
@@ -240,7 +299,7 @@ export function calculateVoteResults(race: string, allies: Card[]): VoteResult[]
  * Obtiene todos los datos de votación para una raza. Usa API si está disponible.
  */
 export async function getRaceVotingDataFromStorage(race: string, userId: string): Promise<RaceVotingData> {
-  const allies = getAlliesByRace(race)
+  const allies = await getAlliesByRace(race)
   
   let userVote: string | null = null;
   let results: VoteResult[] = [];
@@ -278,7 +337,7 @@ export async function getRaceVotingDataFromStorage(race: string, userId: string)
  * Obtiene todos los datos de votación para una raza desde localStorage (fallback)
  */
 export function getRaceVotingData(race: string, userId: string): RaceVotingData {
-  const allies = getAlliesByRace(race)
+  const allies = getAlliesByRaceSync(race)
   const userVote = getUserVoteForRace(userId, race)
   const results = calculateVoteResults(race, allies)
   const totalVotes = results.reduce((sum, r) => sum + r.votes, 0)

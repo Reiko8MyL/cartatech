@@ -16,7 +16,7 @@ import {
   getUniqueTypes,
   getUniqueRaces,
   getUniqueCosts,
-  getAlternativeArtsForCard,
+  getBaseCardId,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import type { Card, DeckCard, DeckFilters } from "@/lib/deck-builder/types"
@@ -101,11 +101,14 @@ function GaleriaContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
-  // Cargar todas las cartas desde la API con cache
-  const { cards: allCardsRaw, isLoading: isLoadingCardsFromAPI } = useCards(false) // Solo principales para galería
+  // Cargar todas las cartas desde la API con cache (incluyendo alternativas para el modal)
+  const { cards: allCardsWithAlternatives, isLoading: isLoadingCardsFromAPI } = useCards(true) // Incluir alternativas para el modal
+  
+  // Filtrar solo cartas originales para la galería
   const allCards = useMemo(() => {
-    return sortCardsByEditionAndId(allCardsRaw)
-  }, [allCardsRaw])
+    const originalCards = allCardsWithAlternatives.filter((card) => !card.isCosmetic)
+    return sortCardsByEditionAndId(originalCards)
+  }, [allCardsWithAlternatives])
   
   const [isLoading, setIsLoading] = useState(true)
   
@@ -419,19 +422,26 @@ function GaleriaContent() {
       </ErrorBoundary>
 
       {/* Modal de información de carta */}
-      {selectedCard && (
-        <CardInfoModal
-          card={selectedCard}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          alternativeArts={getAlternativeArtsForCard(selectedCard.id)}
-          quantityInDeck={
-            isCollectionMode && collectedCards.has(selectedCard.id) ? 1 : 0
-          }
-          maxQuantity={isCollectionMode ? 1 : selectedCard.banListRE}
-          deckCards={[]}
-          onAddCard={(cardId: string) => {
-            if (isCollectionMode) {
+      {selectedCard && (() => {
+        // Obtener cartas alternativas desde el cache (ya cargado con useCards)
+        const baseId = getBaseCardId(selectedCard.id)
+        const alternativeArts = allCardsWithAlternatives.filter(
+          (card) => card.isCosmetic && getBaseCardId(card.id) === baseId
+        )
+        
+        return (
+          <CardInfoModal
+            card={selectedCard}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            alternativeArts={alternativeArts}
+            quantityInDeck={
+              isCollectionMode && collectedCards.has(selectedCard.id) ? 1 : 0
+            }
+            maxQuantity={isCollectionMode ? 1 : selectedCard.banListRE}
+            deckCards={[]}
+            onAddCard={(cardId: string) => {
+              if (isCollectionMode) {
               toggleCardCollection(cardId)
             }
           }}
@@ -444,7 +454,8 @@ function GaleriaContent() {
             // No disponible en modo galería
           }}
         />
-      )}
+        )
+      })()}
     </main>
   )
 }

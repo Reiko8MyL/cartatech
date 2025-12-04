@@ -57,9 +57,9 @@ import {
   EDITION_LOGOS,
   getPrioritizedDeckTags,
   getSavedDecksFromStorage,
-  getAlternativeArtCards,
   getBaseCardId,
 } from "@/lib/deck-builder/utils"
+import { useCards } from "@/hooks/use-cards"
 import { SaveDeckModal } from "./save-deck-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/contexts/auth-context"
@@ -1074,12 +1074,14 @@ export function DeckManagementPanel({
     [deckCards]
   )
 
+  // Cargar cartas alternativas desde la API con cache
+  const { cards: allCardsWithAlternatives } = useCards(true) // Incluir alternativas
+  
   // Crear mapa de cartas que incluya alternativas para mostrar cartas reemplazadas en el mazo
   const cardMap = useMemo(() => {
-    const altCards = getAlternativeArtCards()
-    const allCardsWithAlternatives = [...allCards, ...altCards]
+    // allCardsWithAlternatives ya incluye todas las cartas (principales + alternativas)
     return new Map(allCardsWithAlternatives.map((card) => [card.id, card]))
-  }, [allCards])
+  }, [allCardsWithAlternatives])
 
   // Crear mapa de cantidad total por baseId (considerando todas las variantes)
   const baseCardQuantityMap = useMemo(() => {

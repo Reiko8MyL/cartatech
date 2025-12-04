@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from "react"
 import { CardInfoModal } from "./card-info-modal"
 import { CardItem } from "./card-item"
 import type { Card, DeckCard, DeckFormat } from "@/lib/deck-builder/types"
-import { getAlternativeArtsForCard, getBaseCardId } from "@/lib/deck-builder/utils"
+import { getBaseCardId } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 
 interface CardsPanelProps {
@@ -198,24 +198,32 @@ export function CardsPanel({
       </div>
 
       {/* Modal de información de carta */}
-      {selectedCard && (
-        <CardInfoModal
-          card={selectedCard}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          alternativeArts={getAlternativeArtsForCard(selectedCard.id)}
-          quantityInDeck={getCardQuantity(selectedCard.id)}
-          maxQuantity={getMaxQuantity(selectedCard)}
-          deckCards={deckCards}
-          onAddCard={(cardId) => {
-            onAddCard(cardId)
-          }}
-          onRemoveCard={(cardId) => {
-            onRemoveCard(cardId)
-          }}
-          onReplaceCard={onReplaceCard}
-        />
-      )}
+      {selectedCard && (() => {
+        // Obtener cartas alternativas desde el cache (ya cargado con useCards)
+        const baseId = getBaseCardId(selectedCard.id)
+        const alternativeArts = allCardsWithAlternatives.filter(
+          (card) => card.isCosmetic && getBaseCardId(card.id) === baseId
+        )
+        
+        return (
+          <CardInfoModal
+            card={selectedCard}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            alternativeArts={alternativeArts}
+            quantityInDeck={getCardQuantity(selectedCard.id)}
+            maxQuantity={getMaxQuantity(selectedCard)}
+            deckCards={deckCards}
+            onAddCard={(cardId) => {
+              onAddCard(cardId)
+            }}
+            onRemoveCard={(cardId) => {
+              onRemoveCard(cardId)
+            }}
+            onReplaceCard={onReplaceCard}
+          />
+        )
+      })()}
     </>
   )
 }

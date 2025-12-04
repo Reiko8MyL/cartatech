@@ -175,10 +175,30 @@ export function getBaseCardId(cardId: string): string {
   return cardId.split("-").slice(0, 2).join("-");
 }
 
+/**
+ * Obtiene las cartas alternativas para una carta específica (versión síncrona)
+ * Usa fallback a archivos JS
+ */
 export function getAlternativeArtsForCard(cardId: string): Card[] {
   const baseId = getBaseCardId(cardId);
-  const altCards = getAlternativeArtCards();
+  const altCards = getAlternativeArtCards(); // Usa fallback a archivos JS
   return altCards.filter((card) => getBaseCardId(card.id) === baseId);
+}
+
+/**
+ * Obtiene las cartas alternativas para una carta específica desde la API (versión async)
+ */
+export async function getAlternativeArtsForCardAsync(cardId: string): Promise<Card[]> {
+  try {
+    const { getAllCardsFromAPI } = await import("@/lib/api/cards");
+    const allCards = await getAllCardsFromAPI(true); // Incluir alternativas
+    const baseId = getBaseCardId(cardId);
+    return allCards.filter((card) => card.isCosmetic && getBaseCardId(card.id) === baseId);
+  } catch (error) {
+    console.error("Error al obtener cartas alternativas desde API, usando fallback:", error);
+    // Fallback a función síncrona
+    return getAlternativeArtsForCard(cardId);
+  }
 }
 
 export function sortCardsByEditionAndId(cards: Card[]): Card[] {
@@ -244,10 +264,9 @@ export function calculateDeckStats(
   deckCards: DeckCard[],
   allCards: Card[]
 ): DeckStats {
-  // Incluir cartas alternativas en el mapa para que las estadísticas las consideren
-  const altCards = getAlternativeArtCards();
-  const allCardsWithAlternatives = [...allCards, ...altCards];
-  const cardMap = new Map(allCardsWithAlternatives.map((card) => [card.id, card]));
+  // allCards ya debería incluir alternativas si viene del hook useCards(true)
+  // Si no las incluye, usar solo allCards (las alternativas se manejan por baseCardId)
+  const cardMap = new Map(allCards.map((card) => [card.id, card]));
   let totalCards = 0;
   let totalCost = 0;
   let totalCardsForAverage = 0; // Cartas excluyendo Oro para el cálculo del promedio

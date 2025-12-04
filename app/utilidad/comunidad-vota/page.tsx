@@ -14,9 +14,20 @@ export default function ComunidadVotaPage() {
   const [updateKey, setUpdateKey] = useState(0)
 
   useEffect(() => {
-    const allRaces = getAllRaces()
-    // Tomar las primeras 12 razas o todas si hay menos de 12
-    setRaces(allRaces.slice(0, 12))
+    const loadRaces = async () => {
+      try {
+        const allRaces = await getAllRaces()
+        // Tomar las primeras 12 razas o todas si hay menos de 12
+        setRaces(allRaces.slice(0, 12))
+      } catch (error) {
+        console.error("Error al cargar razas:", error)
+        // Fallback: usar función síncrona
+        const { getAllRacesSync } = await import("@/lib/voting/utils")
+        const allRaces = getAllRacesSync()
+        setRaces(allRaces.slice(0, 12))
+      }
+    }
+    loadRaces()
   }, [])
 
   const handleVoteUpdate = () => {
