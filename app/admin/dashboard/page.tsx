@@ -25,6 +25,7 @@ import {
   Lock,
   Calendar,
   ArrowUpRight,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -388,6 +389,23 @@ export default function AdminDashboardPage() {
 
               {user?.role === "ADMIN" && (
                 <>
+                  <Link href="/admin/agregar-carta">
+                    <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Plus className="size-5" />
+                          Agregar Nueva Carta
+                        </CardTitle>
+                        <CardDescription>
+                          Crea nuevas cartas y agrégalas a la base de datos
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ArrowUpRight className="size-4 text-muted-foreground" />
+                      </CardContent>
+                    </Card>
+                  </Link>
+
                   <Link href="/admin/ban-list">
                     <Card className="hover:border-primary transition-colors cursor-pointer h-full">
                       <CardHeader>
