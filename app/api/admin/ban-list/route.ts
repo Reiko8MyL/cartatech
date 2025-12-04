@@ -44,14 +44,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener todas las cartas desde BD
+    // Obtener todas las cartas principales desde BD (baseCardId es null)
     const allCards = await prisma.card.findMany({
-      where: { isCosmetic: false },
+      where: { 
+        baseCardId: null, // Solo cartas principales
+      },
       orderBy: { id: "asc" },
     });
     
+    // Obtener cartas alternativas (baseCardId no es null)
     const altCards = await prisma.card.findMany({
-      where: { isCosmetic: true },
+      where: { 
+        baseCardId: { not: null }, // Solo cartas alternativas
+      },
       orderBy: { id: "asc" },
     });
 
