@@ -1371,6 +1371,8 @@ export default function ViewDeckPage() {
                     fill
                     className="object-contain"
                     sizes="96px"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               )}
@@ -1514,6 +1516,8 @@ export default function ViewDeckPage() {
                               fill
                               className="object-contain"
                               sizes="40px"
+                              loading="lazy"
+                              decoding="async"
                             />
                           </div>
                         )}
@@ -1537,6 +1541,8 @@ export default function ViewDeckPage() {
                         fill
                         className="object-contain p-2"
                         sizes="160px"
+                        loading="lazy"
+                        decoding="async"
                       />
                       {/* Efecto de brillo especial */}
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1782,6 +1788,8 @@ export default function ViewDeckPage() {
                                   fill
                                   className="object-contain p-1"
                                   sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                                 {isSelected && (
                                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">

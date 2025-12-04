@@ -643,6 +643,8 @@ export default function MisMazosPage() {
                               fill
                               className="object-contain"
                               sizes="96px"
+                              loading="lazy"
+                              decoding="async"
                             />
                           </div>
                         </div>
@@ -777,6 +779,8 @@ export default function MisMazosPage() {
                                   fill
                                   className="object-contain"
                                   sizes="48px"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               </div>
                             </div>

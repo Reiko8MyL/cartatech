@@ -697,6 +697,8 @@ function MazosComunidadPage() {
                               fill
                               className="object-contain"
                               sizes="96px"
+                              loading="lazy"
+                              decoding="async"
                             />
                           </div>
                         </div>
