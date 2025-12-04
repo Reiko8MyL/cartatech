@@ -3,12 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Menu, User, LogOut, LogIn, UserPlus, Sun, Moon, Monitor } from "lucide-react";
+import { Menu, User, LogOut, LogIn, UserPlus, Sun, Moon, Monitor, Shield } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { UtilidadDropdown } from "./utilidad-dropdown";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/contexts/auth-context";
+import { hasModeratorAccess } from "@/lib/auth/authorization";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,17 @@ export function Navbar() {
                     Mis Favoritos
                   </Link>
                 </DropdownMenuItem>
+                {hasModeratorAccess(user.role) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/dashboard" className="cursor-pointer">
+                        <Shield className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Panel de Administración
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={logout}
@@ -242,6 +254,16 @@ export function Navbar() {
                     <div className="px-4 py-2 text-sm text-muted-foreground">
                       {user.username}
                     </div>
+                    {hasModeratorAccess(user.role) && (
+                      <Link
+                        href="/admin/dashboard"
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Panel de Administración
+                      </Link>
+                    )}
                     <button
                       onClick={() => {
                         logout();
