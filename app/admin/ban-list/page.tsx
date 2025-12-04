@@ -186,28 +186,29 @@ export default function AdminBanListPage() {
     setIsSaving(true);
 
     try {
-      const updates = Array.from(pendingChanges.entries());
+      const updates = Array.from(pendingChanges.entries()).map(([cardId, value]) => ({
+        cardId,
+        format,
+        value,
+      }));
       
-      // Guardar todos los cambios
-      for (const [cardId, value] of updates) {
-        const response = await fetch(`/api/admin/ban-list`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: user.id,
-            cardId,
-            format,
-            value,
-          }),
-        });
+      // Guardar todos los cambios en una sola llamada batch
+      const response = await fetch(`/api/admin/ban-list/batch`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          updates,
+        }),
+      });
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || `Error al actualizar ${cardId}`);
-        }
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Error al guardar cambios");
       }
 
-      toastSuccess(`${updates.length} carta(s) actualizada(s) exitosamente`);
+      const data = await response.json();
+      toastSuccess(data.message || `${updates.length} carta(s) actualizada(s) exitosamente`);
       setPendingChanges(new Map());
       // Recargar la lista (las que se marcaron como 3 ya no aparecerán)
       await loadBanList();

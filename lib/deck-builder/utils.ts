@@ -135,15 +135,36 @@ export async function getAlternativeArtCardsAsync(): Promise<Card[]> {
 /**
  * Limpia el cache de cartas (solo en servidor)
  * Usa importación dinámica para evitar incluir Prisma en el cliente
+ * También limpia el cache síncrono para forzar recarga desde BD
  */
 export async function clearCardsCache(): Promise<void> {
   if (typeof window !== "undefined") {
     return; // No hacer nada en cliente
   }
 
+  // Limpiar cache síncrono
+  syncCardsCache = null;
+  syncAltCardsCache = null;
+
   try {
     const { clearCardsCache: clearCache } = await import("./cards-db");
     clearCache();
+    
+    // Recargar cache síncrono desde BD en background
+    const { getAllCardsFromDB, getAlternativeArtCardsFromDB } = await import("./cards-db");
+    getAllCardsFromDB().then((cards) => {
+      syncCardsCache = cards;
+    }).catch(() => {
+      // Si falla, mantener archivos JS como fallback
+      syncCardsCache = CARDS as Card[];
+    });
+    
+    getAlternativeArtCardsFromDB().then((cards) => {
+      syncAltCardsCache = cards;
+    }).catch(() => {
+      // Si falla, mantener archivos JS como fallback
+      syncAltCardsCache = AAcards as Card[];
+    });
   } catch (error) {
     // Si falla, no hacer nada
   }
