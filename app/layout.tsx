@@ -126,14 +126,21 @@ export default function RootLayout({
           rel="icon"
           type="image/webp"
           href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+          sizes="32x32"
+        />
+        <link
+          rel="icon"
+          type="image/webp"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+          sizes="16x16"
         />
         <link
           rel="shortcut icon"
-          type="image/webp"
           href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
         />
         <link
           rel="apple-touch-icon"
+          sizes="180x180"
           href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
         />
         {/* Google AdSense - Script de anuncios */}
