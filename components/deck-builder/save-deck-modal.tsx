@@ -15,6 +15,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { DeckCard, SavedDeck, DeckFormat, Card } from "@/lib/deck-builder/types"
 import { DECK_TAGS } from "@/lib/deck-builder/types"
 import { useAuth } from "@/contexts/auth-context"
