@@ -106,12 +106,23 @@ export const CardItem = memo(function CardItem({
             canAddMore ? "" : "opacity-50"
           }`}
           sizes="(max-width: 640px) 25vw, (max-width: 768px) 25vw, (max-width: 1024px) 16vw, 20vw"
-          loading="eager"
-          priority={true}
+          loading={priority ? "eager" : "lazy"}
+          priority={priority}
           decoding="async"
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
+          onError={(e) => {
+            // Si la imagen falla, intentar recargar después de un delay
+            const target = e.target as HTMLImageElement
+            if (target && target.src) {
+              setTimeout(() => {
+                if (target.src) {
+                  target.src = target.src + (target.src.includes('?') ? '&' : '?') + '_retry=' + Date.now()
+                }
+              }, 2000)
+            }
+          }}
           style={{
             userSelect: 'none',
             WebkitUserSelect: 'none',
