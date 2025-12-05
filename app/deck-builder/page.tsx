@@ -489,14 +489,7 @@ function DeckBuilderContent() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
         {/* Panel izquierdo: Cartas disponibles */}
         <ErrorBoundary>
-          <div 
-            className="border rounded-lg bg-card overflow-hidden"
-            style={{
-              // Permitir interacción con el cards panel incluso cuando el panel de gestión está colapsado
-              pointerEvents: isMobile && panelHeight <= MIN_HEIGHT + 50 ? 'auto' : 'auto',
-              zIndex: isMobile && panelHeight <= MIN_HEIGHT + 50 ? 10 : 1,
-            }}
-          >
+          <div className="border rounded-lg bg-card overflow-hidden">
             {isLoadingCards ? (
               <div className="h-full overflow-y-auto">
                 <CardGridSkeleton count={12} columns={6} />
