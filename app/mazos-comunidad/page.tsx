@@ -129,9 +129,6 @@ function MazosComunidadPage() {
   const [loadingLikes, setLoadingLikes] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
 
-  // Cargar todas las cartas desde la API con cache
-  const { cards: allCards } = useCards(false)
-
   // Cargar likes y favoritos al iniciar
   useEffect(() => {
     const loadData = async () => {

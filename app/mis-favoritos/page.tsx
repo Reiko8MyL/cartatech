@@ -88,9 +88,6 @@ export default function MisFavoritosPage() {
   const [favorites, setFavorites] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Cargar todas las cartas desde la API con cache
-  const { cards: allCards } = useCards(false)
-
   // Cargar favoritos y likes al iniciar
   useEffect(() => {
     if (user) {
