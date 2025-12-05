@@ -52,6 +52,14 @@ const CONTEXT_DESCRIPTIONS: Record<string, string> = {
 // Contextos que comparten la misma forma de mostrar paneles
 const CONTEXT_GROUPS: Record<string, string[]> = {
   "listas-mazos": ["mis-mazos", "mazos-comunidad", "favoritos"],
+  "dashboard-cards": [
+    "admin-dashboard-card-moderar-comentarios",
+    "admin-dashboard-card-agregar-carta",
+    "admin-dashboard-card-ban-list",
+    "admin-dashboard-card-gestionar-usuarios",
+    "admin-dashboard-card-ajustar-cartas",
+    "admin-dashboard-card-ajustar-banners",
+  ],
 };
 
 const DEVICE_LABELS: Record<string, string> = {
