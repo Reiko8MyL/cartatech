@@ -38,7 +38,7 @@ import {
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { Pagination } from "@/components/ui/pagination"
-import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType, useBannerSettingsMap } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
 
 type ViewMode = "grid" | "list"
@@ -61,7 +61,6 @@ export default function MisMazosPage() {
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const deviceType = useDeviceType()
-  const { setting: bannerSetting } = useBannerSettings("mis-mazos", viewMode, deviceType)
   const [filters, setFilters] = useState<DeckFilters>({
     search: "",
     race: "",
@@ -78,6 +77,28 @@ export default function MisMazosPage() {
 
   // Cargar todas las cartas desde la API con cache
   const { cards: allCards } = useCards(false)
+  
+  // Obtener todos los IDs de imágenes únicos de los decks
+  const deckImageIds = useMemo(() => {
+    if (!allCards.length || !decks.length) return [];
+    const uniqueIds = new Set<string | null>();
+    decks.forEach(deck => {
+      const race = getDeckRace(deck.cards, allCards);
+      const backgroundImage = getDeckBackgroundImage(race);
+      if (backgroundImage) {
+        uniqueIds.add(getBackgroundImageId(backgroundImage));
+      } else {
+        uniqueIds.add(null);
+      }
+    });
+    return Array.from(uniqueIds);
+  }, [decks, allCards]);
+  
+  // Obtener ajustes para todas las imágenes
+  const { settingsMap, isLoading: isLoadingBannerSettings } = useBannerSettingsMap("mis-mazos", viewMode, deviceType, deckImageIds);
+  
+  // Ajuste por defecto (para compatibilidad)
+  const { setting: bannerSetting } = useBannerSettings("mis-mazos", viewMode, deviceType)
 
   useEffect(() => {
     if (user) {
@@ -577,13 +598,19 @@ export default function MisMazosPage() {
                 day: "numeric",
               })
 
+              // Obtener raza e imagen de fondo del deck
+              const race = getDeckRace(deck.cards, allCards);
+              const backgroundImage = getDeckBackgroundImage(race);
+              const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
+              const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
+
               return (
                 <Card key={deck.id} className="flex flex-col overflow-hidden group">
                   <div
                     className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={getBannerStyle(deck.backgroundImage, bannerSetting)}
+                    style={getBannerStyle(backgroundImage, deckBannerSetting)}
                   >
-                    <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
+                    <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -707,14 +734,20 @@ export default function MisMazosPage() {
                 day: "numeric",
               })
 
+              // Obtener raza e imagen de fondo del deck
+              const race = getDeckRace(deck.cards, allCards);
+              const backgroundImage = getDeckBackgroundImage(race);
+              const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
+              const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
+
               return (
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
                       className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
-                      style={getBannerStyle(deck.backgroundImage, bannerSetting)}
+                      style={getBannerStyle(backgroundImage, deckBannerSetting)}
                     >
-                      <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
+                      <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">
                         <CardTitle className="text-white text-lg line-clamp-1 drop-shadow-lg">{deck.name}</CardTitle>
                       </div>

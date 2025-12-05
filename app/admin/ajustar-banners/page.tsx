@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { AdminGuard } from "@/components/admin/admin-guard";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export default function AjustarBannersPage() {
   });
 
   const [settings, setSettings] = useState<BannerSetting[]>([]);
-  const backgroundImages = getAllBackgroundImages();
+  const [backgroundImages, setBackgroundImages] = useState(getAllBackgroundImages());
 
   // Cargar ajustes al cambiar filtros
   useEffect(() => {
@@ -307,6 +307,106 @@ export default function AjustarBannersPage() {
     }
   }
 
+  // Componente para subir imágenes
+  function ButtonUploadBannerImage({ onUploadSuccess }: { onUploadSuccess: (image: { id: string; url: string; race: string }) => void }) {
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+      const file = e.target.files?.[0];
+      if (!file || !user?.id) return;
+
+      // Validar tipo de archivo
+      if (!file.type.startsWith("image/")) {
+        toastError("Por favor selecciona un archivo de imagen");
+        return;
+      }
+
+      // Validar tamaño (máx 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toastError("La imagen no puede ser mayor a 10MB");
+        return;
+      }
+
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("userId", user.id);
+        formData.append("race", "Custom");
+
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+        const url = API_BASE_URL
+          ? `${API_BASE_URL}/api/admin/upload-banner-image`
+          : `/api/admin/upload-banner-image`;
+
+        const response = await fetch(url, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Error al subir la imagen");
+        }
+
+        const data = await response.json();
+        const newImage = {
+          id: data.url,
+          url: data.url,
+          race: data.race || "Custom",
+        };
+
+        // Agregar a la lista de imágenes
+        setBackgroundImages(prev => [...prev, newImage]);
+        onUploadSuccess(newImage);
+      } catch (error) {
+        console.error("Error al subir imagen:", error);
+        const errorMessage = error instanceof Error ? error.message : "Error al subir la imagen";
+        toastError(errorMessage);
+      } finally {
+        setIsUploading(false);
+        // Resetear input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    }
+
+    return (
+      <div className="space-y-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+          id="banner-image-upload"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+          className="w-full"
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Subiendo...
+            </>
+          ) : (
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              Subir Nueva Imagen
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  }
+
   // Obtener imagen de fondo para vista previa
   const previewImage = selectedImageId 
     ? backgroundImages.find(img => img.id === selectedImageId)?.url 
@@ -461,6 +561,14 @@ export default function AjustarBannersPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <ButtonUploadBannerImage 
+                      onUploadSuccess={(newImage) => {
+                        // Agregar nueva imagen a la lista
+                        backgroundImages.push(newImage);
+                        setSelectedImageId(newImage.id);
+                        toastSuccess("Imagen subida correctamente");
+                      }}
+                    />
                   </div>
 
                   {/* Posición X */}

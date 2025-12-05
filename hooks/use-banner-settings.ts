@@ -279,3 +279,70 @@ export function useDeviceType(): "desktop" | "tablet" | "mobile" {
 
   return deviceType;
 }
+
+/**
+ * Hook para obtener múltiples ajustes de banners (para diferentes imágenes)
+ * Útil cuando necesitas ajustes para diferentes imágenes en la misma página
+ */
+export function useBannerSettingsMap(
+  context: string,
+  viewMode: string = "grid",
+  device: string = "desktop",
+  imageIds: (string | null)[]
+) {
+  const [settingsMap, setSettingsMap] = useState<Map<string | null, BannerSetting | null>>(new Map());
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const params = new URLSearchParams({
+          context,
+          viewMode,
+          device,
+        });
+
+        const url = API_BASE_URL
+          ? `${API_BASE_URL}/api/banner-settings`
+          : `/api/banner-settings`;
+
+        // Obtener ajustes para todas las imágenes
+        const settingsPromises = imageIds.map(async (imageId) => {
+          const imageParams = new URLSearchParams(params);
+          if (imageId !== undefined && imageId !== null) {
+            imageParams.append("backgroundImageId", imageId);
+          }
+
+          const response = await fetch(`${url}?${imageParams.toString()}`);
+          if (!response.ok) {
+            return { imageId, setting: null };
+          }
+
+          const data = await response.json();
+          return { imageId, setting: data.setting || null };
+        });
+
+        const results = await Promise.all(settingsPromises);
+        const newMap = new Map<string | null, BannerSetting | null>();
+        
+        results.forEach(({ imageId, setting }) => {
+          newMap.set(imageId, setting);
+        });
+
+        setSettingsMap(newMap);
+      } catch (error) {
+        console.error("Error al cargar ajustes de banners:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (imageIds.length > 0) {
+      loadSettings();
+    } else {
+      setIsLoading(false);
+    }
+  }, [context, viewMode, device, JSON.stringify(imageIds)]);
+
+  return { settingsMap, isLoading };
+}
