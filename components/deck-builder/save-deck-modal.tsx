@@ -26,6 +26,7 @@ import type { DeckCard, SavedDeck, DeckFormat, Card } from "@/lib/deck-builder/t
 import { DECK_TAGS } from "@/lib/deck-builder/types"
 import { useAuth } from "@/contexts/auth-context"
 import { toastError } from "@/lib/toast"
+import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils"
 
 interface SaveDeckModalProps {
   isOpen: boolean
