@@ -36,6 +36,7 @@ import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType, useBannerSettingsMap } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
