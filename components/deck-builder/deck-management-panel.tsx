@@ -1266,15 +1266,16 @@ export function DeckManagementPanel({
   }, [panelHeight, isMobile])
 
   // Prevenir scroll del fondo cuando el panel está expandido en móvil
+  // PERO solo cuando el usuario está arrastrando el handle
   useEffect(() => {
     if (!isMobile) return
     
-    if (panelHeight > MIN_HEIGHT + 50) {
-      // Panel expandido: prevenir scroll del fondo
+    if (isDragging && panelHeight > MIN_HEIGHT + 50) {
+      // Solo prevenir scroll cuando se está arrastrando activamente
       document.body.style.overflow = 'hidden'
       document.body.style.touchAction = 'none'
     } else {
-      // Panel colapsado: permitir scroll del fondo
+      // Permitir scroll del fondo siempre que no se esté arrastrando
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
     }
@@ -1284,7 +1285,7 @@ export function DeckManagementPanel({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
     }
-  }, [panelHeight, isMobile])
+  }, [isDragging, panelHeight, isMobile])
 
   const maxHeight = getMaxHeight()
   const overlayOpacity = isMobile && panelHeight > MIN_HEIGHT + 50 
@@ -1298,10 +1299,15 @@ export function DeckManagementPanel({
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden transition-opacity duration-300"
           onClick={() => setPanelHeight(MIN_HEIGHT)}
-          onTouchMove={(e) => e.preventDefault()}
+          onTouchMove={(e) => {
+            // Solo prevenir si se está tocando el overlay, no el contenido debajo
+            if (e.target === e.currentTarget) {
+              e.preventDefault()
+            }
+          }}
           style={{
             opacity: overlayOpacity,
-            touchAction: 'none',
+            pointerEvents: panelHeight > MIN_HEIGHT + 50 ? 'auto' : 'none',
           }}
         />
       )}
