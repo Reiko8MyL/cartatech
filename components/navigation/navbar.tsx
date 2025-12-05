@@ -158,23 +158,23 @@ export function Navbar() {
                 <Menu className="h-6 w-6" />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] flex flex-col">
+              <SheetHeader className="flex-shrink-0">
                 <SheetTitle>Menú</SheetTitle>
               </SheetHeader>
-              <nav className="mt-8 flex flex-col gap-4">
+              <nav className="mt-4 flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
                 {mobileNavLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setIsOpen(false)}
-                    className="px-4 py-2 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
                   >
                     {link.label}
                   </Link>
                 ))}
-                <div className="border-t pt-4">
-                  <p className="px-4 py-2 text-sm font-semibold text-foreground">
+                <div className="border-t pt-2 mt-2">
+                  <p className="px-4 py-1.5 text-xs font-semibold text-foreground">
                     Utilidad
                   </p>
                   {utilidadLinks.map((link) => (
@@ -182,20 +182,20 @@ export function Navbar() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setIsOpen(false)}
-                      className="block px-8 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                      className="block px-8 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
                     >
                       {link.label}
                     </Link>
                   ))}
                 </div>
                 {/* Toggle de tema en móvil */}
-                <div className="border-t pt-4">
-                  <div className="px-4 py-2 text-sm font-semibold text-foreground mb-2">
+                <div className="border-t pt-2 mt-2">
+                  <div className="px-4 py-1.5 text-xs font-semibold text-foreground">
                     Tema
                   </div>
                   <button
                     onClick={() => setTheme("light")}
-                    className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
+                    className={`w-full text-left px-4 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-md ${
                       mounted && theme === "light" ? "bg-accent text-accent-foreground" : ""
                     }`}
                     aria-label="Cambiar a tema claro"
@@ -207,7 +207,7 @@ export function Navbar() {
                   </button>
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
+                    className={`w-full text-left px-4 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-md ${
                       mounted && theme === "dark" ? "bg-accent text-accent-foreground" : ""
                     }`}
                     aria-label="Cambiar a tema oscuro"
@@ -219,7 +219,7 @@ export function Navbar() {
                   </button>
                   <button
                     onClick={() => setTheme("system")}
-                    className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
+                    className={`w-full text-left px-4 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-md ${
                       mounted && theme === "system" ? "bg-accent text-accent-foreground" : ""
                     }`}
                     aria-label="Usar tema del sistema"
@@ -232,33 +232,33 @@ export function Navbar() {
                 </div>
                 
                 {!user && (
-                  <div className="border-t pt-4 space-y-2">
+                  <div className="border-t pt-2 mt-2 space-y-1">
                     <Link
                       href="/registro"
                       onClick={() => setIsOpen(false)}
-                      className="block px-4 py-2 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                      className="block px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
                     >
                       Registro
                     </Link>
                     <Link
                       href="/inicio-sesion"
                       onClick={() => setIsOpen(false)}
-                      className="block px-4 py-2 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                      className="block px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
                     >
                       Iniciar Sesión
                     </Link>
                   </div>
                 )}
                 {user && (
-                  <div className="border-t pt-4">
-                    <div className="px-4 py-2 text-sm text-muted-foreground">
+                  <div className="border-t pt-2 mt-2">
+                    <div className="px-4 py-1.5 text-xs text-muted-foreground">
                       {user.username}
                     </div>
                     {hasModeratorAccess(user.role) && (
                       <Link
                         href="/admin/dashboard"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                        className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
                       >
                         <Shield className="h-4 w-4" />
                         Panel de Administración
@@ -269,7 +269,7 @@ export function Navbar() {
                         logout();
                         setIsOpen(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-base font-medium transition-colors hover:bg-accent hover:text-accent-foreground text-destructive"
+                      className="w-full text-left px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground text-destructive rounded-md"
                       aria-label="Cerrar sesión"
                       role="button"
                     >
