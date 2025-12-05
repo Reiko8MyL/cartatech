@@ -54,7 +54,7 @@ import { DeckJsonLd } from "@/components/seo/json-ld"
 import { trackDeckViewed, trackDeckLiked, trackDeckCopied } from "@/lib/analytics/events"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
-import { optimizeCloudinaryUrl } from "@/lib/deck-builder/cloudinary-utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
 import {
   Dialog,
   DialogContent,
@@ -1376,15 +1376,23 @@ export default function ViewDeckPage() {
               </div>
               {deckMetadata.edition && EDITION_LOGOS[deckMetadata.edition] && (
                 <div className="relative w-24 h-24 flex-shrink-0">
-                  <Image
-                    src={EDITION_LOGOS[deckMetadata.edition]}
-                    alt={deckMetadata.edition}
-                    fill
-                    className="object-contain"
-                    sizes="96px"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  {(() => {
+                    const logoUrl = EDITION_LOGOS[deckMetadata.edition]
+                    const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                    return (
+                      <Image
+                        src={optimizedLogoUrl}
+                        alt={deckMetadata.edition}
+                        fill
+                        className="object-contain"
+                        sizes="96px"
+                        loading="lazy"
+                        decoding="async"
+                        unoptimized={isOptimized}
+                      />
+                    )
+                  })()}
                 </div>
               )}
             </div>

@@ -567,13 +567,21 @@ export default function MisFavoritosPage() {
                       {deck.edition && EDITION_LOGOS[deck.edition] && (
                         <div className="absolute -top-32 right-0 z-10">
                           <div className="relative w-24 h-24" title={deck.edition}>
-                            <Image
-                              src={EDITION_LOGOS[deck.edition]}
-                              alt={deck.edition}
-                              fill
-                              className="object-contain"
-                              sizes="96px"
-                            />
+                            {(() => {
+                              const logoUrl = EDITION_LOGOS[deck.edition]
+                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                              return (
+                                <Image
+                                  src={optimizedLogoUrl}
+                                  alt={deck.edition}
+                                  fill
+                                  className="object-contain"
+                                  sizes="96px"
+                                  unoptimized={isOptimized}
+                                />
+                              )
+                            })()}
                           </div>
                         </div>
                       )}
@@ -715,13 +723,21 @@ export default function MisFavoritosPage() {
                             {deck.edition && EDITION_LOGOS[deck.edition] && (
                               <div className="absolute -top-32 right-0 z-10">
                                 <div className="relative w-12 h-12" title={deck.edition}>
-                                  <Image
-                                    src={EDITION_LOGOS[deck.edition]}
-                                    alt={deck.edition}
-                                    fill
-                                    className="object-contain"
-                                    sizes="48px"
-                                  />
+                                  {(() => {
+                                    const logoUrl = EDITION_LOGOS[deck.edition]
+                                    const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                                    return (
+                                      <Image
+                                        src={optimizedLogoUrl}
+                                        alt={deck.edition}
+                                        fill
+                                        className="object-contain"
+                                        sizes="48px"
+                                        unoptimized={isOptimized}
+                                      />
+                                    )
+                                  })()}
                                 </div>
                               </div>
                             )}

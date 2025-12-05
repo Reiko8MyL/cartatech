@@ -70,6 +70,7 @@ import { DeckHeader } from "./deck-header"
 import { DeckStatsSection } from "./deck-stats-section"
 import { DeckActionsBar } from "./deck-actions-bar"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
 
 /**
  * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
@@ -1524,13 +1525,21 @@ export function DeckManagementPanel({
                     {deck.edition && EDITION_LOGOS[deck.edition] && (
                       <div className="absolute top-1.5 right-1.5 z-10">
                         <div className="relative w-12 h-12" title={deck.edition}>
-                          <Image
-                            src={EDITION_LOGOS[deck.edition]}
-                            alt={deck.edition}
-                            fill
-                            className="object-contain drop-shadow-lg"
-                            sizes="48px"
-                          />
+                          {(() => {
+                            const logoUrl = EDITION_LOGOS[deck.edition]
+                            const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                            const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                            return (
+                              <Image
+                                src={optimizedLogoUrl}
+                                alt={deck.edition}
+                                fill
+                                className="object-contain drop-shadow-lg"
+                                sizes="48px"
+                                unoptimized={isOptimized}
+                              />
+                            )
+                          })()}
                         </div>
                       </div>
                     )}

@@ -71,3 +71,41 @@ export function detectDeviceType(width: number): 'mobile' | 'tablet' | 'desktop'
   return 'desktop'
 }
 
+/**
+ * Verifica si una URL de Cloudinary ya tiene transformaciones aplicadas
+ * @param imageUrl URL de la imagen
+ * @returns true si la URL ya tiene transformaciones
+ */
+export function isCloudinaryOptimized(imageUrl: string): boolean {
+  if (!imageUrl.includes('res.cloudinary.com')) return false
+  return imageUrl.includes('/w_') || 
+         imageUrl.includes('/c_') || 
+         imageUrl.includes('/f_') ||
+         imageUrl.includes('/h_') ||
+         imageUrl.includes('/q_')
+}
+
+/**
+ * Obtiene las props optimizadas para Next.js Image component
+ * Deshabilita la optimización de Next.js si Cloudinary ya tiene transformaciones
+ * @param imageUrl URL de la imagen
+ * @param deviceType Tipo de dispositivo (opcional, para optimizar tamaño)
+ * @returns Objeto con props para Image component
+ */
+export function getOptimizedImageProps(
+  imageUrl: string,
+  deviceType?: 'mobile' | 'tablet' | 'desktop'
+) {
+  const optimizedUrl = deviceType 
+    ? optimizeCloudinaryUrl(imageUrl, deviceType)
+    : imageUrl
+  
+  const isOptimized = isCloudinaryOptimized(optimizedUrl)
+  
+  return {
+    src: optimizedUrl,
+    unoptimized: isOptimized,
+    sizes: isOptimized ? undefined : undefined, // Mantener sizes si no está optimizado
+  }
+}
+

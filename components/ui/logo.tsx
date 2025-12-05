@@ -4,6 +4,7 @@ import Image from "next/image"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface LogoProps {
   width?: number
@@ -25,23 +26,35 @@ export function Logo({
 }: LogoProps) {
   const { theme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
 
   useEffect(() => {
     setMounted(true)
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
   }, [])
 
   // Determinar qué tema está activo (resuelve "system" a "light" o "dark")
   const currentTheme = mounted ? (resolvedTheme || theme) : "dark"
   const logoSrc = currentTheme === "light" ? LOGO_LIGHT : LOGO_DARK
+  
+  // Optimizar URL de Cloudinary
+  const optimizedLogoSrc = optimizeCloudinaryUrl(logoSrc, deviceType)
+  const isOptimized = isCloudinaryOptimized(optimizedLogoSrc)
 
   return (
     <Image
-      src={logoSrc}
+      src={optimizedLogoSrc}
       alt={alt}
       width={width}
       height={height}
       className={cn("w-auto", className)}
       priority={priority}
+      unoptimized={isOptimized}
     />
   )
 }

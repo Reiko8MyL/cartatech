@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -11,6 +11,7 @@ import { Eye, EyeOff } from "lucide-react"
 import { getTemporaryDeck } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { Spinner } from "@/components/ui/spinner"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 export default function InicioSesionPage() {
   const router = useRouter()
@@ -84,14 +85,22 @@ export default function InicioSesionPage() {
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background via-background/50 to-transparent z-0" />
         <div className="relative z-10 flex flex-col items-end text-right">
           <Link href="/" className="inline-block mb-8">
-            <Image
-              src="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
-              alt="Carta Tech Logo"
-              width={200}
-              height={67}
-              className="h-16 w-auto ml-auto scale-[1.2]"
-              priority
-            />
+            {(() => {
+              const logoUrl = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+              return (
+                <Image
+                  src={optimizedLogoUrl}
+                  alt="Carta Tech Logo"
+                  width={200}
+                  height={67}
+                  className="h-16 w-auto ml-auto scale-[1.2]"
+                  priority
+                  unoptimized={isOptimized}
+                />
+              )
+            })()}
           </Link>
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
             El mejor constructor de<br />

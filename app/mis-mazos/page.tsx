@@ -40,6 +40,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { Pagination } from "@/components/ui/pagination"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType, useBannerSettingsMap } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race"
@@ -664,15 +665,23 @@ export default function MisMazosPage() {
                       {deck.edition && EDITION_LOGOS[deck.edition] && (
                         <div className="absolute -top-32 right-0 z-10">
                           <div className="relative w-24 h-24" title={deck.edition}>
-                            <Image
-                              src={EDITION_LOGOS[deck.edition]}
-                              alt={deck.edition}
-                              fill
-                              className="object-contain"
-                              sizes="96px"
-                              loading="lazy"
-                              decoding="async"
-                            />
+                            {(() => {
+                              const logoUrl = EDITION_LOGOS[deck.edition]
+                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                              return (
+                                <Image
+                                  src={optimizedLogoUrl}
+                                  alt={deck.edition}
+                                  fill
+                                  className="object-contain"
+                                  sizes="96px"
+                                  loading="lazy"
+                                  decoding="async"
+                                  unoptimized={isOptimized}
+                                />
+                              )
+                            })()}
                           </div>
                         </div>
                       )}
