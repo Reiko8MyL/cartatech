@@ -69,7 +69,7 @@ import { getAllCardsMetadata } from "@/lib/api/cards"
 import { DeckHeader } from "./deck-header"
 import { DeckStatsSection } from "./deck-stats-section"
 import { DeckActionsBar } from "./deck-actions-bar"
-import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
 
 /**
  * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
@@ -154,7 +154,8 @@ export function DeckManagementPanel({
   onCurrentDeckChange,
   cardReplacements,
 }: DeckManagementPanelProps) {
-  const { setting: bannerSetting } = useBannerSettings("deck-builder")
+  const deviceType = useDeviceType()
+  const { setting: bannerSetting } = useBannerSettings("deck-builder", "grid", deviceType)
   
   // Debug: Log cuando currentDeck cambia
   useEffect(() => {

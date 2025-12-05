@@ -38,7 +38,8 @@ import {
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { Pagination } from "@/components/ui/pagination"
-import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
+import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race"
@@ -59,7 +60,8 @@ export default function MisMazosPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const { setting: bannerSetting } = useBannerSettings("mis-mazos")
+  const deviceType = useDeviceType()
+  const { setting: bannerSetting } = useBannerSettings("mis-mazos", viewMode, deviceType)
   const [filters, setFilters] = useState<DeckFilters>({
     search: "",
     race: "",

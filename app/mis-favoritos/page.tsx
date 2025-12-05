@@ -34,7 +34,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess, toastError } from "@/lib/toast"
-import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -49,7 +49,9 @@ interface DeckFilters {
 export default function MisFavoritosPage() {
   const { user } = useAuth()
   const [favoriteDecks, setFavoriteDecks] = useState<SavedDeck[]>([])
-  const { setting: bannerSetting } = useBannerSettings("favoritos")
+  const [viewMode, setViewMode] = useState<ViewMode>("grid")
+  const deviceType = useDeviceType()
+  const { setting: bannerSetting } = useBannerSettings("favoritos", viewMode, deviceType)
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")

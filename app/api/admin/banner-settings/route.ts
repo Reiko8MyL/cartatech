@@ -10,6 +10,10 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
+    const context = searchParams.get("context");
+    const viewMode = searchParams.get("viewMode") || "grid";
+    const device = searchParams.get("device") || "desktop";
+    const backgroundImageId = searchParams.get("backgroundImageId");
 
     if (!userId) {
       return NextResponse.json(
@@ -41,58 +45,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener todos los ajustes o crear valores por defecto si no existen
-    const contexts = ["mis-mazos", "mazos-comunidad", "favoritos", "deck-builder"];
-    const settings = await Promise.all(
-      contexts.map(async (context) => {
-        let setting = await prisma.deckPanelBannerSettings.findUnique({
-          where: { context },
-        });
+    // Construir filtros
+    const where: any = {};
+    if (context) where.context = context;
+    if (viewMode) where.viewMode = viewMode;
+    if (device) where.device = device;
+    if (backgroundImageId !== null) {
+      where.backgroundImageId = backgroundImageId === "" ? null : backgroundImageId;
+    }
 
-        if (!setting) {
-          // Crear valores por defecto según el contexto
-          const defaults = {
-            "mis-mazos": {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 128, // h-32
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            "mazos-comunidad": {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 128, // h-32
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            favoritos: {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 128, // h-32
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            "deck-builder": {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 80, // h-20
-              overlayOpacity: 0.7,
-              overlayGradient: "to-t",
-            },
-          };
-
-          setting = await prisma.deckPanelBannerSettings.create({
-            data: {
-              context,
-              ...defaults[context as keyof typeof defaults],
-            },
-          });
-        }
-
-        return setting;
-      })
-    );
+    // Obtener ajustes
+    const settings = await prisma.deckPanelBannerSettings.findMany({
+      where,
+      orderBy: [
+        { context: "asc" },
+        { viewMode: "asc" },
+        { device: "asc" },
+        { backgroundImageId: "asc" },
+      ],
+    });
 
     return NextResponse.json({ settings });
   } catch (error) {
@@ -116,7 +87,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * PUT - Actualizar ajustes de banners
+ * PUT - Actualizar o crear ajustes de banners
  * Solo accesible para administradores
  */
 export async function PUT(request: NextRequest) {
@@ -126,7 +97,11 @@ export async function PUT(request: NextRequest) {
       userId: string;
       settings: Array<{
         context: string;
-        backgroundPosition: string;
+        viewMode?: string;
+        device?: string;
+        backgroundImageId?: string | null;
+        backgroundPositionX: number;
+        backgroundPositionY: number;
         backgroundSize: string;
         height: number;
         overlayOpacity: number;
@@ -164,13 +139,25 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Actualizar cada ajuste
+    // Actualizar o crear cada ajuste
     const updatedSettings = await Promise.all(
       settings.map(async (setting) => {
+        const viewMode = setting.viewMode || "grid";
+        const device = setting.device || "desktop";
+        const backgroundImageId = setting.backgroundImageId === "" ? null : setting.backgroundImageId;
+
         return await prisma.deckPanelBannerSettings.upsert({
-          where: { context: setting.context },
+          where: {
+            context_viewMode_device_backgroundImageId: {
+              context: setting.context,
+              viewMode,
+              device,
+              backgroundImageId,
+            },
+          },
           update: {
-            backgroundPosition: setting.backgroundPosition,
+            backgroundPositionX: setting.backgroundPositionX,
+            backgroundPositionY: setting.backgroundPositionY,
             backgroundSize: setting.backgroundSize,
             height: setting.height,
             overlayOpacity: setting.overlayOpacity,
@@ -178,7 +165,11 @@ export async function PUT(request: NextRequest) {
           },
           create: {
             context: setting.context,
-            backgroundPosition: setting.backgroundPosition,
+            viewMode,
+            device,
+            backgroundImageId,
+            backgroundPositionX: setting.backgroundPositionX,
+            backgroundPositionY: setting.backgroundPositionY,
             backgroundSize: setting.backgroundSize,
             height: setting.height,
             overlayOpacity: setting.overlayOpacity,
@@ -209,3 +200,61 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+/**
+ * DELETE - Eliminar ajustes de banners
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get("userId");
+    const id = searchParams.get("id");
+
+    if (!userId || !id) {
+      return NextResponse.json(
+        { error: "userId e id son requeridos" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el usuario es admin
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    if (!hasAdminAccess(user.role)) {
+      return NextResponse.json(
+        {
+          error:
+            "No tienes permiso para realizar esta acción. Se requiere rol de administrador.",
+        },
+        { status: 403 }
+      );
+    }
+
+    await prisma.deckPanelBannerSettings.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error al eliminar ajustes de banners:", error);
+
+    return NextResponse.json(
+      {
+        error: "Error al eliminar ajustes de banners",
+        ...(process.env.NODE_ENV === "development" && {
+          details: error instanceof Error ? error.message : String(error),
+        }),
+      },
+      { status: 500 }
+    );
+  }
+}

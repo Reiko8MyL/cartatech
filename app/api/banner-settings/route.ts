@@ -3,111 +3,119 @@ import { prisma } from "@/lib/db/prisma";
 
 /**
  * GET - Obtener ajustes de banners (público)
- * Retorna los ajustes de banners para todos los contextos
+ * Retorna los ajustes de banners según los parámetros
  */
 export async function GET(request: NextRequest) {
   try {
-    // Obtener todos los ajustes o crear valores por defecto si no existen
-    const contexts = ["mis-mazos", "mazos-comunidad", "favoritos", "deck-builder"];
-    const settings = await Promise.all(
-      contexts.map(async (context) => {
-        let setting = await prisma.deckPanelBannerSettings.findUnique({
-          where: { context },
-        });
+    const searchParams = request.nextUrl.searchParams;
+    const context = searchParams.get("context");
+    const viewMode = searchParams.get("viewMode") || "grid";
+    const device = searchParams.get("device") || "desktop";
+    const backgroundImageId = searchParams.get("backgroundImageId");
 
-        if (!setting) {
-          // Crear valores por defecto según el contexto
-          const defaults = {
-            "mis-mazos": {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 128, // h-32
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            "mazos-comunidad": {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 128, // h-32
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            favoritos: {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 128, // h-32
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            "deck-builder": {
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              height: 80, // h-20
-              overlayOpacity: 0.7,
-              overlayGradient: "to-t",
-            },
-          };
+    // Construir filtros
+    const where: any = {};
+    if (context) where.context = context;
+    where.viewMode = viewMode;
+    where.device = device;
+    
+    // Buscar primero ajuste específico para la imagen, luego el genérico
+    if (backgroundImageId) {
+      where.OR = [
+        { backgroundImageId },
+        { backgroundImageId: null },
+      ];
+    } else {
+      where.backgroundImageId = null;
+    }
 
-          setting = await prisma.deckPanelBannerSettings.create({
-            data: {
-              context,
-              ...defaults[context as keyof typeof defaults],
-            },
-          });
-        }
+    // Obtener ajustes ordenados por especificidad (imagen específica primero)
+    const settings = await prisma.deckPanelBannerSettings.findMany({
+      where,
+      orderBy: [
+        { backgroundImageId: { sort: "asc", nulls: "last" } },
+      ],
+    });
 
-        return {
-          context: setting.context,
-          backgroundPosition: setting.backgroundPosition,
-          backgroundSize: setting.backgroundSize,
-          height: setting.height,
-          overlayOpacity: setting.overlayOpacity,
-          overlayGradient: setting.overlayGradient,
-        };
-      })
-    );
+    // Si hay ajuste específico, usarlo; si no, usar el genérico
+    const setting = settings.find(s => s.backgroundImageId === backgroundImageId) || settings.find(s => s.backgroundImageId === null);
 
-    return NextResponse.json({ settings });
+    // Si no hay ajuste, retornar valores por defecto
+    if (!setting) {
+      const defaultSettings: Record<string, any> = {
+        "mis-mazos": {
+          context: "mis-mazos",
+          viewMode,
+          device,
+          backgroundImageId: null,
+          backgroundPositionX: 50,
+          backgroundPositionY: 50,
+          backgroundSize: "cover",
+          height: viewMode === "grid" ? 128 : 128,
+          overlayOpacity: 0.6,
+          overlayGradient: "to-t",
+        },
+        "mazos-comunidad": {
+          context: "mazos-comunidad",
+          viewMode,
+          device,
+          backgroundImageId: null,
+          backgroundPositionX: 50,
+          backgroundPositionY: 50,
+          backgroundSize: "cover",
+          height: viewMode === "grid" ? 128 : 128,
+          overlayOpacity: 0.6,
+          overlayGradient: "to-t",
+        },
+        favoritos: {
+          context: "favoritos",
+          viewMode,
+          device,
+          backgroundImageId: null,
+          backgroundPositionX: 50,
+          backgroundPositionY: 50,
+          backgroundSize: "cover",
+          height: viewMode === "grid" ? 128 : 128,
+          overlayOpacity: 0.6,
+          overlayGradient: "to-t",
+        },
+        "deck-builder": {
+          context: "deck-builder",
+          viewMode: "grid",
+          device,
+          backgroundImageId: null,
+          backgroundPositionX: 50,
+          backgroundPositionY: 50,
+          backgroundSize: "cover",
+          height: 80,
+          overlayOpacity: 0.7,
+          overlayGradient: "to-t",
+        },
+      };
+
+      return NextResponse.json({
+        setting: defaultSettings[context || "mis-mazos"] || defaultSettings["mis-mazos"],
+      });
+    }
+
+    return NextResponse.json({ setting });
   } catch (error) {
     console.error("Error al obtener ajustes de banners:", error);
 
     // En caso de error, retornar valores por defecto
-    const defaultSettings = [
-      {
-        context: "mis-mazos",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        height: 128,
-        overlayOpacity: 0.6,
-        overlayGradient: "to-t",
-      },
-      {
-        context: "mazos-comunidad",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        height: 128,
-        overlayOpacity: 0.6,
-        overlayGradient: "to-t",
-      },
-      {
-        context: "favoritos",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        height: 128,
-        overlayOpacity: 0.6,
-        overlayGradient: "to-t",
-      },
-      {
-        context: "deck-builder",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        height: 80,
-        overlayOpacity: 0.7,
-        overlayGradient: "to-t",
-      },
-    ];
+    const defaultSetting = {
+      context: context || "mis-mazos",
+      viewMode: viewMode || "grid",
+      device: device || "desktop",
+      backgroundImageId: null,
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundSize: "cover",
+      height: 128,
+      overlayOpacity: 0.6,
+      overlayGradient: "to-t",
+    };
 
-    return NextResponse.json({ settings: defaultSettings });
+    return NextResponse.json({ setting: defaultSetting });
   }
 }
-

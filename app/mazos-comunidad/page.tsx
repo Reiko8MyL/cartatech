@@ -41,7 +41,7 @@ import { toastSuccess, toastError } from "@/lib/toast"
 import { AdInline } from "@/components/ads/ad-inline"
 import { AdSidebar } from "@/components/ads/ad-sidebar"
 import { Pagination } from "@/components/ui/pagination"
-import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -59,13 +59,14 @@ interface DeckFilters {
 function MazosComunidadPage() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
-  const { setting: bannerSetting } = useBannerSettings("mazos-comunidad")
   
   // Leer el parámetro de búsqueda de la URL
   const searchFromUrl = searchParams.get("search") || ""
   
   const [publicDecks, setPublicDecks] = useState<SavedDeck[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
+  const deviceType = useDeviceType()
+  const { setting: bannerSetting } = useBannerSettings("mazos-comunidad", viewMode, deviceType)
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [filters, setFilters] = useState<DeckFilters>({

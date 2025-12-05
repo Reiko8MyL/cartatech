@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 
 export interface BannerSetting {
   context: string;
-  backgroundPosition: string;
+  viewMode?: string;
+  device?: string;
+  backgroundImageId?: string | null;
+  backgroundPositionX: number;
+  backgroundPositionY: number;
   backgroundSize: string;
   height: number;
   overlayOpacity: number;
@@ -14,66 +18,92 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 /**
  * Hook para obtener ajustes de banners
  */
-export function useBannerSettings(context: string) {
+export function useBannerSettings(
+  context: string,
+  viewMode: string = "grid",
+  device: string = "desktop",
+  backgroundImageId?: string | null
+) {
   const [setting, setSetting] = useState<BannerSetting | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadSettings() {
       try {
+        const params = new URLSearchParams({
+          context,
+          viewMode,
+          device,
+        });
+        if (backgroundImageId !== undefined) {
+          params.append("backgroundImageId", backgroundImageId || "");
+        }
+
         const url = API_BASE_URL
           ? `${API_BASE_URL}/api/banner-settings`
           : `/api/banner-settings`;
 
-        const response = await fetch(url);
+        const response = await fetch(`${url}?${params.toString()}`);
         if (!response.ok) {
           throw new Error("Error al obtener ajustes de banners");
         }
 
         const data = await response.json();
-        const foundSetting = data.settings?.find(
-          (s: BannerSetting) => s.context === context
-        );
-
-        if (foundSetting) {
-          setSetting(foundSetting);
+        
+        if (data.setting) {
+          setSetting(data.setting);
         } else {
           // Valores por defecto si no se encuentra
           const defaults: Record<string, BannerSetting> = {
             "mis-mazos": {
               context: "mis-mazos",
-              backgroundPosition: "center",
+              viewMode,
+              device,
+              backgroundImageId: null,
+              backgroundPositionX: 50,
+              backgroundPositionY: 50,
               backgroundSize: "cover",
-              height: 128,
+              height: viewMode === "grid" ? 128 : 128,
               overlayOpacity: 0.6,
               overlayGradient: "to-t",
             },
             "mazos-comunidad": {
               context: "mazos-comunidad",
-              backgroundPosition: "center",
+              viewMode,
+              device,
+              backgroundImageId: null,
+              backgroundPositionX: 50,
+              backgroundPositionY: 50,
               backgroundSize: "cover",
-              height: 128,
+              height: viewMode === "grid" ? 128 : 128,
               overlayOpacity: 0.6,
               overlayGradient: "to-t",
             },
             favoritos: {
               context: "favoritos",
-              backgroundPosition: "center",
+              viewMode,
+              device,
+              backgroundImageId: null,
+              backgroundPositionX: 50,
+              backgroundPositionY: 50,
               backgroundSize: "cover",
-              height: 128,
+              height: viewMode === "grid" ? 128 : 128,
               overlayOpacity: 0.6,
               overlayGradient: "to-t",
             },
             "deck-builder": {
               context: "deck-builder",
-              backgroundPosition: "center",
+              viewMode: "grid",
+              device,
+              backgroundImageId: null,
+              backgroundPositionX: 50,
+              backgroundPositionY: 50,
               backgroundSize: "cover",
               height: 80,
               overlayOpacity: 0.7,
               overlayGradient: "to-t",
             },
           };
-
           setSetting(defaults[context] || defaults["mis-mazos"]);
         }
       } catch (error) {
@@ -82,31 +112,47 @@ export function useBannerSettings(context: string) {
         const defaults: Record<string, BannerSetting> = {
           "mis-mazos": {
             context: "mis-mazos",
-            backgroundPosition: "center",
+            viewMode,
+            device,
+            backgroundImageId: null,
+            backgroundPositionX: 50,
+            backgroundPositionY: 50,
             backgroundSize: "cover",
-            height: 128,
+            height: viewMode === "grid" ? 128 : 128,
             overlayOpacity: 0.6,
             overlayGradient: "to-t",
           },
           "mazos-comunidad": {
             context: "mazos-comunidad",
-            backgroundPosition: "center",
+            viewMode,
+            device,
+            backgroundImageId: null,
+            backgroundPositionX: 50,
+            backgroundPositionY: 50,
             backgroundSize: "cover",
-            height: 128,
+            height: viewMode === "grid" ? 128 : 128,
             overlayOpacity: 0.6,
             overlayGradient: "to-t",
           },
           favoritos: {
             context: "favoritos",
-            backgroundPosition: "center",
+            viewMode,
+            device,
+            backgroundImageId: null,
+            backgroundPositionX: 50,
+            backgroundPositionY: 50,
             backgroundSize: "cover",
-            height: 128,
+            height: viewMode === "grid" ? 128 : 128,
             overlayOpacity: 0.6,
             overlayGradient: "to-t",
           },
           "deck-builder": {
             context: "deck-builder",
-            backgroundPosition: "center",
+            viewMode: "grid",
+            device,
+            backgroundImageId: null,
+            backgroundPositionX: 50,
+            backgroundPositionY: 50,
             backgroundSize: "cover",
             height: 80,
             overlayOpacity: 0.7,
@@ -120,7 +166,7 @@ export function useBannerSettings(context: string) {
     }
 
     loadSettings();
-  }, [context]);
+  }, [context, viewMode, device, backgroundImageId]);
 
   return { setting, isLoading };
 }
@@ -134,7 +180,8 @@ export function getBannerStyle(
 ): React.CSSProperties {
   const defaultSetting: BannerSetting = {
     context: "default",
-    backgroundPosition: "center",
+    backgroundPositionX: 50,
+    backgroundPositionY: 50,
     backgroundSize: "cover",
     height: 128,
     overlayOpacity: 0.6,
@@ -145,7 +192,7 @@ export function getBannerStyle(
 
   return {
     backgroundImage: `url(${backgroundImage})`,
-    backgroundPosition: s.backgroundPosition,
+    backgroundPosition: `${s.backgroundPositionX}% ${s.backgroundPositionY}%`,
     backgroundSize: s.backgroundSize,
     height: `${s.height}px`,
   };
@@ -159,7 +206,8 @@ export function getOverlayStyle(
 ): React.CSSProperties {
   const defaultSetting: BannerSetting = {
     context: "default",
-    backgroundPosition: "center",
+    backgroundPositionX: 50,
+    backgroundPositionY: 50,
     backgroundSize: "cover",
     height: 128,
     overlayOpacity: 0.6,
@@ -182,3 +230,28 @@ export function getOverlayStyle(
   };
 }
 
+/**
+ * Hook para detectar el dispositivo actual
+ */
+export function useDeviceType(): "desktop" | "tablet" | "mobile" {
+  const [deviceType, setDeviceType] = useState<"desktop" | "tablet" | "mobile">("desktop");
+
+  useEffect(() => {
+    function updateDeviceType() {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setDeviceType("mobile");
+      } else if (width < 1024) {
+        setDeviceType("tablet");
+      } else {
+        setDeviceType("desktop");
+      }
+    }
+
+    updateDeviceType();
+    window.addEventListener("resize", updateDeviceType);
+    return () => window.removeEventListener("resize", updateDeviceType);
+  }, []);
+
+  return deviceType;
+}

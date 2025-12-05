@@ -247,15 +247,22 @@ model ShareCode {
 
 model DeckPanelBannerSettings {
   id                String   @id @default(cuid())
-  context           String   @unique // "mis-mazos", "mazos-comunidad", "favoritos", "deck-builder"
-  backgroundPosition String   @default("center") // "center", "top", "bottom", o porcentaje como "center 30%"
+  context           String   // "mis-mazos", "mazos-comunidad", "favoritos", "deck-builder"
+  viewMode          String   @default("grid") // "grid", "list"
+  device            String   @default("desktop") // "desktop", "tablet", "mobile"
+  backgroundImageId String?  // ID de la imagen específica (null = ajustes por defecto para todas)
+  backgroundPositionX Float  @default(50.0) // Posición X en porcentaje (0-100)
+  backgroundPositionY Float  @default(50.0) // Posición Y en porcentaje (0-100)
   backgroundSize     String   @default("cover") // "cover", "contain", o porcentaje como "135%"
-  height             Int      @default(128) // Altura en píxeles (h-32 = 128px, h-20 = 80px)
+  height             Int      @default(128) // Altura en píxeles
   overlayOpacity     Float    @default(0.6) // Opacidad del overlay (0.0 a 1.0)
   overlayGradient    String   @default("to-t") // Dirección del gradiente: "to-t", "to-b", "to-l", "to-r"
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  @@unique([context, viewMode, device, backgroundImageId])
+  @@index([context])
+  @@index([backgroundImageId])
   @@map("deck_panel_banner_settings")
 }
 
