@@ -52,6 +52,8 @@ import { SocialShare } from "@/components/sharing/social-share"
 import { CommentsSection } from "@/components/deck/comments-section"
 import { DeckJsonLd } from "@/components/seo/json-ld"
 import { trackDeckViewed, trackDeckLiked, trackDeckCopied } from "@/lib/analytics/events"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
+import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
 import {
   Dialog,
   DialogContent,
@@ -75,6 +77,9 @@ export default function ViewDeckPage() {
 
   // Cargar todas las cartas desde la API con cache (incluyendo alternativas)
   const { cards: allCards } = useCards(true)
+  
+  // Obtener ajustes de banner para la página individual de mazo
+  const deviceType = useDeviceType()
 
   const [deck, setDeck] = useState<SavedDeck | null>(null)
   const [likes, setLikes] = useState<Record<string, string[]>>({})
@@ -182,6 +187,15 @@ export default function ViewDeckPage() {
       backgroundImage,
     }
   }, [deck, allCards, likes, user])
+  
+  // Obtener ID de imagen de fondo para ajustes de banner
+  const backgroundImageId = useMemo(() => {
+    if (!deckMetadata?.backgroundImage) return null;
+    return getBackgroundImageId(deckMetadata.backgroundImage);
+  }, [deckMetadata?.backgroundImage]);
+  
+  // Obtener ajustes de banner
+  const { setting: bannerSetting } = useBannerSettings("mazo-individual", "grid", deviceType, backgroundImageId)
 
   // Organizar cartas por tipo y edición
   const organizedCards = useMemo(() => {
@@ -1314,14 +1328,10 @@ export default function ViewDeckPage() {
 
         {/* Hero Section con imagen de fondo */}
         <div
-          className="relative h-64 rounded-lg overflow-hidden mb-6"
-          style={{
-            backgroundImage: `url(${deckMetadata.backgroundImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+          className="relative rounded-lg overflow-hidden mb-6"
+          style={getBannerStyle(deckMetadata.backgroundImage, bannerSetting)}
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
           <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">
             <div className="flex items-start justify-between">
               <div className="flex-1">

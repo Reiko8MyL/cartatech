@@ -25,12 +25,14 @@ import { Save, RotateCcw, Loader2, Image as ImageIcon, Globe, Lock, Eye, Trash2 
 import { getDeckBackgroundImage, EDITION_LOGOS, getDeckFormatName } from "@/lib/deck-builder/utils";
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils";
 import Image from "next/image";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const CONTEXT_LABELS: Record<string, string> = {
   "mis-mazos": "Mis Mazos",
   "mazos-comunidad": "Mazos de la Comunidad",
   favoritos: "Favoritos",
   "deck-builder": "Deck Builder (Cargar Mazo)",
+  "mazo-individual": "Página Individual de Mazo",
 };
 
 const CONTEXT_DESCRIPTIONS: Record<string, string> = {
@@ -38,6 +40,12 @@ const CONTEXT_DESCRIPTIONS: Record<string, string> = {
   "mazos-comunidad": "Ajusta cómo se ven los banners en la página 'Mazos de la Comunidad'",
   favoritos: "Ajusta cómo se ven los banners en la página 'Mis Favoritos'",
   "deck-builder": "Ajusta cómo se ven los banners en el panel de cargar mazo del Deck Builder",
+  "mazo-individual": "Ajusta cómo se ve el banner hero en la página individual de cada mazo (solo por imagen)",
+};
+
+// Contextos que comparten la misma forma de mostrar paneles
+const CONTEXT_GROUPS: Record<string, string[]> = {
+  "listas-mazos": ["mis-mazos", "mazos-comunidad", "favoritos"],
 };
 
 const DEVICE_LABELS: Record<string, string> = {
@@ -52,10 +60,13 @@ export default function AjustarBannersPage() {
   const [isSaving, setIsSaving] = useState(false);
   
   // Selectores
-  const [selectedContext, setSelectedContext] = useState<string>("mis-mazos");
+  const [selectedContexts, setSelectedContexts] = useState<string[]>(["mis-mazos"]);
   const [selectedViewMode, setSelectedViewMode] = useState<string>("grid");
   const [selectedDevice, setSelectedDevice] = useState<string>("desktop");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  
+  // Para compatibilidad, usar el primer contexto seleccionado para cargar ajustes
+  const selectedContext = selectedContexts[0] || "mis-mazos";
   
   // Valores locales para edición
   const [localValues, setLocalValues] = useState({
@@ -153,23 +164,24 @@ export default function AjustarBannersPage() {
   }, [user, selectedContext, selectedViewMode, selectedDevice, selectedImageId]);
 
   async function handleSave() {
-    if (!user?.id) return;
+    if (!user?.id || selectedContexts.length === 0) return;
 
     setIsSaving(true);
     try {
-      await updateBannerSettings(user.id, [
-        {
-          context: selectedContext,
-          viewMode: selectedViewMode,
-          device: selectedDevice,
-          backgroundImageId: selectedImageId,
-          ...localValues,
-        },
-      ]);
+      // Crear ajustes para todos los contextos seleccionados
+      const settingsToSave = selectedContexts.map(context => ({
+        context,
+        viewMode: context === "mazo-individual" ? "grid" : selectedViewMode, // mazo-individual no tiene viewMode
+        device: selectedDevice,
+        backgroundImageId: selectedImageId,
+        ...localValues,
+      }));
 
-      toastSuccess("Ajustes guardados correctamente");
+      await updateBannerSettings(user.id, settingsToSave);
+
+      toastSuccess(`Ajustes guardados correctamente para ${selectedContexts.length} contexto(s)`);
       
-      // Recargar ajustes
+      // Recargar ajustes del primer contexto para mostrar
       const loadedSettings = await getBannerSettings(
         user.id,
         selectedContext,
@@ -189,17 +201,27 @@ export default function AjustarBannersPage() {
   }
 
   async function handleReset() {
-    if (!user?.id) return;
+    if (!user?.id || selectedContexts.length === 0) return;
 
     setIsSaving(true);
     try {
-      // Eliminar ajuste personalizado si existe
-      const currentSetting = settings.find(
-        s => s.backgroundImageId === selectedImageId && s.id
-      );
-      
-      if (currentSetting?.id) {
-        await deleteBannerSetting(user.id, currentSetting.id);
+      // Eliminar ajustes personalizados para todos los contextos seleccionados
+      for (const context of selectedContexts) {
+        const contextSettings = await getBannerSettings(
+          user.id,
+          context,
+          context === "mazo-individual" ? "grid" : selectedViewMode,
+          selectedDevice,
+          selectedImageId
+        );
+        
+        const currentSetting = contextSettings.find(
+          s => s.backgroundImageId === selectedImageId && s.id
+        );
+        
+        if (currentSetting?.id) {
+          await deleteBannerSetting(user.id, currentSetting.id);
+        }
       }
 
       // Restaurar valores por defecto
@@ -236,10 +258,18 @@ export default function AjustarBannersPage() {
           overlayOpacity: 0.7,
           overlayGradient: "to-t",
         },
+        "mazo-individual": {
+          backgroundPositionX: 50,
+          backgroundPositionY: 50,
+          backgroundSize: "cover",
+          height: 256, // h-64 = 256px
+          overlayOpacity: 0.8,
+          overlayGradient: "to-t",
+        },
       };
 
       setLocalValues(defaults[selectedContext] || defaults["mis-mazos"]);
-      toastSuccess("Ajustes restaurados a valores por defecto");
+      toastSuccess(`Ajustes restaurados a valores por defecto para ${selectedContexts.length} contexto(s)`);
       
       // Recargar ajustes
       const loadedSettings = await getBannerSettings(
@@ -260,6 +290,23 @@ export default function AjustarBannersPage() {
     }
   }
 
+  // Función para manejar selección de contextos
+  function handleContextToggle(context: string, checked: boolean) {
+    if (checked) {
+      setSelectedContexts(prev => [...prev, context]);
+    } else {
+      setSelectedContexts(prev => prev.filter(c => c !== context));
+    }
+  }
+
+  // Función para seleccionar grupo de contextos
+  function handleGroupSelect(groupKey: string) {
+    const group = CONTEXT_GROUPS[groupKey];
+    if (group) {
+      setSelectedContexts(group);
+    }
+  }
+
   // Obtener imagen de fondo para vista previa
   const previewImage = selectedImageId 
     ? backgroundImages.find(img => img.id === selectedImageId)?.url 
@@ -277,8 +324,10 @@ export default function AjustarBannersPage() {
     background: `linear-gradient(${localValues.overlayGradient === "to-t" ? "to top" : localValues.overlayGradient === "to-b" ? "to bottom" : localValues.overlayGradient === "to-l" ? "to left" : "to right"}, rgba(0,0,0,${localValues.overlayOpacity}) 0%, transparent 100%)`,
   };
 
-  // Determinar si el contexto soporta vista grid/list
-  const supportsViewMode = selectedContext !== "deck-builder";
+  // Determinar si los contextos seleccionados soportan vista grid/list
+  const supportsViewMode = selectedContexts.some(c => c !== "deck-builder" && c !== "mazo-individual");
+  // Para mazo-individual, no mostrar selector de vista
+  const showViewModeSelector = supportsViewMode && !selectedContexts.includes("mazo-individual");
 
   return (
     <AdminGuard requiredRole="ADMIN">
@@ -306,28 +355,62 @@ export default function AjustarBannersPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Selector de contexto */}
+                  {/* Selector múltiple de contextos */}
                   <div className="space-y-2">
-                    <Label>Contexto</Label>
-                    <Select value={selectedContext} onValueChange={setSelectedContext}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CONTEXT_LABELS).map(([context, label]) => (
-                          <SelectItem key={context} value={context}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {CONTEXT_DESCRIPTIONS[selectedContext]}
-                    </p>
+                    <Label>Contextos (puedes seleccionar varios)</Label>
+                    <div className="space-y-2 border rounded-md p-3">
+                      {/* Botón para seleccionar grupo de listas */}
+                      <div className="mb-3 pb-3 border-b">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGroupSelect("listas-mazos")}
+                          className="w-full"
+                        >
+                          Seleccionar Listas de Mazos
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Selecciona Mis Mazos, Mazos de la Comunidad y Favoritos
+                        </p>
+                      </div>
+                      
+                      {/* Checkboxes de contextos */}
+                      {Object.entries(CONTEXT_LABELS).map(([context, label]) => {
+                        const isChecked = selectedContexts.includes(context);
+                        const isMazoIndividual = context === "mazo-individual";
+                        return (
+                          <div key={context} className="flex items-start space-x-2">
+                            <Checkbox
+                              id={`context-${context}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => handleContextToggle(context, checked as boolean)}
+                              disabled={isMazoIndividual && selectedContexts.length > 0 && !isChecked && selectedContexts.some(c => c !== "mazo-individual")}
+                            />
+                            <div className="flex-1">
+                              <label
+                                htmlFor={`context-${context}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {label}
+                              </label>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {CONTEXT_DESCRIPTIONS[context]}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedContexts.length === 0 && (
+                      <p className="text-xs text-destructive">
+                        Debes seleccionar al menos un contexto
+                      </p>
+                    )}
                   </div>
 
                   {/* Selector de vista (solo para algunos contextos) */}
-                  {supportsViewMode && (
+                  {showViewModeSelector && (
                     <div className="space-y-2">
                       <Label>Vista</Label>
                       <Select value={selectedViewMode} onValueChange={setSelectedViewMode}>

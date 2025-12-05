@@ -91,6 +91,18 @@ export async function GET(request: NextRequest) {
           overlayOpacity: 0.7,
           overlayGradient: "to-t",
         },
+        "mazo-individual": {
+          context: "mazo-individual",
+          viewMode: "grid",
+          device,
+          backgroundImageId: null,
+          backgroundPositionX: 50,
+          backgroundPositionY: 50,
+          backgroundSize: "cover",
+          height: 256,
+          overlayOpacity: 0.8,
+          overlayGradient: "to-t",
+        },
       };
 
       return NextResponse.json({
