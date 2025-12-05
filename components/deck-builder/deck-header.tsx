@@ -146,11 +146,11 @@ export function DeckHeader({
       </div>
       
       {/* Selector de formato */}
-      <div className="space-y-2">
+      <div className="space-y-1 sm:space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-muted-foreground">Formato</label>
+          <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Formato</label>
           {currentDeck?.id && (
-            <Lock className="size-3 text-muted-foreground" />
+            <Lock className="size-2.5 sm:size-3 text-muted-foreground" />
           )}
         </div>
         <ToggleGroup
@@ -168,24 +168,27 @@ export function DeckHeader({
         >
           <ToggleGroupItem 
             value="RE" 
-            className="flex-1 rounded-r-none"
+            className="flex-1 rounded-r-none text-[10px] sm:text-sm py-1.5 sm:py-2"
             disabled={!!currentDeck?.id}
           >
-            Racial Edición
+            <span className="hidden sm:inline">Racial Edición</span>
+            <span className="sm:hidden">RE</span>
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="RL" 
-            className="flex-1 rounded-none border-x"
+            className="flex-1 rounded-none border-x text-[10px] sm:text-sm py-1.5 sm:py-2"
             disabled={!!currentDeck?.id}
           >
-            Racial Libre
+            <span className="hidden sm:inline">Racial Libre</span>
+            <span className="sm:hidden">RL</span>
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="LI" 
-            className="flex-1 rounded-l-none"
+            className="flex-1 rounded-l-none text-[10px] sm:text-sm py-1.5 sm:py-2"
             disabled={!!currentDeck?.id}
           >
-            Formato Libre
+            <span className="hidden sm:inline">Formato Libre</span>
+            <span className="sm:hidden">LI</span>
           </ToggleGroupItem>
         </ToggleGroup>
       </div>

@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 
 const utilidadLinks = [
   { href: "/utilidad/ban-list", label: "Ban List" },
-  { href: "/utilidad/pbx-101", label: "PBX 101" },
   { href: "/utilidad/comunidad-vota", label: "La Comunidad Vota" },
 ];
 
