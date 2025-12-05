@@ -38,6 +38,32 @@ export const metadata: Metadata = {
   authors: [{ name: "Carta Tech" }],
   creator: "Carta Tech",
   publisher: "Carta Tech",
+  icons: {
+    icon: [
+      {
+        url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp",
+        type: "image/webp",
+      },
+      {
+        url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp",
+        type: "image/png",
+        sizes: "32x32",
+      },
+      {
+        url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp",
+        type: "image/png",
+        sizes: "16x16",
+      },
+    ],
+    apple: [
+      {
+        url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp",
+        sizes: "180x180",
+        type: "image/webp",
+      },
+    ],
+    shortcut: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp",
+  },
   openGraph: {
     type: "website",
     locale: "es_ES",
