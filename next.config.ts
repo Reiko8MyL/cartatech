@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
     formats: ["image/webp", "image/avif"],
     // Optimizar carga de imágenes para evitar exceder cuota de Cloudinary
     minimumCacheTTL: 60,
-    dangerouslyAllowSVG: false,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   // Permitir dominios de Google AdSense
   async headers() {
