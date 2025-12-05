@@ -231,7 +231,7 @@ export function CardsPanel({
                   {edition}
                 </h2>
                 <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
-                  {editionCards.map((card) => {
+                  {editionCards.map((card, index) => {
                     // Obtener la carta a mostrar (puede ser alternativa si está reemplazada)
                     const cardToDisplay = getCardToDisplay(card)
                     const quantity = getCardQuantity(card.id)
@@ -242,6 +242,9 @@ export function CardsPanel({
                     
                     // Verificar si se puede agregar más: debe cumplir límite individual Y límite total de 50
                     const canAddMore = quantity < maxQuantity && totalCards < 50
+
+                    // Priorizar carga de las primeras 12 cartas (primera fila visible en móvil)
+                    const shouldPrioritize = index < 12
 
                     return (
                       <CardItem
@@ -256,6 +259,7 @@ export function CardsPanel({
                         onCardHoverEnd={!isMobile ? handleCardHoverEnd : undefined}
                         onCardLongPress={isMobile ? () => handleCardLongPress(card) : undefined}
                         onCardTouchEnd={isMobile ? () => handleCardTouchEnd(card) : undefined}
+                        priority={shouldPrioritize}
                       />
                     )
                   })}

@@ -65,7 +65,7 @@ export const CardItem = memo(function CardItem({
 
   return (
     <div
-      className="group relative aspect-[63/88] cursor-pointer rounded-2xl overflow-hidden"
+      className="group relative aspect-[63/88] cursor-pointer rounded-2xl overflow-hidden select-none"
       onClick={() => {
         // Solo ejecutar click si no se activó el long press
         if (!touchTimeoutRef.current || Date.now() - (touchStartTimeRef.current || 0) < 800) {
@@ -77,11 +77,20 @@ export const CardItem = memo(function CardItem({
           touchTimeoutRef.current = null
         }
       }}
-      onContextMenu={(e) => onCardRightClick(e, card)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onCardRightClick(e, card)
+      }}
       onMouseEnter={onCardHover}
       onMouseLeave={onCardHoverEnd}
       onTouchStart={onCardLongPress ? handleTouchStart : undefined}
       onTouchEnd={onCardTouchEnd ? handleTouchEnd : undefined}
+      style={{
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+        touchAction: 'manipulation',
+      }}
     >
       {/* Contenedor que se anima en hover (imagen + nombre) */}
       <div
@@ -96,10 +105,19 @@ export const CardItem = memo(function CardItem({
           className={`object-contain rounded ${
             canAddMore ? "" : "opacity-50"
           }`}
-          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-          loading={priority ? "eager" : "lazy"}
-          priority={priority}
+          sizes="(max-width: 640px) 25vw, (max-width: 768px) 25vw, (max-width: 1024px) 16vw, 20vw"
+          loading="eager"
+          priority={true}
           decoding="async"
+          draggable={false}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
+          style={{
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none',
+            touchAction: 'manipulation',
+          }}
         />
 
         {/* Sombreado y cantidad centrada según copias en el mazo */}
