@@ -1618,15 +1618,24 @@ export default function ViewDeckPage() {
                         className="group relative aspect-[63/88] rounded-lg overflow-hidden border border-border bg-card transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/20 cursor-pointer"
                       >
                         {/* Imagen de la carta completa */}
-                        <Image
-                          src={card.image}
-                          alt={card.name}
-                          fill
-                          className="object-contain p-1"
-                          sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, (max-width: 1280px) 16vw, 12vw"
-                          loading="lazy"
-                          decoding="async"
-                        />
+                        {(() => {
+                          const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+                          const isCloudinaryOptimized = optimizedImageUrl.includes('/w_') || 
+                                                       optimizedImageUrl.includes('/c_') || 
+                                                       optimizedImageUrl.includes('/f_')
+                          return (
+                            <Image
+                              src={optimizedImageUrl}
+                              alt={card.name}
+                              fill
+                              className="object-contain p-1"
+                              sizes={isCloudinaryOptimized ? undefined : "(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, (max-width: 1280px) 16vw, 12vw"}
+                              loading="lazy"
+                              decoding="async"
+                              unoptimized={isCloudinaryOptimized}
+                            />
+                          )
+                        })()}
                         
                         {/* Overlay con información al hacer hover */}
                         <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-3">
