@@ -1504,22 +1504,22 @@ export default function ViewDeckPage() {
                 </div>
 
                 {/* Cartas por Tipo con Óvalos */}
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium mb-3">Cartas por Tipo</p>
-                  <div className="flex flex-wrap gap-3">
+                <div className="pt-3 sm:pt-4 border-t">
+                  <p className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Cartas por Tipo</p>
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
                     {Object.entries(deckMetadata.stats.cardsByType).map(([type, count]) => (
                       <div
                         key={type}
-                        className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-full border border-border"
+                        className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 bg-muted/50 rounded-full border border-border"
                       >
-                        <div className="flex flex-col items-center min-w-[40px]">
-                          <span className="text-xs font-medium text-muted-foreground mb-0.5">
+                        <div className="flex flex-col items-center min-w-[35px] sm:min-w-[40px]">
+                          <span className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-0.5">
                             {typeLabels[type] || type}:
                           </span>
-                          <span className="text-lg font-bold">{count}</span>
+                          <span className="text-base sm:text-lg font-bold">{count}</span>
                         </div>
                         {typeIcons[type] && (
-                          <div className="relative w-10 h-10 flex-shrink-0">
+                          <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                             <Image
                               src={typeIcons[type]}
                               alt={type}
