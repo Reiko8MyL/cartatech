@@ -52,7 +52,6 @@ export default function MisFavoritosPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const deviceType = useDeviceType()
   const { setting: bannerSetting } = useBannerSettings("favoritos", viewMode, deviceType)
-  const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [filters, setFilters] = useState<DeckFilters>({
