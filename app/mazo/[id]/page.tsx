@@ -1468,14 +1468,14 @@ export default function ViewDeckPage() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
               {/* Sección izquierda: Estadísticas principales */}
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total de Cartas</p>
-                    <p className="text-2xl font-bold">{deckMetadata.stats.totalCards}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total de Cartas</p>
+                    <p className="text-xl sm:text-2xl font-bold">{deckMetadata.stats.totalCards}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Costo Promedio</p>
-                    <p className="text-2xl font-bold">{deckMetadata.stats.averageCost.toFixed(1)}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Costo Promedio</p>
+                    <p className="text-xl sm:text-2xl font-bold">{deckMetadata.stats.averageCost.toFixed(1)}</p>
                   </div>
                   {/* Gráfico de Coste vs Cantidad */}
                   {costDistribution.length > 0 && (
@@ -1538,13 +1538,13 @@ export default function ViewDeckPage() {
               </div>
 
               {/* Sección derecha: La Carta Tech */}
-              <div className="lg:border-l lg:pl-6">
+              <div className="lg:border-l lg:pl-6 flex flex-col items-center sm:items-start">
                 <div className="mb-3">
                   <p className="text-sm font-medium">La Carta Tech</p>
                 </div>
                 {techCard ? (
-                  <div className="relative group">
-                    <div className="relative aspect-[63/88] rounded-lg overflow-hidden border-2 border-primary/50 bg-card shadow-lg max-w-[160px] w-full">
+                  <div className="relative group w-full flex flex-col items-center sm:items-start">
+                    <div className="relative aspect-[63/88] rounded-lg overflow-hidden border-2 border-primary/50 bg-card shadow-lg max-w-[160px] w-full mx-auto sm:mx-0">
                       <Image
                         src={techCard.image}
                         alt={techCard.name}
@@ -1573,7 +1573,7 @@ export default function ViewDeckPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative aspect-[63/88] rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center max-w-[160px] w-full">
+                  <div className="relative aspect-[63/88] rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center max-w-[160px] w-full mx-auto sm:mx-0">
                     <div className="text-center p-4">
                       <p className="text-sm text-muted-foreground mb-3">
                         {isOwner ? "Selecciona una carta" : "Sin carta tech"}
@@ -1610,7 +1610,7 @@ export default function ViewDeckPage() {
                   <h3 className="text-xl font-semibold mb-4 pb-3 border-b">
                     {section.type} <span className="text-muted-foreground font-normal">({section.cards.reduce((sum, c) => sum + c.quantity, 0)})</span>
                   </h3>
-                  <div className="grid gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                     {section.cards.map(({ card, quantity }) => (
                       <div
                         key={card.id}
