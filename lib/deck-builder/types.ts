@@ -38,6 +38,7 @@ export interface SavedDeck {
   viewCount?: number;
   tags?: string[];
   format?: DeckFormat;
+  backgroundImage?: string; // URL de la imagen de fondo personalizada del banner
 }
 
 export const DECK_TAGS = [

@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         isPublic: deck.isPublic,
         publishedAt: deck.publishedAt?.getTime(),
         techCardId: deck.techCardId,
+        backgroundImage: deck.backgroundImage,
         viewCount: deck.viewCount,
         tags: deck.tags,
       }));
@@ -111,6 +112,7 @@ export async function GET(request: NextRequest) {
       isPublic: deck.isPublic,
       publishedAt: deck.publishedAt?.getTime(),
       techCardId: deck.techCardId,
+      backgroundImage: deck.backgroundImage,
       viewCount: deck.viewCount,
       tags: deck.tags,
     }));
@@ -178,6 +180,7 @@ export async function POST(request: NextRequest) {
         isPublic: deck.isPublic || false,
         publishedAt: deck.publishedAt ? new Date(deck.publishedAt) : null,
         techCardId: deck.techCardId,
+        backgroundImage: deck.backgroundImage || null,
         tags: deck.tags || [],
       },
     });
@@ -207,6 +210,7 @@ export async function POST(request: NextRequest) {
         isPublic: newDeck.isPublic,
         publishedAt: newDeck.publishedAt?.getTime(),
         techCardId: newDeck.techCardId,
+        backgroundImage: newDeck.backgroundImage,
         viewCount: newDeck.viewCount,
         tags: newDeck.tags,
       },

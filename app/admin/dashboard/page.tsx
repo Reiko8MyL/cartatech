@@ -39,6 +39,9 @@ import {
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings";
+import { useDeviceType } from "@/hooks/use-banner-settings";
+import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils";
 
 interface AdminStats {
   totalUsers: number;
@@ -83,14 +86,32 @@ const TIME_RANGE_LABELS: Record<TimeRange, string> = {
   all: "Todos los tiempos",
 };
 
+// IDs de los cards del dashboard para banners
+const DASHBOARD_CARD_IDS = [
+  "moderar-comentarios",
+  "agregar-carta",
+  "ban-list",
+  "gestionar-usuarios",
+  "ajustar-cartas",
+  "ajustar-banners",
+] as const;
+
 export default function AdminDashboardPage() {
   const { user } = useAuth();
+  const deviceType = useDeviceType();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [recentDecks, setRecentDecks] = useState<RecentDeck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>("7");
+
+  // Obtener ajustes de banners para cada card
+  const cardBannerSettings = DASHBOARD_CARD_IDS.reduce((acc, cardId) => {
+    const { setting } = useBannerSettings(`admin-dashboard-card-${cardId}`, "grid", deviceType);
+    acc[cardId] = setting;
+    return acc;
+  }, {} as Record<string, any>);
 
   async function loadStats() {
     if (!user?.id) {
@@ -493,8 +514,29 @@ export default function AdminDashboardPage() {
               {user?.role === "ADMIN" && (
                 <>
                   <Link href="/admin/agregar-carta">
-                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
-                      <CardHeader>
+                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full overflow-hidden relative">
+                      {cardBannerSettings["agregar-carta"] && (() => {
+                        const bannerImages = getAllBackgroundImages();
+                        const bannerImage = bannerImages.find(img => 
+                          cardBannerSettings["agregar-carta"]?.backgroundImageId === img.id
+                        )?.url;
+                        if (bannerImage) {
+                          return (
+                            <>
+                              <div
+                                className="absolute inset-0 z-0"
+                                style={getBannerStyle(bannerImage, cardBannerSettings["agregar-carta"])}
+                              />
+                              <div
+                                className="absolute inset-0 z-0"
+                                style={getOverlayStyle(cardBannerSettings["agregar-carta"])}
+                              />
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                      <CardHeader className="relative z-10">
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Plus className="size-5" />
                           Agregar Nueva Carta
@@ -503,15 +545,36 @@ export default function AdminDashboardPage() {
                           Crea nuevas cartas y agrégalas a la base de datos
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="relative z-10">
                         <ArrowUpRight className="size-4 text-muted-foreground" />
                       </CardContent>
                     </Card>
                   </Link>
 
                   <Link href="/admin/ban-list">
-                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
-                      <CardHeader>
+                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full overflow-hidden relative">
+                      {cardBannerSettings["ban-list"] && (() => {
+                        const bannerImages = getAllBackgroundImages();
+                        const bannerImage = bannerImages.find(img => 
+                          cardBannerSettings["ban-list"]?.backgroundImageId === img.id
+                        )?.url;
+                        if (bannerImage) {
+                          return (
+                            <>
+                              <div
+                                className="absolute inset-0 z-0"
+                                style={getBannerStyle(bannerImage, cardBannerSettings["ban-list"])}
+                              />
+                              <div
+                                className="absolute inset-0 z-0"
+                                style={getOverlayStyle(cardBannerSettings["ban-list"])}
+                              />
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                      <CardHeader className="relative z-10">
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Settings className="size-5" />
                           Gestionar Ban List
@@ -520,15 +583,36 @@ export default function AdminDashboardPage() {
                           Actualiza la lista de cartas prohibidas y restringidas
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="relative z-10">
                         <ArrowUpRight className="size-4 text-muted-foreground" />
                       </CardContent>
                     </Card>
                   </Link>
 
                   <Link href="/admin/users">
-                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
-                      <CardHeader>
+                    <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full overflow-hidden relative">
+                      {cardBannerSettings["gestionar-usuarios"] && (() => {
+                        const bannerImages = getAllBackgroundImages();
+                        const bannerImage = bannerImages.find(img => 
+                          cardBannerSettings["gestionar-usuarios"]?.backgroundImageId === img.id
+                        )?.url;
+                        if (bannerImage) {
+                          return (
+                            <>
+                              <div
+                                className="absolute inset-0 z-0"
+                                style={getBannerStyle(bannerImage, cardBannerSettings["gestionar-usuarios"])}
+                              />
+                              <div
+                                className="absolute inset-0 z-0"
+                                style={getOverlayStyle(cardBannerSettings["gestionar-usuarios"])}
+                              />
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                      <CardHeader className="relative z-10">
                         <CardTitle className="flex items-center gap-2 text-base">
                           <Users className="size-5" />
                           Gestionar Usuarios
@@ -537,7 +621,7 @@ export default function AdminDashboardPage() {
                           Administra usuarios y sus roles
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="relative z-10">
                         <div className="flex items-center justify-between">
                           <span className="text-2xl font-bold">
                             {stats?.totalUsers || 0}
@@ -551,8 +635,29 @@ export default function AdminDashboardPage() {
               )}
 
               <Link href="/admin/ajustar-cartas">
-                <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
-                  <CardHeader>
+                <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full overflow-hidden relative">
+                  {cardBannerSettings["ajustar-cartas"] && (() => {
+                    const bannerImages = getAllBackgroundImages();
+                    const bannerImage = bannerImages.find(img => 
+                      cardBannerSettings["ajustar-cartas"]?.backgroundImageId === img.id
+                    )?.url;
+                    if (bannerImage) {
+                      return (
+                        <>
+                          <div
+                            className="absolute inset-0 z-0"
+                            style={getBannerStyle(bannerImage, cardBannerSettings["ajustar-cartas"])}
+                          />
+                          <div
+                            className="absolute inset-0 z-0"
+                            style={getOverlayStyle(cardBannerSettings["ajustar-cartas"])}
+                          />
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Settings className="size-5" />
                       Ajustar Cartas
@@ -561,7 +666,7 @@ export default function AdminDashboardPage() {
                       Ajusta la posición Y de las cartas en la lista
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="relative z-10">
                     <ArrowUpRight className="size-4 text-muted-foreground" />
                   </CardContent>
                 </Card>
@@ -569,8 +674,29 @@ export default function AdminDashboardPage() {
 
               {user?.role === "ADMIN" && (
                 <Link href="/admin/ajustar-banners">
-                  <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
-                    <CardHeader>
+                  <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full overflow-hidden relative">
+                    {cardBannerSettings["ajustar-banners"] && (() => {
+                      const bannerImages = getAllBackgroundImages();
+                      const bannerImage = bannerImages.find(img => 
+                        cardBannerSettings["ajustar-banners"]?.backgroundImageId === img.id
+                      )?.url;
+                      if (bannerImage) {
+                        return (
+                          <>
+                            <div
+                              className="absolute inset-0 z-0"
+                              style={getBannerStyle(bannerImage, cardBannerSettings["ajustar-banners"])}
+                            />
+                            <div
+                              className="absolute inset-0 z-0"
+                              style={getOverlayStyle(cardBannerSettings["ajustar-banners"])}
+                            />
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <CardHeader className="relative z-10">
                       <CardTitle className="flex items-center gap-2 text-base">
                         <FileText className="size-5" />
                         Ajustar Banners
@@ -579,7 +705,7 @@ export default function AdminDashboardPage() {
                         Ajusta cómo se ven los banners de los deck panels
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="relative z-10">
                       <ArrowUpRight className="size-4 text-muted-foreground" />
                     </CardContent>
                   </Card>

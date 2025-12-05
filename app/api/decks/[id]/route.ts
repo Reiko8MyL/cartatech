@@ -50,6 +50,7 @@ export async function GET(
         isPublic: deck.isPublic,
         publishedAt: deck.publishedAt?.getTime(),
         techCardId: deck.techCardId,
+        backgroundImage: deck.backgroundImage,
         viewCount: deck.viewCount,
         tags: deck.tags,
       },
@@ -110,6 +111,8 @@ export async function PUT(
     // Actualizar mazo
     // Si techCardId es undefined, establecerlo a null explícitamente para eliminar la carta tech
     const techCardIdValue = deck.techCardId !== undefined ? deck.techCardId : null;
+    // Si backgroundImage es undefined, establecerlo a null explícitamente para eliminar la imagen personalizada
+    const backgroundImageValue = deck.backgroundImage !== undefined ? deck.backgroundImage : null;
     
     const updatedDeck = await prisma.deck.update({
       where: { id },
@@ -121,6 +124,7 @@ export async function PUT(
         isPublic: deck.isPublic || false,
         publishedAt: deck.publishedAt ? new Date(deck.publishedAt) : null,
         techCardId: techCardIdValue,
+        backgroundImage: backgroundImageValue,
         tags: deck.tags || [],
       },
       include: {
@@ -159,6 +163,7 @@ export async function PUT(
         isPublic: updatedDeck.isPublic,
         publishedAt: updatedDeck.publishedAt?.getTime(),
         techCardId: updatedDeck.techCardId,
+        backgroundImage: updatedDeck.backgroundImage,
         viewCount: updatedDeck.viewCount,
         tags: updatedDeck.tags,
       },

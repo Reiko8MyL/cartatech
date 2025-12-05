@@ -49,6 +49,7 @@ export function SaveDeckModal({
   const [tags, setTags] = useState<string[]>(existingDeck?.tags || [])
   const [techCardId, setTechCardId] = useState<string | undefined>(existingDeck?.techCardId)
   const [techCardSelectorOpen, setTechCardSelectorOpen] = useState(false)
+  const [backgroundImage, setBackgroundImage] = useState<string | undefined>(existingDeck?.backgroundImage)
   
   // Obtener la carta tech seleccionada
   const techCard = useMemo(() => {
@@ -97,12 +98,14 @@ export function SaveDeckModal({
         setIsPublic(existingDeck.isPublic || false)
         setTags(existingDeck.tags || [])
         setTechCardId(existingDeck.techCardId)
+        setBackgroundImage(existingDeck.backgroundImage)
       } else {
         setDeckName(initialName)
         setDescription("")
         setIsPublic(false)
         setTags([])
         setTechCardId(undefined)
+        setBackgroundImage(undefined)
       }
     }
   }, [existingDeck, initialName, isOpen])
@@ -129,6 +132,7 @@ export function SaveDeckModal({
       tags: tags.length > 0 ? tags : undefined,
       format: deckFormat,
       techCardId: techCardId || undefined,
+      backgroundImage: backgroundImage || undefined,
     })
 
     // Reset form solo si no se está editando un mazo existente
@@ -138,6 +142,7 @@ export function SaveDeckModal({
       setIsPublic(false)
       setTags([])
       setTechCardId(undefined)
+      setBackgroundImage(undefined)
     }
     onClose()
   }
@@ -240,6 +245,38 @@ export function SaveDeckModal({
                 Al publicar, tu mazo será visible para todos los usuarios en "Mazos de la Comunidad"
               </p>
             </div>
+          </div>
+
+          {/* Selector de Banner */}
+          <div>
+            <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">Imagen de Fondo del Banner (opcional)</Label>
+            <Select
+              value={backgroundImage || "default"}
+              onValueChange={(value) => setBackgroundImage(value === "default" ? undefined : value)}
+            >
+              <SelectTrigger className="mt-1.5 sm:mt-2">
+                <SelectValue placeholder="Selecciona una imagen de fondo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Por defecto (según raza)</SelectItem>
+                {getAllBackgroundImages().map((img) => (
+                  <SelectItem key={img.id} value={img.url}>
+                    {img.race}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {backgroundImage && (
+              <div className="mt-2 relative w-full h-24 rounded-lg overflow-hidden border">
+                <Image
+                  src={backgroundImage}
+                  alt="Banner preview"
+                  fill
+                  className="object-cover"
+                  sizes="100vw"
+                />
+              </div>
+            )}
           </div>
 
           {/* Selector de Carta Tech */}

@@ -40,6 +40,7 @@ model Deck {
   isPublic    Boolean  @default(false)
   publishedAt DateTime?
   techCardId  String?
+  backgroundImage String? // URL de la imagen de fondo personalizada del banner
   viewCount   Int      @default(0)
   tags        String[] @default([])
   createdAt   DateTime @default(now())

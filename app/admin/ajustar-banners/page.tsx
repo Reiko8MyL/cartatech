@@ -41,6 +41,12 @@ const CONTEXT_DESCRIPTIONS: Record<string, string> = {
   favoritos: "Ajusta cómo se ven los banners en la página 'Mis Favoritos'",
   "deck-builder": "Ajusta cómo se ven los banners en el panel de cargar mazo del Deck Builder",
   "mazo-individual": "Ajusta cómo se ve el banner hero en la página individual de cada mazo (solo por imagen)",
+  "admin-dashboard-card-moderar-comentarios": "Ajusta el banner del card 'Moderar Comentarios' en el dashboard",
+  "admin-dashboard-card-agregar-carta": "Ajusta el banner del card 'Agregar Nueva Carta' en el dashboard",
+  "admin-dashboard-card-ban-list": "Ajusta el banner del card 'Gestionar Ban List' en el dashboard",
+  "admin-dashboard-card-gestionar-usuarios": "Ajusta el banner del card 'Gestionar Usuarios' en el dashboard",
+  "admin-dashboard-card-ajustar-cartas": "Ajusta el banner del card 'Ajustar Cartas' en el dashboard",
+  "admin-dashboard-card-ajustar-banners": "Ajusta el banner del card 'Ajustar Banners' en el dashboard",
 };
 
 // Contextos que comparten la misma forma de mostrar paneles
@@ -310,6 +316,9 @@ export default function AjustarBannersPage() {
   // Componente para subir imágenes
   function ButtonUploadBannerImage({ onUploadSuccess }: { onUploadSuccess: (image: { id: string; url: string; race: string }) => void }) {
     const [isUploading, setIsUploading] = useState(false);
+    const [showUrlInput, setShowUrlInput] = useState(false);
+    const [imageUrl, setImageUrl] = useState("");
+    const [imageName, setImageName] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -373,36 +382,145 @@ export default function AjustarBannersPage() {
       }
     }
 
+    async function handleUrlSubmit() {
+      if (!imageUrl.trim() || !user?.id) return;
+
+      // Validar que sea una URL válida
+      try {
+        new URL(imageUrl);
+      } catch {
+        toastError("Por favor ingresa una URL válida");
+        return;
+      }
+
+      setIsUploading(true);
+      try {
+        const newImage = {
+          id: imageUrl.trim(),
+          url: imageUrl.trim(),
+          race: imageName.trim() || "Custom",
+        };
+
+        // Agregar a la lista de imágenes
+        setBackgroundImages(prev => [...prev, newImage]);
+        onUploadSuccess(newImage);
+        setImageUrl("");
+        setImageName("");
+        setShowUrlInput(false);
+        toastSuccess("Imagen agregada desde URL");
+      } catch (error) {
+        console.error("Error al agregar imagen desde URL:", error);
+        const errorMessage = error instanceof Error ? error.message : "Error al agregar la imagen";
+        toastError(errorMessage);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+
     return (
       <div className="space-y-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-          id="banner-image-upload"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="w-full"
-        >
-          {isUploading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Subiendo...
-            </>
-          ) : (
-            <>
-              <Upload className="h-4 w-4 mr-2" />
-              Subir Nueva Imagen
-            </>
-          )}
-        </Button>
+        {!showUrlInput ? (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="banner-image-upload"
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="flex-1"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Subir Archivo
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowUrlInput(true)}
+                disabled={isUploading}
+                className="flex-1"
+              >
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Desde URL
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2 border rounded-md p-3">
+            <div className="space-y-2">
+              <Label htmlFor="image-url" className="text-xs">URL de la Imagen</Label>
+              <Input
+                id="image-url"
+                type="url"
+                placeholder="https://..."
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                disabled={isUploading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="image-name" className="text-xs">Nombre (opcional)</Label>
+              <Input
+                id="image-name"
+                type="text"
+                placeholder="Ej: Caballero, Dragón, etc."
+                value={imageName}
+                onChange={(e) => setImageName(e.target.value)}
+                disabled={isUploading}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowUrlInput(false);
+                  setImageUrl("");
+                  setImageName("");
+                }}
+                disabled={isUploading}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleUrlSubmit}
+                disabled={isUploading || !imageUrl.trim()}
+                className="flex-1"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  "Agregar"
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
