@@ -146,15 +146,50 @@ export async function PUT(request: NextRequest) {
         const device = setting.device || "desktop";
         const backgroundImageId: string | null = setting.backgroundImageId === "" || setting.backgroundImageId === undefined ? null : setting.backgroundImageId;
 
-        return await prisma.deckPanelBannerSettings.upsert({
+        // Buscar si ya existe un ajuste con estos parámetros
+        const existing = await prisma.deckPanelBannerSettings.findUnique({
           where: {
             context_viewMode_device_backgroundImageId: {
               context: setting.context,
               viewMode,
               device,
-              backgroundImageId,
+              backgroundImageId: backgroundImageId ?? null,
             },
           },
+        });
+
+        if (existing) {
+          // Actualizar existente
+          return await prisma.deckPanelBannerSettings.update({
+            where: { id: existing.id },
+            data: {
+              backgroundPositionX: setting.backgroundPositionX,
+              backgroundPositionY: setting.backgroundPositionY,
+              backgroundSize: setting.backgroundSize,
+              height: setting.height,
+              overlayOpacity: setting.overlayOpacity,
+              overlayGradient: setting.overlayGradient,
+            },
+          });
+        } else {
+          // Crear nuevo
+          return await prisma.deckPanelBannerSettings.create({
+            data: {
+              context: setting.context,
+              viewMode,
+              device,
+              backgroundImageId: backgroundImageId ?? null,
+              backgroundPositionX: setting.backgroundPositionX,
+              backgroundPositionY: setting.backgroundPositionY,
+              backgroundSize: setting.backgroundSize,
+              height: setting.height,
+              overlayOpacity: setting.overlayOpacity,
+              overlayGradient: setting.overlayGradient,
+            },
+          });
+        }
+      })
+    );
           update: {
             backgroundPositionX: setting.backgroundPositionX,
             backgroundPositionY: setting.backgroundPositionY,
