@@ -68,15 +68,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_ES",
     url: "/",
-    siteName: "Carta Tech",
-    title: "Carta Tech - MyL Deck Builder",
+    siteName: "CartaTech",
+    title: "CartaTech",
     description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque. Construye, comparte y explora mazos de la comunidad.",
     images: [
       {
         url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764381679/logo_CT_2_txcqch.webp",
         width: 1200,
         height: 630,
-        alt: "Carta Tech - MyL Deck Builder",
+        alt: "CartaTech",
       },
     ],
   },
