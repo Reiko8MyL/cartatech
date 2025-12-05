@@ -190,29 +190,6 @@ export async function PUT(request: NextRequest) {
         }
       })
     );
-          update: {
-            backgroundPositionX: setting.backgroundPositionX,
-            backgroundPositionY: setting.backgroundPositionY,
-            backgroundSize: setting.backgroundSize,
-            height: setting.height,
-            overlayOpacity: setting.overlayOpacity,
-            overlayGradient: setting.overlayGradient,
-          },
-          create: {
-            context: setting.context,
-            viewMode,
-            device,
-            backgroundImageId,
-            backgroundPositionX: setting.backgroundPositionX,
-            backgroundPositionY: setting.backgroundPositionY,
-            backgroundSize: setting.backgroundSize,
-            height: setting.height,
-            overlayOpacity: setting.overlayOpacity,
-            overlayGradient: setting.overlayGradient,
-          },
-        });
-      })
-    );
 
     return NextResponse.json({ settings: updatedSettings });
   } catch (error) {
