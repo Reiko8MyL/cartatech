@@ -30,8 +30,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.cl"),
   title: {
-    default: "Carta Tech - MyL Deck Builder",
-    template: "%s | Carta Tech - MyL Deck Builder",
+    default: "CartaTech",
+    template: "%s | CartaTech",
   },
   description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque. Construye, comparte y explora mazos de la comunidad. La base de datos más completa de cartas del formato Primer Bloque Extendido.",
   keywords: ["Mitos y Leyendas", "MyL", "Deck Builder", "TCG", "Primer Bloque", "Chile", "cartas", "mazos"],
@@ -82,7 +82,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Carta Tech - MyL Deck Builder",
+    title: "CartaTech",
     description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque.",
     images: ["https://res.cloudinary.com/dpbmbrekj/image/upload/v1764381679/logo_CT_2_txcqch.webp"],
     creator: "@cartatech",
