@@ -11,7 +11,8 @@ const nextConfig: NextConfig = {
     ],
     formats: ["image/webp", "image/avif"],
     // Optimizar carga de imágenes para evitar exceder cuota de Cloudinary
-    minimumCacheTTL: 60,
+    // Caché agresivo de 1 hora para reducir transformaciones repetidas
+    minimumCacheTTL: 3600,
   },
   // Permitir dominios de Google AdSense
   async headers() {

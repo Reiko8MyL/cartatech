@@ -1,8 +1,9 @@
 "use client"
 
-import { memo, useRef } from "react"
+import { memo, useRef, useState, useEffect } from "react"
 import Image from "next/image"
 import type { Card } from "@/lib/deck-builder/types"
+import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface CardItemProps {
   card: Card
@@ -35,6 +36,22 @@ export const CardItem = memo(function CardItem({
 }: CardItemProps) {
   const touchStartTimeRef = useRef<number | null>(null)
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+  
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
+  
+  // Optimizar URL de Cloudinary con transformaciones fijas
+  const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+  
   const fillRatio =
     maxQuantity > 0 ? Math.min(quantity / maxQuantity, 1) : 0
   const overlayOpacity = fillRatio * 0.6
@@ -99,13 +116,14 @@ export const CardItem = memo(function CardItem({
         }`}
       >
         <Image
-          src={card.image}
+          src={optimizedImageUrl}
           alt={card.name}
           fill
           className={`object-contain rounded ${
             canAddMore ? "" : "opacity-50"
           }`}
-          sizes="(max-width: 640px) calc(25vw - 8px), (max-width: 768px) calc(25vw - 12px), (max-width: 1024px) calc(16.66vw - 12px), calc(16.66vw - 16px)"
+          // Usar tamaños más simples ya que las transformaciones están en la URL
+          sizes="(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 300px"
           loading={priority ? "eager" : "lazy"}
           priority={priority}
           decoding="async"
