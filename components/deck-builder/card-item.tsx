@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useRef } from "react"
 import Image from "next/image"
 import type { Card } from "@/lib/deck-builder/types"
 
@@ -13,6 +13,8 @@ interface CardItemProps {
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
   onCardHover?: () => void
   onCardHoverEnd?: () => void
+  onCardLongPress?: () => void
+  onCardTouchEnd?: () => void
   priority?: boolean
   showBanListIndicator?: boolean
 }
@@ -26,22 +28,60 @@ export const CardItem = memo(function CardItem({
   onCardRightClick,
   onCardHover,
   onCardHoverEnd,
+  onCardLongPress,
+  onCardTouchEnd,
   priority = false,
   showBanListIndicator = true,
 }: CardItemProps) {
+  const touchStartTimeRef = useRef<number | null>(null)
+  const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fillRatio =
     maxQuantity > 0 ? Math.min(quantity / maxQuantity, 1) : 0
   const overlayOpacity = fillRatio * 0.6
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (onCardLongPress) {
+      touchStartTimeRef.current = Date.now()
+      // Iniciar el long press después de 800ms
+      touchTimeoutRef.current = setTimeout(() => {
+        if (onCardLongPress) {
+          onCardLongPress()
+        }
+      }, 800)
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (onCardTouchEnd) {
+      // Cancelar el long press si se suelta antes de tiempo
+      if (touchTimeoutRef.current) {
+        clearTimeout(touchTimeoutRef.current)
+        touchTimeoutRef.current = null
+      }
+      onCardTouchEnd()
+    }
+    touchStartTimeRef.current = null
+  }
+
   return (
     <div
       className="group relative aspect-[63/88] cursor-pointer rounded-2xl overflow-hidden"
-      onClick={() => onCardClick(card)}
+      onClick={() => {
+        // Solo ejecutar click si no se activó el long press
+        if (!touchTimeoutRef.current || Date.now() - (touchStartTimeRef.current || 0) < 800) {
+          onCardClick(card)
+        }
+        // Limpiar timeout si existe
+        if (touchTimeoutRef.current) {
+          clearTimeout(touchTimeoutRef.current)
+          touchTimeoutRef.current = null
+        }
+      }}
       onContextMenu={(e) => onCardRightClick(e, card)}
       onMouseEnter={onCardHover}
       onMouseLeave={onCardHoverEnd}
-      onTouchStart={onCardHover}
-      onTouchEnd={onCardHoverEnd}
+      onTouchStart={onCardLongPress ? handleTouchStart : undefined}
+      onTouchEnd={onCardTouchEnd ? handleTouchEnd : undefined}
     >
       {/* Contenedor que se anima en hover (imagen + nombre) */}
       <div
@@ -142,6 +182,9 @@ export const CardItem = memo(function CardItem({
   // Comparar handlers de hover
   if (prevProps.onCardHover !== nextProps.onCardHover) return false
   if (prevProps.onCardHoverEnd !== nextProps.onCardHoverEnd) return false
+  // Comparar handlers de long press
+  if (prevProps.onCardLongPress !== nextProps.onCardLongPress) return false
+  if (prevProps.onCardTouchEnd !== nextProps.onCardTouchEnd) return false
   // Si las funciones cambian, no re-renderizar (son estables con useCallback)
   return true
 })

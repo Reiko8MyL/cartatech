@@ -141,16 +141,16 @@ export function FiltersPanel({
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Filter className="size-3.5 sm:size-4 text-muted-foreground" />
           <span className="text-xs sm:text-sm font-medium">Filtros</span>
-        </div>
-        {/* Buscador por nombre */}
+      </div>
+      {/* Buscador por nombre */}
         <div className="flex-1 min-w-0">
-          <Input
-            type="text"
-            placeholder="Buscar por nombre..."
-            value={filters.search}
-            onChange={(e) => updateFilter("search", e.target.value)}
+        <Input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={filters.search}
+          onChange={(e) => updateFilter("search", e.target.value)}
             className="w-full h-8 sm:h-9 text-sm"
-          />
+        />
         </div>
         {/* Botón para limpiar filtros */}
         {hasActiveFilters && (

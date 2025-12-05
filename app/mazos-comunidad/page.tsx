@@ -654,20 +654,20 @@ function MazosComunidadPage() {
                     const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
                     const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
                     return (
-                      <div
+                  <div
                         className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
                         style={getBannerStyle(backgroundImage, deckBannerSetting)}
-                      >
+                  >
                         <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
-                        <div className="absolute bottom-2 left-2 right-2">
+                    <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
                         <div title="Público">
                           <Globe className="h-4 w-4 text-white" aria-label="Público" />
                         </div>
                       </div>
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                     );
                   })()}
                   <CardContent className="flex-1 flex flex-col p-4">

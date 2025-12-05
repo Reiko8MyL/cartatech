@@ -330,10 +330,10 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MessageSquare className="size-3" />
-                      <span>
-                        {stats?.recentComments || 0} en las últimas 24 horas
-                      </span>
+                    <MessageSquare className="size-3" />
+                    <span>
+                      {stats?.recentComments || 0} en las últimas 24 horas
+                    </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Clock className="size-3" />
@@ -706,10 +706,10 @@ export default function AdminDashboardPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                      <ArrowUpRight className="size-4 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                </Link>
+                    <ArrowUpRight className="size-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              </Link>
               )}
             </div>
           </>

@@ -108,8 +108,8 @@ export function CardsPanel({
     setIsModalOpen(true)
   }, [originalCards])
 
-  // Handler para hover en móvil/tablet
-  const handleCardHover = useCallback((card: Card) => {
+  // Handler para long press en móvil/tablet (para abrir modal)
+  const handleCardLongPress = useCallback((card: Card) => {
     if (!isMobile) return // Solo en móvil/tablet
     
     // Limpiar timeout anterior para esta carta si existe
@@ -119,7 +119,7 @@ export function CardsPanel({
       clearTimeout(existingTimeout)
     }
     
-    // Abrir modal después de 800ms de hover
+    // Abrir modal después de 800ms de mantener presionado
     const timeout = setTimeout(() => {
       const baseId = getBaseCardId(card.id)
       const originalCard = originalCards.find((c) => getBaseCardId(c.id) === baseId) || card
@@ -131,8 +131,8 @@ export function CardsPanel({
     hoverTimeoutRef.current.set(baseId, timeout)
   }, [isMobile, originalCards])
 
-  // Handler para cuando se sale del hover
-  const handleCardHoverEnd = useCallback((card: Card) => {
+  // Handler para cuando se suelta el touch (cancelar long press)
+  const handleCardTouchEnd = useCallback((card: Card) => {
     if (!isMobile) return
     
     const baseId = getBaseCardId(card.id)
@@ -141,6 +141,18 @@ export function CardsPanel({
       clearTimeout(timeout)
       hoverTimeoutRef.current.delete(baseId)
     }
+  }, [isMobile])
+
+  // Handler para hover normal (solo desktop)
+  const handleCardHover = useCallback((card: Card) => {
+    if (isMobile) return // No hacer nada en móvil/tablet
+    
+    // En desktop, el hover funciona normalmente con el tooltip
+  }, [isMobile])
+
+  const handleCardHoverEnd = useCallback(() => {
+    if (isMobile) return
+    // En desktop, el hover funciona normalmente
   }, [isMobile])
 
   // Limpiar timeouts al desmontar
@@ -243,8 +255,10 @@ export function CardsPanel({
                         canAddMore={canAddMore}
                         onCardClick={() => handleCardClick(card, cardToDisplay)}
                         onCardRightClick={(e) => handleCardRightClick(e, card)}
-                        onCardHover={isMobile ? () => handleCardHover(card) : undefined}
-                        onCardHoverEnd={isMobile ? () => handleCardHoverEnd(card) : undefined}
+                        onCardHover={!isMobile ? handleCardHover : undefined}
+                        onCardHoverEnd={!isMobile ? handleCardHoverEnd : undefined}
+                        onCardLongPress={isMobile ? () => handleCardLongPress(card) : undefined}
+                        onCardTouchEnd={isMobile ? () => handleCardTouchEnd(card) : undefined}
                       />
                     )
                   })}
