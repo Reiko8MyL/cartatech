@@ -105,7 +105,7 @@ export const CardItem = memo(function CardItem({
           className={`object-contain rounded ${
             canAddMore ? "" : "opacity-50"
           }`}
-          sizes="(max-width: 640px) 25vw, (max-width: 768px) 25vw, (max-width: 1024px) 16vw, 20vw"
+          sizes="(max-width: 640px) calc(25vw - 8px), (max-width: 768px) calc(25vw - 12px), (max-width: 1024px) calc(16.66vw - 12px), calc(16.66vw - 16px)"
           loading={priority ? "eager" : "lazy"}
           priority={priority}
           decoding="async"

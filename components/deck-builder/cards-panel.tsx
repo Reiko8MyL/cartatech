@@ -243,9 +243,9 @@ export function CardsPanel({
                     // Verificar si se puede agregar más: debe cumplir límite individual Y límite total de 50
                     const canAddMore = quantity < maxQuantity && totalCards < 50
 
-                    // Priorizar carga solo de las primeras 8 cartas (primera fila visible en móvil/tablet)
-                    // Esto reduce la carga inicial y evita exceder la cuota de Cloudinary
-                    const shouldPrioritize = index < 8
+                    // Priorizar carga solo de las primeras 4 cartas (primera fila visible en móvil)
+                    // Esto reduce significativamente la carga inicial y evita exceder la cuota de Cloudinary
+                    const shouldPrioritize = index < 4
 
                     return (
                       <CardItem
