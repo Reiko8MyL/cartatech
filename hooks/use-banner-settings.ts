@@ -43,7 +43,12 @@ export function useBannerSettings(
           ? `${API_BASE_URL}/api/banner-settings`
           : `/api/banner-settings`;
 
-        const response = await fetch(`${url}?${params.toString()}`);
+        // Agregar timestamp para evitar cache del navegador
+        params.append("_t", Date.now().toString());
+
+        const response = await fetch(`${url}?${params.toString()}`, {
+          cache: "no-store",
+        });
         if (!response.ok) {
           throw new Error("Error al obtener ajustes de banners");
         }
@@ -306,6 +311,9 @@ export function useBannerSettingsMap(
           ? `${API_BASE_URL}/api/banner-settings`
           : `/api/banner-settings`;
 
+        // Agregar timestamp para evitar cache del navegador
+        params.append("_t", Date.now().toString());
+
         // Obtener ajustes para todas las imágenes
         const settingsPromises = imageIds.map(async (imageId) => {
           const imageParams = new URLSearchParams(params);
@@ -313,7 +321,9 @@ export function useBannerSettingsMap(
             imageParams.append("backgroundImageId", imageId);
           }
 
-          const response = await fetch(`${url}?${imageParams.toString()}`);
+          const response = await fetch(`${url}?${imageParams.toString()}`, {
+            cache: "no-store",
+          });
           if (!response.ok) {
             return { imageId, setting: null };
           }

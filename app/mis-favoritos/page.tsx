@@ -34,7 +34,8 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess, toastError } from "@/lib/toast"
-import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
+import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType, useBannerSettingsMap } from "@/hooks/use-banner-settings"
+import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -51,6 +52,30 @@ export default function MisFavoritosPage() {
   const [favoriteDecks, setFavoriteDecks] = useState<SavedDeck[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const deviceType = useDeviceType()
+  
+  // Obtener todas las cartas
+  const { cards: allCards } = useCards(false);
+  
+  // Obtener todos los IDs de imágenes únicos de los decks
+  const deckImageIds = useMemo(() => {
+    if (!allCards.length || !favoriteDecks.length) return [];
+    const uniqueIds = new Set<string | null>();
+    favoriteDecks.forEach(deck => {
+      const race = getDeckRace(deck.cards, allCards);
+      const backgroundImage = getDeckBackgroundImage(race);
+      if (backgroundImage) {
+        uniqueIds.add(getBackgroundImageId(backgroundImage));
+      } else {
+        uniqueIds.add(null);
+      }
+    });
+    return Array.from(uniqueIds);
+  }, [favoriteDecks, allCards]);
+  
+  // Obtener ajustes para todas las imágenes
+  const { settingsMap, isLoading: isLoadingBannerSettings } = useBannerSettingsMap("favoritos", viewMode, deviceType, deckImageIds);
+  
+  // Ajuste por defecto (para compatibilidad)
   const { setting: bannerSetting } = useBannerSettings("favoritos", viewMode, deviceType)
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -490,13 +515,19 @@ export default function MisFavoritosPage() {
                 day: "numeric",
               })
 
+              // Obtener raza e imagen de fondo del deck
+              const race = getDeckRace(deck.cards, allCards);
+              const backgroundImage = getDeckBackgroundImage(race);
+              const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
+              const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
+
               return (
                 <Card key={deck.id} className="flex flex-col overflow-hidden group">
                   <div
                     className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={getBannerStyle(deck.backgroundImage, bannerSetting)}
+                    style={getBannerStyle(backgroundImage, deckBannerSetting)}
                   >
-                    <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
+                    <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -604,14 +635,20 @@ export default function MisFavoritosPage() {
                 day: "numeric",
               })
 
+              // Obtener raza e imagen de fondo del deck
+              const race = getDeckRace(deck.cards, allCards);
+              const backgroundImage = getDeckBackgroundImage(race);
+              const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
+              const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
+
               return (
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
                       className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
-                      style={getBannerStyle(deck.backgroundImage, bannerSetting)}
+                      style={getBannerStyle(backgroundImage, deckBannerSetting)}
                     >
-                      <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
+                      <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">
                         <CardTitle className="text-white text-lg line-clamp-1 drop-shadow-lg">{deck.name}</CardTitle>
                       </div>
