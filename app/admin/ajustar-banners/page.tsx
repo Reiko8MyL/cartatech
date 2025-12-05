@@ -21,7 +21,7 @@ import {
   type BannerSetting,
 } from "@/lib/api/banner-settings";
 import { toastSuccess, toastError } from "@/lib/toast";
-import { Save, RotateCcw, Loader2, Image as ImageIcon, Globe, Lock, Eye, Trash2 } from "lucide-react";
+import { Save, RotateCcw, Loader2, Image as ImageIcon, Globe, Lock, Eye, Trash2, Upload } from "lucide-react";
 import { getDeckBackgroundImage, EDITION_LOGOS, getDeckFormatName } from "@/lib/deck-builder/utils";
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils";
 import Image from "next/image";
