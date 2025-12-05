@@ -14,6 +14,7 @@ import { Plus, Minus } from "lucide-react"
 import type { Card, DeckCard } from "@/lib/deck-builder/types"
 import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
 import { toastSuccess } from "@/lib/toast"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface CardInfoModalProps {
   card: Card | null
@@ -43,6 +44,17 @@ export function CardInfoModal({
   if (!card) return null
 
   const [displayImage, setDisplayImage] = useState<string>(card.image)
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
 
   // Cuando cambia la carta, resetear al arte original
   useEffect(() => {
@@ -168,13 +180,20 @@ export function CardInfoModal({
           {/* Columna izquierda: carta principal + controles */}
           <div className="space-y-4 flex flex-col items-center md:items-start">
             <div className="relative aspect-[63/88] w-full max-w-[280px] mx-auto">
-              <Image
-                src={displayImage}
-                alt={card.name}
-                fill
-                className="object-contain rounded-lg"
-                sizes="(max-width: 768px) 70vw, 280px"
-              />
+              {(() => {
+                const optimizedImageUrl = optimizeCloudinaryUrl(displayImage, deviceType)
+                const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                return (
+                  <Image
+                    src={optimizedImageUrl}
+                    alt={card.name}
+                    fill
+                    className="object-contain rounded-lg"
+                    sizes="(max-width: 768px) 70vw, 280px"
+                    unoptimized={isOptimized}
+                  />
+                )
+              })()}
             </div>
 
             {/* Controles de cantidad bajo la carta */}
@@ -293,13 +312,21 @@ export function CardInfoModal({
                 <div className="flex items-center gap-2">
                   {EDITION_LOGOS[card.edition] ? (
                     <div className="relative w-20 h-20">
-                      <Image
-                        src={EDITION_LOGOS[card.edition]}
-                        alt={card.edition}
-                        fill
-                        className="object-contain rounded-full bg-background"
-                        sizes="80px"
-                      />
+                      {(() => {
+                        const logoUrl = EDITION_LOGOS[card.edition]
+                        const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                        const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                        return (
+                          <Image
+                            src={optimizedLogoUrl}
+                            alt={card.edition}
+                            fill
+                            className="object-contain rounded-full bg-background"
+                            sizes="80px"
+                            unoptimized={isOptimized}
+                          />
+                        )
+                      })()}
                     </div>
                   ) : (
                     <span>{card.edition}</span>
@@ -321,23 +348,28 @@ export function CardInfoModal({
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold">Arte alternativo</h3>
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {alternativeArts.map((altCard) => (
-                    <button
-                      key={altCard.id}
-                      className="relative aspect-[63/88] w-24 sm:w-28 md:w-32 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity duration-200 ease-out"
-                      onClick={() => setDisplayImage(altCard.image)}
-                      aria-label={`Ver variante de ${altCard.name}`}
-                      role="button"
-                    >
-                      <Image
-                        src={altCard.image}
-                        alt={`${altCard.name} - Variante`}
-                        fill
-                        className="object-contain rounded"
-                        sizes="128px"
-                      />
-                    </button>
-                  ))}
+                  {alternativeArts.map((altCard) => {
+                    const optimizedAltImageUrl = optimizeCloudinaryUrl(altCard.image, deviceType)
+                    const isAltOptimized = isCloudinaryOptimized(optimizedAltImageUrl)
+                    return (
+                      <button
+                        key={altCard.id}
+                        className="relative aspect-[63/88] w-24 sm:w-28 md:w-32 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity duration-200 ease-out"
+                        onClick={() => setDisplayImage(altCard.image)}
+                        aria-label={`Ver variante de ${altCard.name}`}
+                        role="button"
+                      >
+                        <Image
+                          src={optimizedAltImageUrl}
+                          alt={`${altCard.name} - Variante`}
+                          fill
+                          className="object-contain rounded"
+                          sizes="128px"
+                          unoptimized={isAltOptimized}
+                        />
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
