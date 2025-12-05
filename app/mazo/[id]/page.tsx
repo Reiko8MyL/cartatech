@@ -54,6 +54,7 @@ import { DeckJsonLd } from "@/components/seo/json-ld"
 import { trackDeckViewed, trackDeckLiked, trackDeckCopied } from "@/lib/analytics/events"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
+import { optimizeCloudinaryUrl } from "@/lib/deck-builder/cloudinary-utils"
 import {
   Dialog,
   DialogContent,

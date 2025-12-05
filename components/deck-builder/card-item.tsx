@@ -52,6 +52,12 @@ export const CardItem = memo(function CardItem({
   // Optimizar URL de Cloudinary con transformaciones fijas
   const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
   
+  // Si la URL ya tiene transformaciones de Cloudinary, deshabilitar optimización de Next.js
+  // para evitar transformaciones duplicadas que consumen créditos
+  const isCloudinaryOptimized = optimizedImageUrl.includes('/w_') || 
+                                 optimizedImageUrl.includes('/c_') || 
+                                 optimizedImageUrl.includes('/f_')
+  
   const fillRatio =
     maxQuantity > 0 ? Math.min(quantity / maxQuantity, 1) : 0
   const overlayOpacity = fillRatio * 0.6
@@ -122,8 +128,11 @@ export const CardItem = memo(function CardItem({
           className={`object-contain rounded ${
             canAddMore ? "" : "opacity-50"
           }`}
+          // Deshabilitar optimización de Next.js si Cloudinary ya tiene transformaciones
+          // Esto evita que Next.js agregue transformaciones adicionales (w=640&q=75) que consumen créditos
+          unoptimized={isCloudinaryOptimized}
           // Usar tamaños más simples ya que las transformaciones están en la URL
-          sizes="(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 300px"
+          sizes={isCloudinaryOptimized ? undefined : "(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 300px"}
           loading={priority ? "eager" : "lazy"}
           priority={priority}
           decoding="async"
