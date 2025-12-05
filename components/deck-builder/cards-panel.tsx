@@ -143,17 +143,14 @@ export function CardsPanel({
     }
   }, [isMobile])
 
-  // Handler para hover normal (solo desktop)
-  const handleCardHover = useCallback((card: Card) => {
-    if (isMobile) return // No hacer nada en móvil/tablet
-    
-    // En desktop, el hover funciona normalmente con el tooltip
-  }, [isMobile])
+  // Handler para hover normal (solo desktop) - no necesita hacer nada, el tooltip funciona con CSS
+  const handleCardHover = useCallback(() => {
+    // En desktop, el hover funciona normalmente con el tooltip CSS
+  }, [])
 
   const handleCardHoverEnd = useCallback(() => {
-    if (isMobile) return
-    // En desktop, el hover funciona normalmente
-  }, [isMobile])
+    // En desktop, el hover funciona normalmente con el tooltip CSS
+  }, [])
 
   // Limpiar timeouts al desmontar
   useEffect(() => {
