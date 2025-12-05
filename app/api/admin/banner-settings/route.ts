@@ -144,7 +144,7 @@ export async function PUT(request: NextRequest) {
       settings.map(async (setting) => {
         const viewMode = setting.viewMode || "grid";
         const device = setting.device || "desktop";
-        const backgroundImageId = setting.backgroundImageId === "" ? null : setting.backgroundImageId;
+        const backgroundImageId: string | null = setting.backgroundImageId === "" || setting.backgroundImageId === undefined ? null : setting.backgroundImageId;
 
         return await prisma.deckPanelBannerSettings.upsert({
           where: {
