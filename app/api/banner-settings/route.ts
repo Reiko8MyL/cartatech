@@ -102,11 +102,17 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error al obtener ajustes de banners:", error);
 
+    // En caso de error, obtener parámetros de nuevo para valores por defecto
+    const searchParams = request.nextUrl.searchParams;
+    const contextParam = searchParams.get("context") || "mis-mazos";
+    const viewModeParam = searchParams.get("viewMode") || "grid";
+    const deviceParam = searchParams.get("device") || "desktop";
+
     // En caso de error, retornar valores por defecto
     const defaultSetting = {
-      context: context || "mis-mazos",
-      viewMode: viewMode || "grid",
-      device: device || "desktop",
+      context: contextParam,
+      viewMode: viewModeParam,
+      device: deviceParam,
       backgroundImageId: null,
       backgroundPositionX: 50,
       backgroundPositionY: 50,
