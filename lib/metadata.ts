@@ -22,7 +22,7 @@ export function generateMetadata({
   type = "website",
   noindex = false,
 }: MetadataOptions): Metadata {
-  const fullTitle = `${title} | Carta Tech - MyL Deck Builder`
+  const fullTitle = `${title} | CartaTech`
   const url = `${SITE_URL}${path}`
   const defaultKeywords = [
     "Mitos y Leyendas",
@@ -39,16 +39,16 @@ export function generateMetadata({
     title: fullTitle,
     description,
     keywords: [...defaultKeywords, ...keywords],
-    authors: [{ name: "Carta Tech" }],
-    creator: "Carta Tech",
-    publisher: "Carta Tech",
+    authors: [{ name: "CartaTech" }],
+    creator: "CartaTech",
+    publisher: "CartaTech",
     robots: noindex ? "noindex, nofollow" : "index, follow",
     openGraph: {
       type,
       url,
       title: fullTitle,
       description,
-      siteName: "Carta Tech",
+      siteName: "CartaTech",
       images: [
         {
           url: ogImage,
