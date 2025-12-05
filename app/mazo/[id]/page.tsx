@@ -1282,7 +1282,7 @@ export default function ViewDeckPage() {
           {/* Skeleton de lista de cartas */}
           <div className="space-y-4">
             <Skeleton className="h-6 w-48" />
-            <div className="grid gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid gap-2 sm:gap-3 md:gap-4 grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {Array.from({ length: 12 }).map((_, i) => (
                 <Skeleton key={i} className="aspect-[63/88] rounded-lg" />
               ))}
