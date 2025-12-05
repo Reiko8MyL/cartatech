@@ -563,10 +563,8 @@ export default function AjustarBannersPage() {
                     </Select>
                     <ButtonUploadBannerImage 
                       onUploadSuccess={(newImage) => {
-                        // Agregar nueva imagen a la lista
-                        backgroundImages.push(newImage);
+                        // Seleccionar la nueva imagen automáticamente
                         setSelectedImageId(newImage.id);
-                        toastSuccess("Imagen subida correctamente");
                       }}
                     />
                   </div>
