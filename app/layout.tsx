@@ -121,6 +121,21 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        {/* Favicon explícito */}
+        <link
+          rel="icon"
+          type="image/webp"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+        />
+        <link
+          rel="shortcut icon"
+          type="image/webp"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+        />
+        <link
+          rel="apple-touch-icon"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+        />
         {/* Google AdSense - Script de anuncios */}
         {adsenseId && <AdSenseScript adsenseId={adsenseId} />}
       </head>
