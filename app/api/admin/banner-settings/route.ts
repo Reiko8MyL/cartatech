@@ -147,16 +147,26 @@ export async function PUT(request: NextRequest) {
         const backgroundImageId: string | null = setting.backgroundImageId === "" || setting.backgroundImageId === undefined ? null : setting.backgroundImageId;
 
         // Buscar si ya existe un ajuste con estos parámetros
-        const existing = await prisma.deckPanelBannerSettings.findUnique({
-          where: {
-            context_viewMode_device_backgroundImageId: {
-              context: setting.context,
-              viewMode,
-              device,
-              backgroundImageId: backgroundImageId ?? null,
-            },
-          },
-        });
+        // Usar findFirst cuando backgroundImageId es null porque findUnique tiene problemas con null en constraints únicos
+        const existing = backgroundImageId === null
+          ? await prisma.deckPanelBannerSettings.findFirst({
+              where: {
+                context: setting.context,
+                viewMode,
+                device,
+                backgroundImageId: null,
+              },
+            })
+          : await prisma.deckPanelBannerSettings.findUnique({
+              where: {
+                context_viewMode_device_backgroundImageId: {
+                  context: setting.context,
+                  viewMode,
+                  device,
+                  backgroundImageId,
+                },
+              },
+            });
 
         if (existing) {
           // Actualizar existente
