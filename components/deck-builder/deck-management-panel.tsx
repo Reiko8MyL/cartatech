@@ -1353,6 +1353,8 @@ export function DeckManagementPanel({
           onDeckFormatChange={onDeckFormatChange}
           currentDeck={currentDeck}
           allCards={allCards}
+          onDragStart={isMobile ? handleDragStart : undefined}
+          isMobile={isMobile}
         />
 
         {/* Estadísticas */}

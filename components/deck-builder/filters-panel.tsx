@@ -135,23 +135,34 @@ export function FiltersPanel({
     filters.cost
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 lg:gap-3 rounded-lg border bg-card p-1.5 sm:p-2 lg:p-4">
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <Filter className="size-3.5 sm:size-4 text-muted-foreground" />
-        <span className="text-xs sm:text-sm font-medium">Filtros</span>
+    <div className="flex flex-col gap-2 sm:gap-3 rounded-lg border bg-card p-1.5 sm:p-2 lg:p-4">
+      {/* Primera fila: Label y buscador */}
+      <div className="flex items-center gap-2 w-full">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Filter className="size-3.5 sm:size-4 text-muted-foreground" />
+          <span className="text-xs sm:text-sm font-medium">Filtros</span>
+        </div>
+        {/* Buscador por nombre */}
+        <div className="flex-1 min-w-0">
+          <Input
+            type="text"
+            placeholder="Buscar por nombre..."
+            value={filters.search}
+            onChange={(e) => updateFilter("search", e.target.value)}
+            className="w-full h-8 sm:h-9 text-sm"
+          />
+        </div>
+        {/* Botón para limpiar filtros */}
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0">
+            <X className="size-3.5 sm:size-4" />
+            <span className="hidden sm:inline">Limpiar</span>
+          </Button>
+        )}
       </div>
 
-      {/* Buscador por nombre */}
-      <div className="flex-1 min-w-[200px]">
-        <Input
-          type="text"
-          placeholder="Buscar por nombre..."
-          value={filters.search}
-          onChange={(e) => updateFilter("search", e.target.value)}
-          className="w-full h-8 sm:h-9 text-sm"
-        />
-      </div>
-
+      {/* Segunda fila: Filtros */}
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
       {/* Filtro por edición */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -301,14 +312,7 @@ export function FiltersPanel({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {/* Botón para limpiar filtros */}
-      {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
-          <X className="size-3.5 sm:size-4" />
-          <span className="hidden sm:inline">Limpiar</span>
-        </Button>
-      )}
+      </div>
     </div>
   )
 }

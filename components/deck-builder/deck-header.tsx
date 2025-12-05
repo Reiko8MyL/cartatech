@@ -17,6 +17,8 @@ interface DeckHeaderProps {
   onDeckFormatChange: (format: DeckFormat) => void
   currentDeck?: SavedDeck | null
   allCards: CardType[]
+  onDragStart?: (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => void
+  isMobile?: boolean
 }
 
 export function DeckHeader({
@@ -26,6 +28,8 @@ export function DeckHeader({
   onDeckFormatChange,
   currentDeck,
   allCards,
+  onDragStart,
+  isMobile = false,
 }: DeckHeaderProps) {
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
@@ -52,12 +56,16 @@ export function DeckHeader({
         
         return (
           <div
-            className="relative rounded-lg overflow-hidden"
+            className={`relative rounded-lg overflow-hidden ${isMobile && onDragStart ? 'cursor-grab active:cursor-grabbing touch-none select-none' : ''}`}
             style={{
               backgroundImage: `url(${backgroundImage})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
+              ...(isMobile && onDragStart ? { touchAction: 'none' } : {}),
             }}
+            onMouseDown={isMobile && onDragStart ? onDragStart : undefined}
+            onTouchStart={isMobile && onDragStart ? onDragStart : undefined}
+            onTouchMove={isMobile && onDragStart ? (e) => e.preventDefault() : undefined}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             <div className="relative p-2 sm:p-3">

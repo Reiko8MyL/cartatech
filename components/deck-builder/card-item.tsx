@@ -11,6 +11,8 @@ interface CardItemProps {
   canAddMore: boolean
   onCardClick: (card: Card) => void
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
+  onCardHover?: () => void
+  onCardHoverEnd?: () => void
   priority?: boolean
   showBanListIndicator?: boolean
 }
@@ -22,6 +24,8 @@ export const CardItem = memo(function CardItem({
   canAddMore,
   onCardClick,
   onCardRightClick,
+  onCardHover,
+  onCardHoverEnd,
   priority = false,
   showBanListIndicator = true,
 }: CardItemProps) {
@@ -34,6 +38,10 @@ export const CardItem = memo(function CardItem({
       className="group relative aspect-[63/88] cursor-pointer rounded-2xl overflow-hidden"
       onClick={() => onCardClick(card)}
       onContextMenu={(e) => onCardRightClick(e, card)}
+      onMouseEnter={onCardHover}
+      onMouseLeave={onCardHoverEnd}
+      onTouchStart={onCardHover}
+      onTouchEnd={onCardHoverEnd}
     >
       {/* Contenedor que se anima en hover (imagen + nombre) */}
       <div
@@ -131,6 +139,9 @@ export const CardItem = memo(function CardItem({
   if (prevProps.card.isUnique !== nextProps.card.isUnique) return false
   if (prevProps.maxQuantity !== nextProps.maxQuantity) return false
   if (prevProps.card.isRework !== nextProps.card.isRework) return false
+  // Comparar handlers de hover
+  if (prevProps.onCardHover !== nextProps.onCardHover) return false
+  if (prevProps.onCardHoverEnd !== nextProps.onCardHoverEnd) return false
   // Si las funciones cambian, no re-renderizar (son estables con useCallback)
   return true
 })

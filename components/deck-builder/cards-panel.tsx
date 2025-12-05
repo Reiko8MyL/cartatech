@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { CardInfoModal } from "./card-info-modal"
 import { CardItem } from "./card-item"
 import type { Card, DeckCard, DeckFormat } from "@/lib/deck-builder/types"
@@ -28,6 +28,19 @@ export function CardsPanel({
 }: CardsPanelProps) {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const hoverTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  
+  // Detectar si estamos en móvil/tablet
+  useEffect(() => {
+    function checkMobile() {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Cargar cartas alternativas desde la API con cache (solo cuando se necesiten)
   const { cards: allCardsWithAlternatives } = useCards(true) // Incluir alternativas
@@ -94,6 +107,49 @@ export function CardsPanel({
     setSelectedCard(originalCard)
     setIsModalOpen(true)
   }, [originalCards])
+
+  // Handler para hover en móvil/tablet
+  const handleCardHover = useCallback((card: Card) => {
+    if (!isMobile) return // Solo en móvil/tablet
+    
+    // Limpiar timeout anterior para esta carta si existe
+    const baseId = getBaseCardId(card.id)
+    const existingTimeout = hoverTimeoutRef.current.get(baseId)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+    
+    // Abrir modal después de 800ms de hover
+    const timeout = setTimeout(() => {
+      const baseId = getBaseCardId(card.id)
+      const originalCard = originalCards.find((c) => getBaseCardId(c.id) === baseId) || card
+      setSelectedCard(originalCard)
+      setIsModalOpen(true)
+      hoverTimeoutRef.current.delete(baseId)
+    }, 800)
+    
+    hoverTimeoutRef.current.set(baseId, timeout)
+  }, [isMobile, originalCards])
+
+  // Handler para cuando se sale del hover
+  const handleCardHoverEnd = useCallback((card: Card) => {
+    if (!isMobile) return
+    
+    const baseId = getBaseCardId(card.id)
+    const timeout = hoverTimeoutRef.current.get(baseId)
+    if (timeout) {
+      clearTimeout(timeout)
+      hoverTimeoutRef.current.delete(baseId)
+    }
+  }, [isMobile])
+
+  // Limpiar timeouts al desmontar
+  useEffect(() => {
+    return () => {
+      hoverTimeoutRef.current.forEach((timeout) => clearTimeout(timeout))
+      hoverTimeoutRef.current.clear()
+    }
+  }, [])
 
   const handleCardClick = useCallback((card: Card, displayedCard?: Card) => {
     // Si se pasa displayedCard, usar esa (puede ser alternativa)
@@ -187,6 +243,8 @@ export function CardsPanel({
                         canAddMore={canAddMore}
                         onCardClick={() => handleCardClick(card, cardToDisplay)}
                         onCardRightClick={(e) => handleCardRightClick(e, card)}
+                        onCardHover={isMobile ? () => handleCardHover(card) : undefined}
+                        onCardHoverEnd={isMobile ? () => handleCardHoverEnd(card) : undefined}
                       />
                     )
                   })}
