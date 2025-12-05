@@ -34,6 +34,7 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess, toastError } from "@/lib/toast"
+import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings"
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -48,6 +49,7 @@ interface DeckFilters {
 export default function MisFavoritosPage() {
   const { user } = useAuth()
   const [favoriteDecks, setFavoriteDecks] = useState<SavedDeck[]>([])
+  const { setting: bannerSetting } = useBannerSettings("favoritos")
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const [sortBy, setSortBy] = useState<SortBy>("date")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -490,14 +492,10 @@ export default function MisFavoritosPage() {
               return (
                 <Card key={deck.id} className="flex flex-col overflow-hidden group">
                   <div
-                    className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={{
-                      backgroundImage: `url(${deck.backgroundImage})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
+                    className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
+                    style={getBannerStyle(deck.backgroundImage, bannerSetting)}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -609,13 +607,14 @@ export default function MisFavoritosPage() {
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
-                      className="relative w-full sm:w-48 h-32 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
-                      style={{
-                        backgroundImage: `url(${deck.backgroundImage})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
-                    />
+                      className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
+                      style={getBannerStyle(deck.backgroundImage, bannerSetting)}
+                    >
+                      <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
+                      <div className="absolute bottom-2 left-2 right-2 z-10">
+                        <CardTitle className="text-white text-lg line-clamp-1 drop-shadow-lg">{deck.name}</CardTitle>
+                      </div>
+                    </div>
                     <div className="flex-1 p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">

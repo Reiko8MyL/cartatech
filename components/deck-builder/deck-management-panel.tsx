@@ -69,6 +69,7 @@ import { getAllCardsMetadata } from "@/lib/api/cards"
 import { DeckHeader } from "./deck-header"
 import { DeckStatsSection } from "./deck-stats-section"
 import { DeckActionsBar } from "./deck-actions-bar"
+import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings"
 
 /**
  * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
@@ -153,6 +154,8 @@ export function DeckManagementPanel({
   onCurrentDeckChange,
   cardReplacements,
 }: DeckManagementPanelProps) {
+  const { setting: bannerSetting } = useBannerSettings("deck-builder")
+  
   // Debug: Log cuando currentDeck cambia
   useEffect(() => {
     if (currentDeck) {
@@ -1503,14 +1506,10 @@ export function DeckManagementPanel({
                 >
                   {/* Imagen de fondo */}
                   <div
-                    className="relative h-20 overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={{
-                      backgroundImage: `url(${deck.backgroundImage})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
+                    className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
+                    style={getBannerStyle(deck.backgroundImage, bannerSetting)}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                    <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
                     
                     {/* Logo de edición */}
                     {deck.edition && EDITION_LOGOS[deck.edition] && (

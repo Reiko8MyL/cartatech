@@ -566,6 +566,25 @@ export default function AdminDashboardPage() {
                   </CardContent>
                 </Card>
               </Link>
+
+              {user?.role === "ADMIN" && (
+                <Link href="/admin/ajustar-banners">
+                  <Card className="hover:border-primary hover:shadow-md transition-all cursor-pointer h-full">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <FileText className="size-5" />
+                        Ajustar Banners
+                      </CardTitle>
+                      <CardDescription>
+                        Ajusta cómo se ven los banners de los deck panels
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ArrowUpRight className="size-4 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
             </div>
           </>
         )}
