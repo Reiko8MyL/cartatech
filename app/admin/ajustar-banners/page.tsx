@@ -552,7 +552,7 @@ export default function AjustarBannersPage() {
 
   // Generar estilo del banner para la vista previa
   const previewBannerStyle = {
-    backgroundImage: `url(${optimizeCloudinaryUrl(previewImage, deviceType)})`,
+    backgroundImage: `url(${previewImage ? optimizeCloudinaryUrl(previewImage, deviceType) : ''})`,
     backgroundPosition: `${localValues.backgroundPositionX}% ${localValues.backgroundPositionY}%`,
     backgroundSize: localValues.backgroundSize,
     height: `${localValues.height}px`,
