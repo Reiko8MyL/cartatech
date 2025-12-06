@@ -55,7 +55,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CardFormData {
   id: string;
@@ -121,6 +128,8 @@ export default function AgregarCartaPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [baseCardSearchQuery, setBaseCardSearchQuery] = useState("");
+  const [baseCardSelectorOpen, setBaseCardSelectorOpen] = useState(false);
 
   // Obtener cartas originales (no alternativas)
   const originalCards = useMemo(() => {
@@ -349,6 +358,25 @@ export default function AgregarCartaPage() {
       }))
       .sort((a, b) => a.id.localeCompare(b.id));
   }, [originalCards]);
+
+  // Filtrar cartas base según búsqueda
+  const filteredBaseCards = useMemo(() => {
+    if (!baseCardSearchQuery.trim()) return baseCardsOptions;
+    
+    const query = baseCardSearchQuery.toLowerCase();
+    return baseCardsOptions.filter(
+      (card) =>
+        card.id.toLowerCase().includes(query) ||
+        card.name.toLowerCase().includes(query)
+    );
+  }, [baseCardsOptions, baseCardSearchQuery]);
+
+  // Obtener el nombre de la carta base seleccionada
+  const selectedBaseCardName = useMemo(() => {
+    if (!formData.baseCardId) return "";
+    const card = baseCardsOptions.find((c) => c.id === formData.baseCardId);
+    return card ? `${card.id} - ${card.name}` : "";
+  }, [formData.baseCardId, baseCardsOptions]);
 
   // Filtrar cartas para búsqueda
   const filteredCards = useMemo(() => {
@@ -736,39 +764,93 @@ export default function AgregarCartaPage() {
                     <Label htmlFor="baseCardId">
                       Carta Base <span className="text-red-500">*</span>
                     </Label>
-                    <Select
-                      value={formData.baseCardId}
-                      onValueChange={(value) => {
-                        handleFieldChange("baseCardId", value);
-                        // Auto-calcular ID recomendado
-                        const baseId = value;
-                        const existingAlternatives = alternativeCards.filter(
-                          (card) => getBaseCardId(card.id) === baseId
-                        );
-                        const variantNumbers = existingAlternatives
-                          .map((card) => {
-                            const match = card.id.match(/^MYL-\d+-(\d+)$/);
-                            return match ? parseInt(match[1], 10) : 0;
-                          })
-                          .filter((num) => num > 0)
-                          .sort((a, b) => b - a);
-                        const nextVariant = variantNumbers.length > 0 ? variantNumbers[0] + 1 : 1;
-                        const recommendedId = `${baseId}-${nextVariant.toString().padStart(2, "0")}`;
-                        handleFieldChange("id", recommendedId);
-                      }}
-                      disabled={viewMode === "edit"}
-                    >
-                      <SelectTrigger className={errors.baseCardId ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Selecciona la carta base" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {baseCardsOptions.map((card) => (
-                          <SelectItem key={card.id} value={card.id}>
-                            {card.id} - {card.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={baseCardSelectorOpen} onOpenChange={setBaseCardSelectorOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={baseCardSelectorOpen}
+                          className={cn(
+                            "w-full justify-between",
+                            errors.baseCardId && "border-red-500",
+                            !formData.baseCardId && "text-muted-foreground"
+                          )}
+                          disabled={viewMode === "edit"}
+                        >
+                          {selectedBaseCardName || "Selecciona la carta base..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <div className="p-2 border-b">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Buscar por ID o nombre..."
+                              value={baseCardSearchQuery}
+                              onChange={(e) => setBaseCardSearchQuery(e.target.value)}
+                              className="pl-8"
+                            />
+                            {baseCardSearchQuery && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-2"
+                                onClick={() => setBaseCardSearchQuery("")}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {filteredBaseCards.length > 0 ? (
+                            filteredBaseCards.map((card) => (
+                              <button
+                                key={card.id}
+                                type="button"
+                                className={cn(
+                                  "w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-muted cursor-pointer",
+                                  formData.baseCardId === card.id && "bg-muted"
+                                )}
+                                onClick={() => {
+                                  handleFieldChange("baseCardId", card.id);
+                                  // Auto-calcular ID recomendado
+                                  const baseId = card.id;
+                                  const existingAlternatives = alternativeCards.filter(
+                                    (altCard) => getBaseCardId(altCard.id) === baseId
+                                  );
+                                  const variantNumbers = existingAlternatives
+                                    .map((altCard) => {
+                                      const match = altCard.id.match(/^MYL-\d+-(\d+)$/);
+                                      return match ? parseInt(match[1], 10) : 0;
+                                    })
+                                    .filter((num) => num > 0)
+                                    .sort((a, b) => b - a);
+                                  const nextVariant = variantNumbers.length > 0 ? variantNumbers[0] + 1 : 1;
+                                  const recommendedId = `${baseId}-${nextVariant.toString().padStart(2, "0")}`;
+                                  handleFieldChange("id", recommendedId);
+                                  setBaseCardSelectorOpen(false);
+                                  setBaseCardSearchQuery("");
+                                }}
+                              >
+                                <span className="flex-1 text-left">
+                                  <span className="font-medium">{card.id}</span>
+                                  <span className="text-muted-foreground ml-2">{card.name}</span>
+                                </span>
+                                {formData.baseCardId === card.id && (
+                                  <Check className="h-4 w-4 text-primary" />
+                                )}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                              No se encontraron cartas
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     {errors.baseCardId && (
                       <p className="text-sm text-red-500">{errors.baseCardId}</p>
                     )}
