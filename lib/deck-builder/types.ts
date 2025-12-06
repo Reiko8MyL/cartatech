@@ -55,6 +55,12 @@ export const DECK_TAGS = [
   "Plaga",
   "Bonificadores",
   "Tech Rara",
+  "Tenpo",
+  "Rampeo",
+  "Arquetipo",
+  "Casual",
+  "Competitivo",
+  "For Fun",
 ] as const;
 
 export interface DeckFilters {

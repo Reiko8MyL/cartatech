@@ -473,90 +473,106 @@ function DeckBuilderContent() {
       />
       <main className="w-full h-[calc(100vh-4rem)] flex flex-col px-2 sm:px-4 lg:px-6 py-4">
         <h1 className="sr-only">Deck Builder - Constructor de Mazos</h1>
-        {/* Panel de filtros */}
-      <div className="mb-3">
-        <FiltersPanel
-          filters={filters}
-          onFiltersChange={setFilters}
-          availableEditions={availableEditions}
-          availableTypes={availableTypes}
-          availableRaces={availableRaces}
-          availableCosts={availableCosts}
-        />
-      </div>
+        
+        {/* Panel de filtros - Solo visible en móvil/tablet */}
+        <div className="mb-3 lg:hidden">
+          <FiltersPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            availableEditions={availableEditions}
+            availableTypes={availableTypes}
+            availableRaces={availableRaces}
+            availableCosts={availableCosts}
+          />
+        </div>
 
-      {/* Contenedor principal con dos paneles */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
-        {/* Panel izquierdo: Cartas disponibles */}
-        <ErrorBoundary>
-          <div className="border rounded-lg bg-card overflow-hidden">
-            {isLoadingCards ? (
-              <div className="h-full overflow-y-auto">
-                <CardGridSkeleton count={12} columns={6} />
+        {/* Contenedor principal con dos paneles */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
+          {/* Panel izquierdo: Filtros compactos (solo desktop) + Cartas disponibles */}
+          <div className="flex flex-col min-h-0">
+            {/* Panel de filtros compacto - Solo visible en desktop */}
+            <div className="hidden lg:block mb-3">
+              <FiltersPanel
+                filters={filters}
+                onFiltersChange={setFilters}
+                availableEditions={availableEditions}
+                availableTypes={availableTypes}
+                availableRaces={availableRaces}
+                availableCosts={availableCosts}
+              />
+            </div>
+            
+            {/* Panel de cartas */}
+            <ErrorBoundary>
+              <div className="flex-1 border rounded-lg bg-card overflow-hidden min-h-0">
+                {isLoadingCards ? (
+                  <div className="h-full overflow-y-auto">
+                    <CardGridSkeleton count={12} columns={6} />
+                  </div>
+                ) : (
+                  <div className="animate-in fade-in duration-300 h-full">
+                    <CardsPanel
+                      cards={filteredCards}
+                      deckCards={deckCards}
+                      onAddCard={addCardToDeck}
+                      onRemoveCard={removeCardFromDeck}
+                      onReplaceCard={replaceCardInDeck}
+                      deckFormat={deckFormat}
+                      cardReplacements={cardReplacements}
+                    />
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="animate-in fade-in duration-300 h-full">
-                <CardsPanel
-                  cards={filteredCards}
+            </ErrorBoundary>
+          </div>
+
+          {/* Panel derecho: Gestión del mazo - Se extiende desde arriba en desktop */}
+          <ErrorBoundary>
+            <div className="border rounded-lg bg-card overflow-hidden lg:h-full">
+              {isLoadingCards ? (
+                <div className="flex flex-col h-full p-4 space-y-4">
+                  <Skeleton className="h-8 w-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="h-9 w-full" />
+                    ))}
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-20" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-in fade-in duration-300 h-full">
+                  <DeckManagementPanel
+                  deckName={deckName}
+                  onDeckNameChange={setDeckName}
                   deckCards={deckCards}
+                  allCards={allCards}
+                  stats={deckStats}
+                  onClearDeck={clearDeck}
+                  onLoadDeck={loadDeck}
                   onAddCard={addCardToDeck}
                   onRemoveCard={removeCardFromDeck}
-                  onReplaceCard={replaceCardInDeck}
                   deckFormat={deckFormat}
+                  onDeckFormatChange={setDeckFormat}
+                  currentDeck={currentDeck}
+                  onCurrentDeckChange={setCurrentDeck}
                   cardReplacements={cardReplacements}
                 />
-              </div>
-            )}
-          </div>
-        </ErrorBoundary>
-
-        {/* Panel derecho: Gestión del mazo */}
-        <ErrorBoundary>
-          <div className="border rounded-lg bg-card overflow-hidden">
-            {isLoadingCards ? (
-              <div className="flex flex-col h-full p-4 space-y-4">
-                <Skeleton className="h-8 w-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-28" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton key={i} className="h-9 w-full" />
-                  ))}
-                </div>
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-5 w-20" />
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="animate-in fade-in duration-300 h-full">
-                <DeckManagementPanel
-                deckName={deckName}
-                onDeckNameChange={setDeckName}
-                deckCards={deckCards}
-                allCards={allCards}
-                stats={deckStats}
-                onClearDeck={clearDeck}
-                onLoadDeck={loadDeck}
-                onAddCard={addCardToDeck}
-                onRemoveCard={removeCardFromDeck}
-                deckFormat={deckFormat}
-                onDeckFormatChange={setDeckFormat}
-                currentDeck={currentDeck}
-                onCurrentDeckChange={setCurrentDeck}
-                cardReplacements={cardReplacements}
-              />
-              </div>
-            )}
-          </div>
-        </ErrorBoundary>
-      </div>
-    </main>
+              )}
+            </div>
+          </ErrorBoundary>
+        </div>
+      </main>
     </>
   )
 }
@@ -565,14 +581,23 @@ export default function DeckBuilderPage() {
   return (
     <Suspense fallback={
       <main className="w-full h-[calc(100vh-4rem)] flex flex-col px-2 sm:px-4 lg:px-6 py-4">
-        <div className="mb-3">
+        {/* Panel de filtros - Solo visible en móvil/tablet */}
+        <div className="mb-3 lg:hidden">
           <div className="h-20 bg-muted animate-pulse rounded-lg" />
         </div>
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
-          <div className="border rounded-lg bg-card overflow-hidden">
-            <CardGridSkeleton count={12} columns={6} />
+          {/* Panel izquierdo: Filtros compactos (solo desktop) + Cartas */}
+          <div className="flex flex-col min-h-0">
+            {/* Panel de filtros compacto - Solo visible en desktop */}
+            <div className="hidden lg:block mb-3">
+              <div className="h-20 bg-muted animate-pulse rounded-lg" />
+            </div>
+            <div className="flex-1 border rounded-lg bg-card overflow-hidden min-h-0">
+              <CardGridSkeleton count={12} columns={6} />
+            </div>
           </div>
-          <div className="border rounded-lg bg-card overflow-hidden p-4 space-y-4">
+          {/* Panel derecho: Gestión del mazo */}
+          <div className="border rounded-lg bg-card overflow-hidden lg:h-full p-4 space-y-4">
             <Skeleton className="h-8 w-full" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-24" />

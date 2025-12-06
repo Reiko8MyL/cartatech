@@ -60,7 +60,7 @@ export function DeckHeader({
   }
 
   return (
-    <div className="p-2 sm:p-3 lg:p-4 border-b space-y-3">
+    <div className="px-2 sm:px-3 lg:px-4 pt-2 sm:pt-3 lg:pt-4 pb-1.5 sm:pb-2 lg:pb-2.5 border-b space-y-2 sm:space-y-2.5">
       {/* Panel de mazo activo - solo se muestra cuando se está editando un mazo existente */}
       {currentDeck && currentDeck.id && (() => {
         const race = getDeckRace(currentDeck.cards, allCards)
@@ -166,7 +166,7 @@ export function DeckHeader({
       </div>
       
       {/* Selector de formato */}
-      <div className="space-y-1 sm:space-y-2">
+      <div className="space-y-0.5 sm:space-y-1">
         <div className="flex items-center justify-between">
           <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Formato</label>
           {currentDeck?.id && (
@@ -188,7 +188,7 @@ export function DeckHeader({
         >
           <ToggleGroupItem 
             value="RE" 
-            className="flex-1 rounded-r-none text-[10px] sm:text-sm py-1.5 sm:py-2"
+            className="flex-1 rounded-r-none text-[10px] sm:text-sm py-1 sm:py-1.5"
             disabled={!!currentDeck?.id}
           >
             <span className="hidden sm:inline">Racial Edición</span>
@@ -196,7 +196,7 @@ export function DeckHeader({
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="RL" 
-            className="flex-1 rounded-none border-x text-[10px] sm:text-sm py-1.5 sm:py-2"
+            className="flex-1 rounded-none border-x text-[10px] sm:text-sm py-1 sm:py-1.5"
             disabled={!!currentDeck?.id}
           >
             <span className="hidden sm:inline">Racial Libre</span>
@@ -204,7 +204,7 @@ export function DeckHeader({
           </ToggleGroupItem>
           <ToggleGroupItem 
             value="LI" 
-            className="flex-1 rounded-l-none text-[10px] sm:text-sm py-1.5 sm:py-2"
+            className="flex-1 rounded-l-none text-[10px] sm:text-sm py-1 sm:py-1.5"
             disabled={!!currentDeck?.id}
           >
             <span className="hidden sm:inline">Formato Libre</span>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
+import { AlertTriangle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { toastError } from "@/lib/toast"
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
+import { calculateDeckStats } from "@/lib/deck-builder/utils"
 
 interface SaveDeckModalProps {
   isOpen: boolean
@@ -76,6 +78,25 @@ export function SaveDeckModal({
     if (!techCardId || allCards.length === 0) return null
     return allCards.find((card) => card.id === techCardId) || null
   }, [techCardId, allCards])
+
+  // Calcular estadísticas del mazo
+  const deckStats = useMemo(() => {
+    if (deckCards.length === 0 || allCards.length === 0) {
+      return {
+        totalCards: 0,
+        totalCost: 0,
+        averageCost: 0,
+        cardsByType: {},
+        cardsByEdition: {},
+        hasOroIni: false,
+      }
+    }
+    return calculateDeckStats(deckCards, allCards)
+  }, [deckCards, allCards])
+
+  const totalCards = deckStats.totalCards
+  const aliadosCount = deckStats.cardsByType["Aliado"] || 0
+  const hasOroIni = deckStats.hasOroIni
 
   // Obtener todas las cartas únicas del mazo para el selector, ordenadas por tipo y coste
   const deckUniqueCards = useMemo(() => {
@@ -182,7 +203,7 @@ export function SaveDeckModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[85vh] sm:max-h-[90vh] overflow-y-auto top-[5%] sm:top-[50%] translate-y-0 sm:translate-y-[-50%]">
+      <DialogContent className="max-w-[95vw] sm:max-w-[1000px] lg:max-w-[1100px] max-h-[85vh] sm:max-h-[90vh] overflow-y-auto top-[5%] sm:top-[50%] translate-y-0 sm:translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>{existingDeck ? "Actualizar Mazo" : "Guardar Mazo"}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
@@ -192,164 +213,193 @@ export function SaveDeckModal({
             }
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
-          <div>
-            <Label htmlFor="deck-name" className="text-sm">Nombre del Mazo</Label>
-            <Input
-              id="deck-name"
-              value={deckName}
-              onChange={(e) => setDeckName(e.target.value)}
-              placeholder="Ingresa un nombre para tu mazo"
-              className="mt-1.5 sm:mt-2"
-              autoFocus
-            />
+        
+        {/* Total de cartas y alertas minimalistas */}
+        <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b flex-wrap">
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            Total de cartas: <span className="font-semibold text-foreground">{totalCards}</span>
           </div>
-
-          <div>
-            <Label htmlFor="deck-description" className="text-sm">Descripción (opcional)</Label>
-            <Textarea
-              id="deck-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe tu mazo, estrategia, o cualquier información relevante..."
-              className="mt-1.5 sm:mt-2"
-              rows={2}
-              style={{ minHeight: '60px' }}
-            />
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">Tags del Mazo</Label>
-            <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
-              {DECK_TAGS.map((tag) => (
-                <div key={tag} className="flex items-center space-x-1.5 sm:space-x-2">
-                  <Checkbox
-                    id={`tag-${tag}`}
-                    checked={tags.includes(tag)}
-                    onCheckedChange={() => {
-                      setTags((prev) => {
-                        if (prev.includes(tag)) {
-                          return prev.filter((t) => t !== tag)
-                        } else {
-                          return [...prev, tag]
-                        }
-                      })
-                    }}
-                  />
-                  <Label
-                    htmlFor={`tag-${tag}`}
-                    className="text-xs sm:text-sm font-normal leading-none cursor-pointer"
-                  >
-                    {tag}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="is-public"
-              checked={isPublic}
-              onCheckedChange={(checked) => setIsPublic(checked === true)}
-              className="mt-0.5"
-            />
-            <div className="space-y-0.5 sm:space-y-1">
-              <Label
-                htmlFor="is-public"
-                className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Publicar en la comunidad
-              </Label>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Al publicar, tu mazo será visible para todos los usuarios en "Mazos de la Comunidad"
-              </p>
-            </div>
-          </div>
-
-          {/* Selector de Banner */}
-          <div>
-            <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">Imagen de Fondo del Banner (opcional)</Label>
-            <Select
-              value={backgroundImage || "default"}
-              onValueChange={(value) => setBackgroundImage(value === "default" ? undefined : value)}
-            >
-              <SelectTrigger className="mt-1.5 sm:mt-2">
-                <SelectValue placeholder="Selecciona una imagen de fondo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Por defecto (según raza)</SelectItem>
-                {getAllBackgroundImages().map((img) => (
-                  <SelectItem key={img.id} value={img.url}>
-                    {img.race}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {backgroundImage && (
-              <div className="mt-2 relative w-full h-24 rounded-lg overflow-hidden border">
-                <Image
-                  src={backgroundImage}
-                  alt="Banner preview"
-                  fill
-                  className="object-cover"
-                  sizes="100vw"
-                />
+          <div className="flex items-center gap-3 flex-wrap">
+            {totalCards < 50 && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>Mazo incompleto ({totalCards}/50)</span>
+              </div>
+            )}
+            {aliadosCount < 16 && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>Mínimo de aliados: {aliadosCount}/16</span>
+              </div>
+            )}
+            {!hasOroIni && (
+              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>Falta Oro Inicial</span>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Selector de Carta Tech */}
-          <div>
-            <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">La Carta Tech (opcional)</Label>
-            {techCard ? (
-              <div className="flex items-center gap-2 mt-1.5 sm:mt-2 p-2 border rounded-lg bg-muted/50">
-                <div className="relative w-12 h-16 sm:w-14 sm:h-20 rounded overflow-hidden flex-shrink-0">
-                  {(() => {
-                    const optimizedImageUrl = optimizeCloudinaryUrl(techCard.image, deviceType)
-                    const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
-                    return (
-                      <Image
-                        src={optimizedImageUrl}
-                        alt={techCard.name}
-                        fill
-                        className="object-contain"
-                        sizes="56px"
-                        unoptimized={isOptimized}
-                      />
-                    )
-                  })()}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 lg:gap-6 py-1 sm:py-2">
+          {/* Columna izquierda: Campos principales */}
+          <div className="space-y-3 sm:space-y-4">
+            <div>
+              <Label htmlFor="deck-name" className="text-sm">Nombre del Mazo</Label>
+              <Input
+                id="deck-name"
+                value={deckName}
+                onChange={(e) => setDeckName(e.target.value)}
+                placeholder="Ingresa un nombre para tu mazo"
+                className="mt-1.5 sm:mt-2"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="deck-description" className="text-sm">Descripción (opcional)</Label>
+              <Textarea
+                id="deck-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe tu mazo, estrategia, o cualquier información relevante..."
+                className="mt-1.5 sm:mt-2"
+                rows={3}
+                style={{ minHeight: '80px' }}
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">Tags del Mazo</Label>
+              <div className="grid grid-cols-4 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
+                {DECK_TAGS.map((tag) => (
+                  <div key={tag} className="flex items-center space-x-1.5 sm:space-x-2">
+                    <Checkbox
+                      id={`tag-${tag}`}
+                      checked={tags.includes(tag)}
+                      onCheckedChange={() => {
+                        setTags((prev) => {
+                          if (prev.includes(tag)) {
+                            return prev.filter((t) => t !== tag)
+                          } else {
+                            return [...prev, tag]
+                          }
+                        })
+                      }}
+                    />
+                    <Label
+                      htmlFor={`tag-${tag}`}
+                      className="text-xs sm:text-sm font-normal leading-none cursor-pointer"
+                    >
+                      {tag}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is-public"
+                checked={isPublic}
+                onCheckedChange={(checked) => setIsPublic(checked === true)}
+                className="mt-0.5"
+              />
+              <div className="space-y-0.5 sm:space-y-1">
+                <Label
+                  htmlFor="is-public"
+                  className="text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Publicar en la comunidad
+                </Label>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Al publicar, tu mazo será visible para todos los usuarios en "Mazos de la Comunidad"
+                </p>
+              </div>
+            </div>
+
+            {/* Selector de Banner */}
+            <div>
+              <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">Imagen de Fondo del Banner (opcional)</Label>
+              <Select
+                value={backgroundImage || "default"}
+                onValueChange={(value) => setBackgroundImage(value === "default" ? undefined : value)}
+              >
+                <SelectTrigger className="mt-1.5 sm:mt-2">
+                  <SelectValue placeholder="Selecciona una imagen de fondo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Por defecto (según raza)</SelectItem>
+                  {getAllBackgroundImages().map((img) => (
+                    <SelectItem key={img.id} value={img.url}>
+                      {img.race}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {backgroundImage && (
+                <div className="mt-2 relative w-full h-32 rounded-lg overflow-hidden border">
+                  <Image
+                    src={backgroundImage}
+                    alt="Banner preview"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 800px"
+                  />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-semibold line-clamp-2">{techCard.name}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{techCard.type}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Columna derecha: Carta Tech */}
+          <div className="space-y-3 sm:space-y-4 lg:space-y-3">
+            {/* Selector de Carta Tech */}
+            <div>
+              <Label className="text-sm font-medium mb-1.5 sm:mb-2 block">La Carta Tech (opcional)</Label>
+              {techCard ? (
+                <div className="flex flex-col gap-2 mt-1.5 sm:mt-2 p-2 border rounded-lg bg-muted/50">
+                  <div className="relative w-40 h-56 lg:w-48 lg:h-[268px] mx-auto rounded overflow-hidden">
+                    {(() => {
+                      const optimizedImageUrl = optimizeCloudinaryUrl(techCard.image, deviceType)
+                      const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                      return (
+                        <Image
+                          src={optimizedImageUrl}
+                          alt={techCard.name}
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 1024px) 160px, 192px"
+                          unoptimized={isOptimized}
+                        />
+                      )
+                    })()}
+                  </div>
+                  <div className="flex-1 min-w-0 text-center">
+                    <p className="text-xs font-semibold line-clamp-2">{techCard.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{techCard.type}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveTechCard}
+                    className="w-full h-7 text-xs"
+                  >
+                    Eliminar carta tech
+                  </Button>
                 </div>
+              ) : (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemoveTechCard}
-                  className="h-7 w-7 p-0 flex-shrink-0"
+                  variant="outline"
+                  onClick={() => setTechCardSelectorOpen(true)}
+                  className="w-full mt-1.5 sm:mt-2 text-xs sm:text-sm h-9 sm:h-10"
+                  disabled={deckUniqueCards.length === 0}
                 >
-                  <span className="sr-only">Eliminar carta tech</span>
-                  ×
+                  {deckUniqueCards.length === 0 ? "Agrega cartas al mazo primero" : "Seleccionar La Carta Tech"}
                 </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setTechCardSelectorOpen(true)}
-                className="w-full mt-1.5 sm:mt-2 text-xs sm:text-sm h-9 sm:h-10"
-                disabled={deckUniqueCards.length === 0}
-              >
-                {deckUniqueCards.length === 0 ? "Agrega cartas al mazo primero" : "Seleccionar La Carta Tech"}
-              </Button>
-            )}
-          </div>
-
-          <div className="text-xs sm:text-sm text-muted-foreground">
-            <p>Total de cartas: {deckCards.reduce((sum, dc) => sum + dc.quantity, 0)}</p>
+              )}
+            </div>
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
