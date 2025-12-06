@@ -70,7 +70,7 @@ import { DeckHeader } from "./deck-header"
 import { DeckStatsSection } from "./deck-stats-section"
 import { DeckActionsBar } from "./deck-actions-bar"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
-import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 /**
  * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
@@ -1461,7 +1461,7 @@ export function DeckManagementPanel({
                               <div
                                 className="absolute inset-0"
                                 style={{
-                                  backgroundImage: `url(${card.image})`,
+                                  backgroundImage: `url(${optimizeCloudinaryUrl(card.image, deviceType)})`,
                                   backgroundPosition: `center ${getCardBackgroundPositionY(card, cardMetadataMap)}`,
                                   backgroundSize: "135% auto",
                                   backgroundRepeat: "no-repeat",

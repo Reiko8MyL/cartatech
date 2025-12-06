@@ -1554,15 +1554,22 @@ export default function ViewDeckPage() {
                 {techCard ? (
                   <div className="relative group w-full flex flex-col items-center sm:items-start">
                     <div className="relative aspect-[63/88] rounded-lg overflow-hidden border-2 border-primary/50 bg-card shadow-lg max-w-[160px] w-full mx-auto sm:mx-0">
-                      <Image
-                        src={techCard.image}
-                        alt={techCard.name}
-                        fill
-                        className="object-contain p-2"
-                        sizes="160px"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      {(() => {
+                        const optimizedImageUrl = optimizeCloudinaryUrl(techCard.image, deviceType)
+                        const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                        return (
+                          <Image
+                            src={optimizedImageUrl}
+                            alt={techCard.name}
+                            fill
+                            className="object-contain p-2"
+                            sizes="160px"
+                            loading="lazy"
+                            decoding="async"
+                            unoptimized={isOptimized}
+                          />
+                        )
+                      })()}
                       {/* Efecto de brillo especial */}
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
@@ -1810,15 +1817,22 @@ export default function ViewDeckPage() {
                                     : "border-border hover:border-primary/50 hover:scale-105"
                                 }`}
                               >
-                                <Image
-                                  src={card.image}
-                                  alt={card.name}
-                                  fill
-                                  className="object-contain p-1"
-                                  sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
-                                  loading="lazy"
-                                  decoding="async"
-                                />
+                                {(() => {
+                                  const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+                                  const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                  return (
+                                    <Image
+                                      src={optimizedImageUrl}
+                                      alt={card.name}
+                                      fill
+                                      className="object-contain p-1"
+                                      sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
+                                      loading="lazy"
+                                      decoding="async"
+                                      unoptimized={isOptimized}
+                                    />
+                                  )
+                                })()}
                                 {isSelected && (
                                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                                     <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">

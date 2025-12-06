@@ -1,8 +1,12 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import type { Card } from "@/lib/deck-builder/types"
 import { Card as CardComponent } from "@/components/ui/card"
 import Image from "next/image"
 import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
 import { EDITION_ORDER } from "@/lib/deck-builder/types"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface BanListSectionProps {
   title: string
@@ -42,6 +46,18 @@ export function BanListSection({
   badgeColor,
   badgeText,
 }: BanListSectionProps) {
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
+
   const cardsByEdition = groupCardsByEdition(cards)
   
   // Ordenar las ediciones según el orden definido
@@ -79,13 +95,20 @@ export function BanListSection({
                 <div className="flex items-center gap-3 border-b border-border pb-2">
                   {editionLogo && (
                     <div className="relative h-12 w-12 sm:h-14 sm:w-14">
-                      <Image
-                        src={editionLogo}
-                        alt={edition}
-                        fill
-                        className="object-contain rounded-full"
-                        sizes="(max-width: 640px) 48px, 56px"
-                      />
+                      {(() => {
+                        const optimizedLogoUrl = optimizeCloudinaryUrl(editionLogo, deviceType)
+                        const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                        return (
+                          <Image
+                            src={optimizedLogoUrl}
+                            alt={edition}
+                            fill
+                            className="object-contain rounded-full"
+                            sizes="(max-width: 640px) 48px, 56px"
+                            unoptimized={isOptimized}
+                          />
+                        )
+                      })()}
                     </div>
                   )}
                   <h3 className="text-lg font-semibold">{edition}</h3>
@@ -95,20 +118,25 @@ export function BanListSection({
                 </div>
                 
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
-                  {editionCards.map((card) => (
-                    <div
-                      key={card.id}
-                      className="group relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-card transition-transform hover:scale-105"
-                    >
-                      <Image
-                        src={card.image}
-                        alt={card.name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, (max-width: 1280px) 16vw, 12vw"
-                      />
-                    </div>
-                  ))}
+                  {editionCards.map((card) => {
+                    const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+                    const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                    return (
+                      <div
+                        key={card.id}
+                        className="group relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-card transition-transform hover:scale-105"
+                      >
+                        <Image
+                          src={optimizedImageUrl}
+                          alt={card.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, (max-width: 1280px) 16vw, 12vw"
+                          unoptimized={isOptimized}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )

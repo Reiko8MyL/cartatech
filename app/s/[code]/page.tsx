@@ -12,3 +12,4 @@ export default async function ShareCodePage({ params }: PageProps) {
   redirect(apiUrl)
 }
 
+

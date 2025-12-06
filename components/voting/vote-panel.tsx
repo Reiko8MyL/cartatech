@@ -10,6 +10,7 @@ import { saveVoteToStorage, getRaceVotingData, getRaceVotingDataFromStorage } fr
 import Image from "next/image"
 import { CheckCircle2, Search, X, Grid3x3, List } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface VotePanelProps {
   race: string
@@ -24,6 +25,17 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
   const [data, setData] = useState<RaceVotingData>(initialData)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
 
   const refreshData = useCallback(async () => {
     try {
@@ -164,13 +176,20 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                       {selectedAlly ? (
                         <div className="flex items-center gap-3 w-full">
                           <div className="relative aspect-[63/88] w-14 h-20 flex-shrink-0 rounded overflow-hidden border border-border">
-                            <Image
-                              src={selectedAlly.image}
-                              alt={selectedAlly.name}
-                              fill
-                              className="object-contain"
-                              sizes="56px"
-                            />
+                            {(() => {
+                              const optimizedImageUrl = optimizeCloudinaryUrl(selectedAlly.image, deviceType)
+                              const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                              return (
+                                <Image
+                                  src={optimizedImageUrl}
+                                  alt={selectedAlly.name}
+                                  fill
+                                  className="object-contain"
+                                  sizes="56px"
+                                  unoptimized={isOptimized}
+                                />
+                              )
+                            })()}
                           </div>
                           <div className="flex-1 text-left min-w-0">
                             <div className="font-medium truncate">{selectedAlly.name}</div>
@@ -197,13 +216,20 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                           >
                             <div className="flex items-center gap-3 w-full">
                               <div className="relative aspect-[63/88] w-12 h-16 flex-shrink-0 rounded overflow-hidden border border-border">
-                                <Image
-                                  src={ally.image}
-                                  alt={ally.name}
-                                  fill
-                                  className="object-contain"
-                                  sizes="48px"
-                                />
+                                {(() => {
+                                  const optimizedImageUrl = optimizeCloudinaryUrl(ally.image, deviceType)
+                                  const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                  return (
+                                    <Image
+                                      src={optimizedImageUrl}
+                                      alt={ally.name}
+                                      fill
+                                      className="object-contain"
+                                      sizes="48px"
+                                      unoptimized={isOptimized}
+                                    />
+                                  )
+                                })()}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium truncate">{ally.name}</div>
@@ -253,16 +279,23 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                               )}
                               aria-label={`Seleccionar ${ally.name}`}
                             >
-                              <Image
-                                src={ally.image}
-                                alt={ally.name}
-                                fill
-                                className={cn(
-                                  "object-contain transition-opacity",
-                                  isSelected ? "opacity-100" : "opacity-90 group-hover:opacity-100"
-                                )}
-                                sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 15vw"
-                              />
+                              {(() => {
+                                const optimizedImageUrl = optimizeCloudinaryUrl(ally.image, deviceType)
+                                const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                return (
+                                  <Image
+                                    src={optimizedImageUrl}
+                                    alt={ally.name}
+                                    fill
+                                    className={cn(
+                                      "object-contain transition-opacity",
+                                      isSelected ? "opacity-100" : "opacity-90 group-hover:opacity-100"
+                                    )}
+                                    sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 15vw"
+                                    unoptimized={isOptimized}
+                                  />
+                                )
+                              })()}
                               {isSelected && (
                                 <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
                               )}
@@ -300,17 +333,22 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                 <div className="text-xs text-muted-foreground mb-2 font-medium">Tu voto:</div>
                 <div className="flex items-center gap-3">
                   <div className="relative aspect-[63/88] w-16 flex-shrink-0 rounded overflow-hidden border border-primary">
-                    <Image
-                      src={
-                        data.allies.find((a) => a.id === data.userVote)?.image || ""
-                      }
-                      alt={
-                        data.allies.find((a) => a.id === data.userVote)?.name || ""
-                      }
-                      fill
-                      className="object-contain"
-                      sizes="64px"
-                    />
+                    {(() => {
+                      const userVoteAlly = data.allies.find((a) => a.id === data.userVote)
+                      if (!userVoteAlly) return null
+                      const optimizedImageUrl = optimizeCloudinaryUrl(userVoteAlly.image, deviceType)
+                      const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                      return (
+                        <Image
+                          src={optimizedImageUrl}
+                          alt={userVoteAlly.name}
+                          fill
+                          className="object-contain"
+                          sizes="64px"
+                          unoptimized={isOptimized}
+                        />
+                      )
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm sm:text-base truncate">
@@ -333,15 +371,20 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="relative aspect-[63/88] w-12 h-16 flex-shrink-0 rounded overflow-hidden border border-border">
-                          {ally && (
-                            <Image
-                              src={ally.image}
-                              alt={ally.name}
-                              fill
-                              className="object-contain"
-                              sizes="48px"
-                            />
-                          )}
+                          {ally && (() => {
+                            const optimizedImageUrl = optimizeCloudinaryUrl(ally.image, deviceType)
+                            const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                            return (
+                              <Image
+                                src={optimizedImageUrl}
+                                alt={ally.name}
+                                fill
+                                className="object-contain"
+                                sizes="48px"
+                                unoptimized={isOptimized}
+                              />
+                            )
+                          })()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-xs sm:text-sm truncate">

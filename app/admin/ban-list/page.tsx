@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { AdminGuard } from "@/components/admin/admin-guard";
 import { useAuth } from "@/contexts/auth-context";
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils";
 import {
   Card,
   CardContent,
@@ -67,8 +68,19 @@ export default function AdminBanListPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addSearchTerm, setAddSearchTerm] = useState("");
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   // Cargar todas las cartas desde la API con cache para el diálogo de agregar
   const { cards: allCardsData } = useCards(false);
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
 
   async function loadBanList() {
     if (!user?.id) {
@@ -433,13 +445,20 @@ export default function AdminBanListPage() {
                           >
                             {/* Imagen de la carta */}
                             <div className="relative aspect-[63/88] w-full">
-                              <Image
-                                src={card.image}
-                                alt={card.name}
-                                fill
-                                className="object-contain"
-                                sizes="(max-width: 768px) 33vw, 20vw"
-                              />
+                              {(() => {
+                                const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+                                const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                return (
+                                  <Image
+                                    src={optimizedImageUrl}
+                                    alt={card.name}
+                                    fill
+                                    className="object-contain"
+                                    sizes="(max-width: 768px) 33vw, 20vw"
+                                    unoptimized={isOptimized}
+                                  />
+                                )
+                              })()}
                               {/* Overlay con información */}
                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col justify-end p-2">
                                 <div className="text-white">
@@ -576,13 +595,20 @@ export default function AdminBanListPage() {
                       onClick={() => handleAddCard(card)}
                       className="relative aspect-[63/88] rounded-lg overflow-hidden border-2 border-border hover:border-primary hover:scale-105 transition-all"
                     >
-                      <Image
-                        src={card.image}
-                        alt={card.name}
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 768px) 33vw, 20vw"
-                      />
+                      {(() => {
+                        const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+                        const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                        return (
+                          <Image
+                            src={optimizedImageUrl}
+                            alt={card.name}
+                            fill
+                            className="object-contain"
+                            sizes="(max-width: 768px) 33vw, 20vw"
+                            unoptimized={isOptimized}
+                          />
+                        )
+                      })()}
                       <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-xs p-1 truncate">
                         {card.name}
                       </div>

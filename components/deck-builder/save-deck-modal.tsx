@@ -27,6 +27,7 @@ import { DECK_TAGS } from "@/lib/deck-builder/types"
 import { useAuth } from "@/contexts/auth-context"
 import { toastError } from "@/lib/toast"
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface SaveDeckModalProps {
   isOpen: boolean
@@ -50,6 +51,7 @@ export function SaveDeckModal({
   allCards,
 }: SaveDeckModalProps) {
   const { user } = useAuth()
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
   // Pre-llenar campos con datos del mazo existente si se está editando
   const [deckName, setDeckName] = useState(existingDeck?.name || initialName)
   const [description, setDescription] = useState(existingDeck?.description || "")
@@ -58,6 +60,16 @@ export function SaveDeckModal({
   const [techCardId, setTechCardId] = useState<string | undefined>(existingDeck?.techCardId)
   const [techCardSelectorOpen, setTechCardSelectorOpen] = useState(false)
   const [backgroundImage, setBackgroundImage] = useState<string | undefined>(existingDeck?.backgroundImage)
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
   
   // Obtener la carta tech seleccionada
   const techCard = useMemo(() => {
@@ -293,13 +305,20 @@ export function SaveDeckModal({
             {techCard ? (
               <div className="flex items-center gap-2 mt-1.5 sm:mt-2 p-2 border rounded-lg bg-muted/50">
                 <div className="relative w-12 h-16 sm:w-14 sm:h-20 rounded overflow-hidden flex-shrink-0">
-                  <Image
-                    src={techCard.image}
-                    alt={techCard.name}
-                    fill
-                    className="object-contain"
-                    sizes="56px"
-                  />
+                  {(() => {
+                    const optimizedImageUrl = optimizeCloudinaryUrl(techCard.image, deviceType)
+                    const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                    return (
+                      <Image
+                        src={optimizedImageUrl}
+                        alt={techCard.name}
+                        fill
+                        className="object-contain"
+                        sizes="56px"
+                        unoptimized={isOptimized}
+                      />
+                    )
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs sm:text-sm font-semibold line-clamp-2">{techCard.name}</p>
@@ -386,13 +405,20 @@ export function SaveDeckModal({
                                   : "border-border hover:border-primary/50 hover:scale-105"
                               }`}
                             >
-                              <Image
-                                src={card.image}
-                                alt={card.name}
-                                fill
-                                className="object-contain p-1"
-                                sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
-                              />
+                              {(() => {
+                                const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
+                                const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                return (
+                                  <Image
+                                    src={optimizedImageUrl}
+                                    alt={card.name}
+                                    fill
+                                    className="object-contain p-1"
+                                    sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 16vw"
+                                    unoptimized={isOptimized}
+                                  />
+                                )
+                              })()}
                               {isSelected && (
                                 <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                                   <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
