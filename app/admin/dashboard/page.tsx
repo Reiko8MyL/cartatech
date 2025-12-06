@@ -42,6 +42,7 @@ import Image from "next/image";
 import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-banner-settings";
 import { useDeviceType } from "@/hooks/use-banner-settings";
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils";
+import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils";
 
 interface AdminStats {
   totalUsers: number;
@@ -440,14 +441,21 @@ export default function AdminDashboardPage() {
                             {/* Imagen de la carta */}
                             {deck.cardImage ? (
                               <div className="relative size-16 rounded-lg overflow-hidden border border-border shrink-0 bg-muted">
-                                <Image
-                                  src={deck.cardImage}
-                                  alt={deck.cardName || "Carta del mazo"}
-                                  fill
-                                  className="object-contain p-1"
-                                  sizes="64px"
-                                  loading="lazy"
-                                />
+                                {(() => {
+                                  const optimizedImageUrl = optimizeCloudinaryUrl(deck.cardImage, deviceType)
+                                  const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                  return (
+                                    <Image
+                                      src={optimizedImageUrl}
+                                      alt={deck.cardName || "Carta del mazo"}
+                                      fill
+                                      className="object-contain p-1"
+                                      sizes="64px"
+                                      loading="lazy"
+                                      unoptimized={isOptimized}
+                                    />
+                                  )
+                                })()}
                               </div>
                             ) : (
                               <div className="size-16 rounded-lg border border-border bg-muted flex items-center justify-center shrink-0">
