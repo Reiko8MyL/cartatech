@@ -1967,13 +1967,20 @@ export default function ViewDeckPage() {
                 </Select>
                 {selectedBackgroundImage && (
                   <div className="mt-2 relative w-full h-24 rounded-lg overflow-hidden border">
-                    <Image
-                      src={selectedBackgroundImage}
-                      alt="Banner preview"
-                      fill
-                      className="object-cover"
-                      sizes="100vw"
-                    />
+                    {(() => {
+                      const optimizedImageUrl = optimizeCloudinaryUrl(selectedBackgroundImage, deviceType, true) // isBanner=true
+                      const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                      return (
+                        <Image
+                          src={optimizedImageUrl}
+                          alt="Banner preview"
+                          fill
+                          className="object-cover"
+                          sizes="100vw"
+                          unoptimized={isOptimized}
+                        />
+                      )
+                    })()}
                   </div>
                 )}
               </div>
