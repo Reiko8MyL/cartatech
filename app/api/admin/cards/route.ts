@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar cost y power según el tipo
-    // Cost: requerido para Aliado y Arma, no permitido para Tótem, Talismán y Oro
-    if (card.type === "Oro" || card.type === "Tótem" || card.type === "Talismán") {
+    // Cost: requerido para Aliado, Arma, Tótem y Talismán, no permitido para Oro
+    if (card.type === "Oro") {
       if (card.cost !== null && card.cost !== undefined) {
         return NextResponse.json(
           { error: `${card.type} no puede tener cost` },
@@ -469,8 +469,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validar cost y power según el tipo
-    // Cost: requerido para Aliado y Arma, no permitido para Tótem, Talismán y Oro
-    if (card.type === "Oro" || card.type === "Tótem" || card.type === "Talismán") {
+    // Cost: requerido para Aliado, Arma, Tótem y Talismán, no permitido para Oro
+    if (card.type === "Oro") {
       if (card.cost !== null && card.cost !== undefined) {
         return NextResponse.json(
           { error: `${card.type} no puede tener cost` },

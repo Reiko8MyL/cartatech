@@ -233,17 +233,18 @@ export default function AgregarCartaPage() {
       return null;
     };
 
-    // Cost: requerido para Aliado y Arma, no permitido para Tótem, Talismán y Oro
+    // Cost: requerido para Aliado, Arma, Tótem y Talismán, no permitido para Oro
     rules.cost = (value: string) => {
-      if (formData.type === "Aliado" || formData.type === "Arma") {
-        if (!value.trim()) return "Cost es requerido para este tipo";
-        const num = parseInt(value, 10);
-        if (isNaN(num) || num < 0) return "Cost debe ser un número >= 0";
-      } else if (
-        formData.type === "Oro" ||
+      if (
+        formData.type === "Aliado" ||
+        formData.type === "Arma" ||
         formData.type === "Tótem" ||
         formData.type === "Talismán"
       ) {
+        if (!value.trim()) return "Cost es requerido para este tipo";
+        const num = parseInt(value, 10);
+        if (isNaN(num) || num < 0) return "Cost debe ser un número >= 0";
+      } else if (formData.type === "Oro") {
         if (value.trim()) return `${formData.type} no puede tener cost`;
       }
       return null;
@@ -433,9 +434,7 @@ export default function AgregarCartaPage() {
         name: formData.name.trim(),
         type: formData.type,
         cost:
-          formData.type === "Oro" ||
-          formData.type === "Tótem" ||
-          formData.type === "Talismán"
+          formData.type === "Oro"
             ? null
             : formData.cost
             ? parseInt(formData.cost, 10)
@@ -574,9 +573,13 @@ export default function AgregarCartaPage() {
 
   // Determinar qué campos mostrar según el tipo
   // Aliados: coste, fuerza, raza
-  // Arma: coste (solo)
-  // Tótem, Talismán, Oro: ninguno
-  const showCost = formData.type === "Aliado" || formData.type === "Arma";
+  // Arma, Tótem, Talismán: coste (solo)
+  // Oro: ninguno
+  const showCost =
+    formData.type === "Aliado" ||
+    formData.type === "Arma" ||
+    formData.type === "Tótem" ||
+    formData.type === "Talismán";
   const showPower = formData.type === "Aliado";
   const showRace = formData.type === "Aliado";
 
@@ -836,11 +839,7 @@ export default function AgregarCartaPage() {
                       onValueChange={(value) => {
                         handleFieldChange("type", value);
                         // Limpiar campos que no aplican al nuevo tipo
-                        if (
-                          value === "Oro" ||
-                          value === "Tótem" ||
-                          value === "Talismán"
-                        ) {
+                        if (value === "Oro") {
                           handleFieldChange("cost", "");
                         }
                         if (
