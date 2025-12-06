@@ -657,7 +657,7 @@ function MazosComunidadPage() {
                     return (
                   <div
                         className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                        style={getBannerStyle(backgroundImage, deckBannerSetting)}
+                        style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType)}
                   >
                         <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">

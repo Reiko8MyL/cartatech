@@ -525,7 +525,7 @@ export default function AdminDashboardPage() {
                             <>
                               <div
                                 className="absolute inset-0 z-0"
-                                style={getBannerStyle(bannerImage, cardBannerSettings["agregar-carta"])}
+                                style={getBannerStyle(bannerImage, cardBannerSettings["agregar-carta"], deviceType)}
                               />
                               <div
                                 className="absolute inset-0 z-0"
@@ -563,7 +563,7 @@ export default function AdminDashboardPage() {
                             <>
                               <div
                                 className="absolute inset-0 z-0"
-                                style={getBannerStyle(bannerImage, cardBannerSettings["ban-list"])}
+                                style={getBannerStyle(bannerImage, cardBannerSettings["ban-list"], deviceType)}
                               />
                               <div
                                 className="absolute inset-0 z-0"
@@ -601,7 +601,7 @@ export default function AdminDashboardPage() {
                             <>
                               <div
                                 className="absolute inset-0 z-0"
-                                style={getBannerStyle(bannerImage, cardBannerSettings["gestionar-usuarios"])}
+                                style={getBannerStyle(bannerImage, cardBannerSettings["gestionar-usuarios"], deviceType)}
                               />
                               <div
                                 className="absolute inset-0 z-0"
@@ -646,7 +646,7 @@ export default function AdminDashboardPage() {
                         <>
                           <div
                             className="absolute inset-0 z-0"
-                            style={getBannerStyle(bannerImage, cardBannerSettings["ajustar-cartas"])}
+                            style={getBannerStyle(bannerImage, cardBannerSettings["ajustar-cartas"], deviceType)}
                           />
                           <div
                             className="absolute inset-0 z-0"
@@ -685,7 +685,7 @@ export default function AdminDashboardPage() {
                           <>
                             <div
                               className="absolute inset-0 z-0"
-                              style={getBannerStyle(bannerImage, cardBannerSettings["ajustar-banners"])}
+                              style={getBannerStyle(bannerImage, cardBannerSettings["ajustar-banners"], deviceType)}
                             />
                             <div
                               className="absolute inset-0 z-0"

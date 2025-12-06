@@ -205,7 +205,8 @@ export function useBannerSettings(
  */
 export function getBannerStyle(
   backgroundImage: string,
-  setting: BannerSetting | null
+  setting: BannerSetting | null,
+  deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop'
 ): React.CSSProperties {
   const defaultSetting: BannerSetting = {
     context: "default",
@@ -219,8 +220,15 @@ export function getBannerStyle(
 
   const s = setting || defaultSetting;
 
+  // Optimizar URL de Cloudinary si es necesario
+  let optimizedImage = backgroundImage;
+  if (backgroundImage && backgroundImage.includes('res.cloudinary.com')) {
+    const { optimizeCloudinaryUrl } = require('@/lib/deck-builder/cloudinary-utils');
+    optimizedImage = optimizeCloudinaryUrl(backgroundImage, deviceType);
+  }
+
   return {
-    backgroundImage: `url(${backgroundImage})`,
+    backgroundImage: `url(${optimizedImage})`,
     backgroundPosition: `${s.backgroundPositionX}% ${s.backgroundPositionY}%`,
     backgroundSize: s.backgroundSize,
     height: `${s.height}px`,

@@ -13,6 +13,7 @@ import { useCards } from "@/hooks/use-cards"
 import type { DeckFormat } from "@/lib/deck-builder/types"
 import { Eye, Calendar, Heart, Globe, User, ArrowLeft } from "lucide-react"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
+import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 export default function UserProfilePage() {
   const params = useParams()
@@ -21,9 +22,20 @@ export default function UserProfilePage() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
   
   // Cargar todas las cartas desde la API con cache
   const { cards: allCards } = useCards(false)
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
 
   useEffect(() => {
     if (username) {
@@ -174,7 +186,7 @@ export default function UserProfilePage() {
                     <div
                       className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
                       style={{
-                        backgroundImage: `url(${backgroundImage})`,
+                        backgroundImage: `url(${optimizeCloudinaryUrl(backgroundImage, deviceType)})`,
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                       }}

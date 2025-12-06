@@ -26,6 +26,7 @@ import { getDeckBackgroundImage, EDITION_LOGOS, getDeckFormatName } from "@/lib/
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils";
 import Image from "next/image";
 import { Checkbox } from "@/components/ui/checkbox";
+import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils";
 
 const CONTEXT_LABELS: Record<string, string> = {
   "mis-mazos": "Mis Mazos",
@@ -72,12 +73,23 @@ export default function AjustarBannersPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   
   // Selectores
   const [selectedContexts, setSelectedContexts] = useState<string[]>(["mis-mazos"]);
   const [selectedViewMode, setSelectedViewMode] = useState<string>("grid");
   const [selectedDevice, setSelectedDevice] = useState<string>("desktop");
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth));
+    }
+    updateDeviceType();
+    window.addEventListener('resize', updateDeviceType);
+    return () => window.removeEventListener('resize', updateDeviceType);
+  }, []);
   
   // Para compatibilidad, usar el primer contexto seleccionado para cargar ajustes
   const selectedContext = selectedContexts[0] || "mis-mazos";
@@ -540,7 +552,7 @@ export default function AjustarBannersPage() {
 
   // Generar estilo del banner para la vista previa
   const previewBannerStyle = {
-    backgroundImage: `url(${previewImage})`,
+    backgroundImage: `url(${optimizeCloudinaryUrl(previewImage, deviceType)})`,
     backgroundPosition: `${localValues.backgroundPositionX}% ${localValues.backgroundPositionY}%`,
     backgroundSize: localValues.backgroundSize,
     height: `${localValues.height}px`,

@@ -523,7 +523,7 @@ export default function MisFavoritosPage() {
                 <Card key={deck.id} className="flex flex-col overflow-hidden group">
                   <div
                     className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={getBannerStyle(backgroundImage, deckBannerSetting)}
+                    style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType)}
                   >
                     <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
@@ -652,7 +652,7 @@ export default function MisFavoritosPage() {
                   <div className="flex flex-col sm:flex-row">
                     <div
                       className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
-                      style={getBannerStyle(backgroundImage, deckBannerSetting)}
+                      style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType)}
                     >
                       <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">

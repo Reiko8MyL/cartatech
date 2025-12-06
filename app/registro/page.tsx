@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -11,10 +11,12 @@ import { Eye, EyeOff, Info } from "lucide-react"
 import { getTemporaryDeck } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { Spinner } from "@/components/ui/spinner"
+import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 export default function RegistroPage() {
   const router = useRouter()
   const { register } = useAuth()
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -29,6 +31,16 @@ export default function RegistroPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
 
   // Cargar cartas para contar (incluyendo alternativas)
   const { cards: allCards } = useCards(true)
@@ -107,7 +119,7 @@ export default function RegistroPage() {
       <div 
         className="hidden lg:flex lg:w-2/5 p-8 lg:p-12 flex-col justify-between relative overflow-hidden"
         style={{
-          backgroundImage: 'url(https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435879/FONDO_WEBPP_etcgej.webp)',
+          backgroundImage: `url(${optimizeCloudinaryUrl('https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435879/FONDO_WEBPP_etcgej.webp', deviceType)})`,
           backgroundSize: 'cover',
           backgroundPosition: 'right center',
           backgroundRepeat: 'no-repeat',

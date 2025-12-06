@@ -1330,7 +1330,7 @@ export default function ViewDeckPage() {
         {/* Hero Section con imagen de fondo */}
         <div
           className="relative rounded-lg overflow-hidden mb-6"
-          style={getBannerStyle(deckMetadata.backgroundImage, bannerSetting)}
+          style={getBannerStyle(deckMetadata.backgroundImage, bannerSetting, deviceType)}
         >
           <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
           <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">

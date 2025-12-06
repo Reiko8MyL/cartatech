@@ -1517,7 +1517,7 @@ export function DeckManagementPanel({
                   {/* Imagen de fondo */}
                   <div
                     className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={getBannerStyle(deck.backgroundImage, bannerSetting)}
+                    style={getBannerStyle(deck.backgroundImage, bannerSetting, deviceType)}
                   >
                     <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
                     

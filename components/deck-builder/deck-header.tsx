@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { Edit2, Check, X, Lock, ArrowRight } from "lucide-react"
 import type { SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import type { Card as CardType } from "@/lib/deck-builder/types"
 import { getDeckRace, getDeckBackgroundImage } from "@/lib/deck-builder/utils"
+import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
 interface DeckHeaderProps {
   deckName: string
@@ -34,6 +35,17 @@ export function DeckHeader({
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
   const [tempName, setTempName] = useState(deckName)
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+
+  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
+  useEffect(() => {
+    function updateDeviceType() {
+      setDeviceType(detectDeviceType(window.innerWidth))
+    }
+    updateDeviceType()
+    window.addEventListener('resize', updateDeviceType)
+    return () => window.removeEventListener('resize', updateDeviceType)
+  }, [])
 
   const handleSaveName = () => {
     if (tempName.trim()) {
@@ -58,7 +70,7 @@ export function DeckHeader({
           <div
             className={`relative rounded-lg overflow-hidden ${isMobile && onDragStart ? 'cursor-grab active:cursor-grabbing touch-none select-none' : ''}`}
             style={{
-              backgroundImage: `url(${backgroundImage})`,
+              backgroundImage: `url(${optimizeCloudinaryUrl(backgroundImage, deviceType)})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               ...(isMobile && onDragStart ? { touchAction: 'none' } : {}),
