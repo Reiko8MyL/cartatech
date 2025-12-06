@@ -339,13 +339,20 @@ export function SaveDeckModal({
               </Select>
               {backgroundImage && (
                 <div className="mt-2 relative w-full h-32 rounded-lg overflow-hidden border">
-                  <Image
-                    src={backgroundImage}
-                    alt="Banner preview"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 800px"
-                  />
+                  {(() => {
+                    const optimizedImageUrl = optimizeCloudinaryUrl(backgroundImage, deviceType, true) // isBanner=true
+                    const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                    return (
+                      <Image
+                        src={optimizedImageUrl}
+                        alt="Banner preview"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 1024px) 100vw, 800px"
+                        unoptimized={isOptimized}
+                      />
+                    )
+                  })()}
                 </div>
               )}
             </div>
