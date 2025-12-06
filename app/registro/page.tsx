@@ -119,7 +119,7 @@ export default function RegistroPage() {
       <div 
         className="hidden lg:flex lg:w-2/5 p-8 lg:p-12 flex-col justify-between relative overflow-hidden"
         style={{
-          backgroundImage: `url(${optimizeCloudinaryUrl('https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435879/FONDO_WEBPP_etcgej.webp', deviceType)})`,
+          backgroundImage: `url(${optimizeCloudinaryUrl('https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435879/FONDO_WEBPP_etcgej.webp', deviceType, true)})`, // isBanner=true
           backgroundSize: 'cover',
           backgroundPosition: 'right center',
           backgroundRepeat: 'no-repeat',

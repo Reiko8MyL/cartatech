@@ -44,6 +44,7 @@ import {
   Download,
   FileText,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { toastSuccess, toastError } from "@/lib/toast"
@@ -53,8 +54,15 @@ import { CommentsSection } from "@/components/deck/comments-section"
 import { DeckJsonLd } from "@/components/seo/json-ld"
 import { trackDeckViewed, trackDeckLiked, trackDeckCopied } from "@/lib/analytics/events"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType } from "@/hooks/use-banner-settings"
-import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
+import { getBackgroundImageId, getAllBackgroundImages } from "@/lib/deck-builder/banner-utils"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -92,6 +100,8 @@ export default function ViewDeckPage() {
   const [editTags, setEditTags] = useState<string[]>([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [techCardSelectorOpen, setTechCardSelectorOpen] = useState(false)
+  const [changeBannerModalOpen, setChangeBannerModalOpen] = useState(false)
+  const [selectedBackgroundImage, setSelectedBackgroundImage] = useState<string | undefined>(undefined)
   
   // Estados para exportación
   const [showExportModal, setShowExportModal] = useState(false)
@@ -177,7 +187,8 @@ export default function ViewDeckPage() {
     const stats = calculateDeckStats(deck.cards, allCards)
     const likeCount = deck.id ? (likes[deck.id]?.length || 0) : 0
     const userLiked = user && deck.id ? hasUserLikedDeck(deck.id, user.id) : false
-    const backgroundImage = getDeckBackgroundImage(race)
+    // Usar backgroundImage del deck si existe, sino usar el de la raza
+    const backgroundImage = deck.backgroundImage || getDeckBackgroundImage(race)
 
     return {
       race,
@@ -190,13 +201,22 @@ export default function ViewDeckPage() {
   }, [deck, allCards, likes, user])
   
   // Obtener ID de imagen de fondo para ajustes de banner
+  // Usar el backgroundImage del deck directamente si existe, sino usar el de metadata
   const backgroundImageId = useMemo(() => {
-    if (!deckMetadata?.backgroundImage) return null;
-    return getBackgroundImageId(deckMetadata.backgroundImage);
-  }, [deckMetadata?.backgroundImage]);
+    const imageToUse = deck?.backgroundImage || deckMetadata?.backgroundImage;
+    if (!imageToUse) return null;
+    return getBackgroundImageId(imageToUse);
+  }, [deck?.backgroundImage, deckMetadata?.backgroundImage]);
   
   // Obtener ajustes de banner
   const { setting: bannerSetting } = useBannerSettings("mazo-individual", "grid", deviceType, backgroundImageId)
+
+  // Inicializar selectedBackgroundImage cuando se abre el modal
+  useEffect(() => {
+    if (changeBannerModalOpen && deck) {
+      setSelectedBackgroundImage(deck.backgroundImage)
+    }
+  }, [changeBannerModalOpen, deck])
 
   // Organizar cartas por tipo y edición
   const organizedCards = useMemo(() => {
@@ -628,6 +648,53 @@ export default function ViewDeckPage() {
       console.error("[handleRemoveTechCard] Error al eliminar carta tech:", error)
       toastError("Error al eliminar la carta tech")
       // NO hacer fallback - el mazo ya existe en la base de datos
+    }
+  }
+
+  // Función para cambiar el fondo del banner
+  const handleChangeBanner = () => {
+    if (!deck) return
+    if (!user || deck.userId !== user.id) {
+      toastError("Solo puedes editar tus propios mazos")
+      return
+    }
+    setSelectedBackgroundImage(deck.backgroundImage)
+    setChangeBannerModalOpen(true)
+  }
+
+  const handleSaveBannerChange = async () => {
+    if (!deck || !user) return
+
+    const updatedDeck: SavedDeck = {
+      ...deck,
+      id: deck.id,
+      userId: deck.userId || user.id,
+      backgroundImage: selectedBackgroundImage || undefined,
+    }
+
+    try {
+      const savedDeck = await saveDeckToStorage(updatedDeck, user.id)
+      
+      if (savedDeck) {
+        if (savedDeck.id !== updatedDeck.id) {
+          console.error("[handleSaveBannerChange] ERROR: El ID cambió después de guardar!")
+          toastError("Error: El ID del mazo cambió.")
+          return
+        }
+        
+        setDeck(savedDeck)
+        setChangeBannerModalOpen(false)
+        toastSuccess("Fondo del banner actualizado correctamente")
+      } else {
+        console.warn("[handleSaveBannerChange] saveDeckToStorage retornó null")
+        saveDeckToLocalStorage(updatedDeck)
+        setDeck(updatedDeck)
+        setChangeBannerModalOpen(false)
+        toastSuccess("Fondo del banner actualizado (guardado local)")
+      }
+    } catch (error) {
+      console.error("[handleSaveBannerChange] Error al actualizar fondo del banner:", error)
+      toastError("Error al actualizar el fondo del banner")
     }
   }
 
@@ -1333,6 +1400,18 @@ export default function ViewDeckPage() {
           style={getBannerStyle(deckMetadata.backgroundImage, bannerSetting, deviceType)}
         >
           <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
+          {/* Botón para cambiar fondo del banner - solo visible para el dueño */}
+          {isOwner && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleChangeBanner}
+              className="absolute top-2 right-2 z-10 bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm border-0"
+              title="Cambiar fondo del banner"
+            >
+              <ImageIcon className="h-4 w-4" />
+            </Button>
+          )}
           <div className="absolute inset-0 flex flex-col justify-end p-6 text-white">
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -1853,6 +1932,58 @@ export default function ViewDeckPage() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setTechCardSelectorOpen(false)}>
                 Cancelar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para cambiar fondo del banner */}
+        <Dialog open={changeBannerModalOpen} onOpenChange={setChangeBannerModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Cambiar Fondo del Banner</DialogTitle>
+              <DialogDescription>
+                Selecciona una nueva imagen de fondo para el banner de tu mazo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Imagen de Fondo del Banner</Label>
+                <Select
+                  value={selectedBackgroundImage || "default"}
+                  onValueChange={(value) => setSelectedBackgroundImage(value === "default" ? undefined : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una imagen de fondo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Por defecto (según raza)</SelectItem>
+                    {getAllBackgroundImages().map((img) => (
+                      <SelectItem key={img.id} value={img.url}>
+                        {img.race}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedBackgroundImage && (
+                  <div className="mt-2 relative w-full h-24 rounded-lg overflow-hidden border">
+                    <Image
+                      src={selectedBackgroundImage}
+                      alt="Banner preview"
+                      fill
+                      className="object-cover"
+                      sizes="100vw"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setChangeBannerModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveBannerChange}>
+                Guardar Cambios
               </Button>
             </DialogFooter>
           </DialogContent>

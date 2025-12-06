@@ -23,11 +23,13 @@ export function getOptimizedImageSize(deviceType: 'mobile' | 'tablet' | 'desktop
  * Agrega transformaciones optimizadas a una URL de Cloudinary
  * @param imageUrl URL original de Cloudinary
  * @param deviceType Tipo de dispositivo para determinar el tamaño
+ * @param isBanner Si es true, usa tamaños más grandes para banners
  * @returns URL con transformaciones optimizadas
  */
 export function optimizeCloudinaryUrl(
   imageUrl: string,
-  deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop'
+  deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop',
+  isBanner: boolean = false
 ): string {
   // Si la URL ya tiene transformaciones, no hacer nada
   if (imageUrl.includes('/w_') || imageUrl.includes('/c_') || imageUrl.includes('/f_')) {
@@ -39,7 +41,27 @@ export function optimizeCloudinaryUrl(
     return imageUrl
   }
   
-  // Obtener el tamaño optimizado
+  // Para banners, usar solo calidad y formato sin reducir tamaño
+  // ya que se muestran con background-size: cover y necesitan resolución completa
+  if (isBanner) {
+    const uploadIndex = imageUrl.indexOf('/upload/')
+    if (uploadIndex === -1) {
+      return imageUrl
+    }
+    
+    const beforeUpload = imageUrl.substring(0, uploadIndex + 8) // '/upload/'
+    const afterUpload = imageUrl.substring(uploadIndex + 8)
+    
+    // Solo aplicar q_auto y f_auto sin reducir tamaño
+    const versionMatch = afterUpload.match(/^(v\d+\/)/)
+    if (versionMatch) {
+      return `${beforeUpload}q_auto,f_auto/${afterUpload}`
+    }
+    
+    return `${beforeUpload}q_auto,f_auto/${afterUpload}`
+  }
+  
+  // Para cartas, usar tamaños reducidos
   const size = getOptimizedImageSize(deviceType)
   
   // Insertar la transformación antes del nombre del archivo

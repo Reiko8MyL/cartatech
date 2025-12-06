@@ -221,10 +221,11 @@ export function getBannerStyle(
   const s = setting || defaultSetting;
 
   // Optimizar URL de Cloudinary si es necesario
+  // Para banners, usar isBanner=true para mantener resolución completa
   let optimizedImage = backgroundImage;
   if (backgroundImage && backgroundImage.includes('res.cloudinary.com')) {
     const { optimizeCloudinaryUrl } = require('@/lib/deck-builder/cloudinary-utils');
-    optimizedImage = optimizeCloudinaryUrl(backgroundImage, deviceType);
+    optimizedImage = optimizeCloudinaryUrl(backgroundImage, deviceType, true); // isBanner=true
   }
 
   return {

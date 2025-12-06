@@ -70,7 +70,7 @@ export function DeckHeader({
           <div
             className={`relative rounded-lg overflow-hidden ${isMobile && onDragStart ? 'cursor-grab active:cursor-grabbing touch-none select-none' : ''}`}
             style={{
-              backgroundImage: `url(${optimizeCloudinaryUrl(backgroundImage, deviceType)})`,
+              backgroundImage: `url(${optimizeCloudinaryUrl(backgroundImage, deviceType, true)})`, // isBanner=true
               backgroundSize: "cover",
               backgroundPosition: "center",
               ...(isMobile && onDragStart ? { touchAction: 'none' } : {}),

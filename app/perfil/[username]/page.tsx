@@ -186,7 +186,7 @@ export default function UserProfilePage() {
                     <div
                       className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
                       style={{
-                        backgroundImage: `url(${optimizeCloudinaryUrl(backgroundImage, deviceType)})`,
+                        backgroundImage: `url(${optimizeCloudinaryUrl(backgroundImage, deviceType, true)})`, // isBanner=true
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                       }}
