@@ -78,9 +78,27 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-8 border-t border-border/40">
-          <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Carta Tech. Todos los derechos
-            reservados.
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <p className="text-center text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Carta Tech. Todos los derechos
+              reservados.
+            </p>
+            <Link
+              href="/politica-de-privacidad"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Política de Privacidad
+            </Link>
+          </div>
+        </div>
+
+        {/* Descargo de Responsabilidad */}
+        <div className="mt-6 pt-6 border-t border-border/20">
+          <p className="text-center text-xs text-muted-foreground/70 max-w-4xl mx-auto px-4 leading-relaxed">
+            CartaTech es un sitio de fans no oficial creado con fines informativos y de entretenimiento. 
+            Todas las imágenes, logotipos y nombres de cartas relacionados con &apos;Mitos y Leyendas&apos; 
+            son marcas registradas y propiedad intelectual de Fenix Entertainment, Klu y sus respectivos 
+            autores. Este sitio no está afiliado, respaldado ni patrocinado por los titulares de los derechos.
           </p>
         </div>
       </div>
