@@ -28,9 +28,12 @@ export async function POST(request: NextRequest) {
   }
 
   const startTime = Date.now();
+  let userId: string | undefined;
+  let deckId: string | undefined;
   try {
     const body = await request.json();
-    const { userId, deckId } = body;
+    userId = body.userId;
+    deckId = body.deckId;
 
     if (!userId || !deckId) {
       return NextResponse.json(
