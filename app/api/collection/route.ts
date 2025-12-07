@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 // GET - Obtener la colección de un usuario
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -45,7 +48,9 @@ export async function GET(request: NextRequest) {
           select: { cardIds: true },
         });
       } catch (createError) {
-        console.error("Error al crear colección:", createError);
+        if (process.env.NODE_ENV === "development") {
+          log.warn("Error al crear colección", { error: createError });
+        }
         
         // Si es un error de foreign key constraint, el usuario no existe
         if (createError && typeof createError === "object" && "code" in createError) {
@@ -65,23 +70,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/collection', 200, duration);
+
     return NextResponse.json({
       cardIds: collection.cardIds || [],
     });
   } catch (error) {
-    console.error("Error al obtener colección:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Si es un error de Prisma, log más detalles
-    if (error && typeof error === "object" && "code" in error) {
-      console.error("Prisma error code:", (error as any).code);
-      console.error("Prisma error meta:", (error as any).meta);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('getCollection', error, { duration });
     
     return NextResponse.json(
       { error: "Error al obtener colección" },
@@ -92,6 +89,29 @@ export async function GET(request: NextRequest) {
 
 // POST - Agregar o quitar una carta de la colección (toggle)
 export async function POST(request: NextRequest) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for collection toggle", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { userId, cardId } = body;
@@ -135,17 +155,16 @@ export async function POST(request: NextRequest) {
       select: { cardIds: true },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('POST', '/api/collection', 200, duration);
+
     return NextResponse.json({
       cardIds: updatedCollection.cardIds,
       isInCollection: !isInCollection,
     });
   } catch (error) {
-    console.error("Error al actualizar colección:", error);
-    
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('toggleCollection', error, { duration });
     
     return NextResponse.json(
       { error: "Error al actualizar colección" },
@@ -156,6 +175,29 @@ export async function POST(request: NextRequest) {
 
 // PUT - Actualizar toda la colección (reemplazar completamente)
 export async function PUT(request: NextRequest) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for collection update", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { userId, cardIds } = body;
@@ -180,16 +222,15 @@ export async function PUT(request: NextRequest) {
       select: { cardIds: true },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('PUT', '/api/collection', 200, duration);
+
     return NextResponse.json({
       cardIds: collection.cardIds,
     });
   } catch (error) {
-    console.error("Error al actualizar colección completa:", error);
-    
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('updateCollection', error, { duration });
     
     return NextResponse.json(
       { error: "Error al actualizar colección completa" },

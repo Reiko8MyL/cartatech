@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 // GET - Obtener votos
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -18,6 +21,9 @@ export async function GET(request: NextRequest) {
           },
         },
       });
+
+      const duration = Date.now() - startTime;
+      log.api('GET', '/api/votes', 200, duration);
 
       return NextResponse.json({
         cardId: vote?.cardId || null,
@@ -37,6 +43,9 @@ export async function GET(request: NextRequest) {
           createdAt: true,
         },
       });
+
+      const duration = Date.now() - startTime;
+      log.api('GET', '/api/votes', 200, duration);
 
       return NextResponse.json({
         votes: votes.map((v: any) => ({
@@ -58,6 +67,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/votes', 200, duration);
+
     return NextResponse.json({
       votes: allVotes.map((v: any) => ({
         race: v.race,
@@ -67,7 +79,8 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Error al obtener votos:", error);
+    const duration = Date.now() - startTime;
+    log.prisma('getVotes', error, { duration });
     
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al obtener votos";
     const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
@@ -89,6 +102,29 @@ export async function GET(request: NextRequest) {
 
 // POST - Guardar o actualizar un voto
 export async function POST(request: NextRequest) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for vote", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { userId, race, cardId } = body as { userId: string; race: string; cardId: string };
@@ -144,22 +180,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('POST', '/api/votes', 200, duration);
+
     return NextResponse.json({
       success: true,
     });
   } catch (error) {
-    console.error("Error al guardar voto:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Verificar si es un error de Prisma
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error("Prisma error code:", error.code);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('saveVote', error, { duration });
     
     // Asegurar que siempre devolvemos un JSON válido
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al guardar voto";
