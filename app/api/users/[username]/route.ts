@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
+import { log } from "@/lib/logging/logger"
 
 // GET - Obtener información del usuario por username
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
+  const startTime = Date.now();
   try {
     const { username } = await params
 
@@ -79,6 +81,9 @@ export async function GET(
       },
     })
 
+    const duration = Date.now() - startTime;
+    log.api('GET', `/api/users/${username}`, 200, duration);
+    
     return NextResponse.json({
       user: {
         ...user,
@@ -98,12 +103,8 @@ export async function GET(
       })),
     })
   } catch (error) {
-    console.error("Error al obtener información del usuario:", error)
-
-    if (error instanceof Error) {
-      console.error("Error message:", error.message)
-      console.error("Error stack:", error.stack)
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('getUserProfile', error, { duration });
 
     return NextResponse.json(
       {

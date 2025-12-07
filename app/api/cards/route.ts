@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllCardsFromDB, getAlternativeArtCardsFromDB } from "@/lib/deck-builder/cards-db";
+import { log } from "@/lib/logging/logger";
 
 /**
  * GET /api/cards
@@ -9,6 +10,7 @@ import { getAllCardsFromDB, getAlternativeArtCardsFromDB } from "@/lib/deck-buil
  * - format: filtrar por formato de ban list (RE, RL, LI)
  */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const includeAlternatives = searchParams.get("includeAlternatives") === "true";
@@ -33,6 +35,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/cards', 200, duration);
+
     return NextResponse.json({
       cards: filteredCards,
       ...(includeAlternatives && { alternativeCards: altCards }),
@@ -40,7 +45,8 @@ export async function GET(request: NextRequest) {
       ...(includeAlternatives && { totalAlternatives: altCards.length }),
     });
   } catch (error) {
-    console.error("Error al obtener cartas:", error);
+    const duration = Date.now() - startTime;
+    log.error("Error al obtener cartas", error, { duration });
     
     return NextResponse.json(
       {

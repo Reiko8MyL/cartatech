@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { log } from "@/lib/logging/logger";
 
 // GET - Obtener likes
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const deckId = searchParams.get("deckId");
@@ -52,7 +54,9 @@ export async function GET(request: NextRequest) {
         },
       });
     } catch (prismaError) {
-      console.error("Error de Prisma al obtener likes:", prismaError);
+      if (process.env.NODE_ENV === "development") {
+        log.warn("Error de Prisma al obtener likes", { error: prismaError });
+      }
       // Si hay un error de Prisma (por ejemplo, tabla no existe), retornar objeto vacío
       return NextResponse.json({
         likes: {},
@@ -68,23 +72,15 @@ export async function GET(request: NextRequest) {
       likesByDeck[like.deckId].push(like.userId);
     }
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/likes', 200, duration);
+
     return NextResponse.json({
       likes: likesByDeck,
     });
   } catch (error) {
-    console.error("Error al obtener likes:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Si es un error de Prisma, log más detalles
-    if (error && typeof error === "object" && "code" in error) {
-      console.error("Prisma error code:", (error as any).code);
-      console.error("Prisma error meta:", (error as any).meta);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('getLikes', error, { duration });
     
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al obtener likes";
     const errorDetails = process.env.NODE_ENV === "development" ? errorMessage : undefined;
