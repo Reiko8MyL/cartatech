@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/utils";
 import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
 import { log } from "@/lib/logging/logger";
-import { log } from "@/lib/logging/logger";
 
 export async function POST(request: NextRequest) {
   // Rate limiting para autenticación
