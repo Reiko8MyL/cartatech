@@ -54,6 +54,8 @@ export function Logo({
       height={height}
       className={cn("w-auto", className)}
       priority={priority}
+      fetchPriority={priority ? "high" : "auto"}
+      loading={priority ? "eager" : "lazy"}
       unoptimized={isOptimized}
     />
   )

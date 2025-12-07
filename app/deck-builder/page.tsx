@@ -67,10 +67,11 @@ function DeckBuilderContent() {
   // Estado de filtros
   const [filters, setFilters] = useState<DeckFilters>({
     search: "",
-    edition: "",
-    type: "",
-    race: "",
-    cost: "",
+    descriptionSearch: "",
+    edition: [],
+    type: [],
+    race: [],
+    cost: [],
   })
 
   // Filtrar cartas según los filtros (solo cartas originales, no alternativas)

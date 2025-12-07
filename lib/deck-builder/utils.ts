@@ -236,25 +236,36 @@ export function filterCards(cards: Card[], filters: DeckFilters): Card[] {
     );
   }
 
-  // Filtrar por edición
-  if (filters.edition) {
-    filtered = filtered.filter((card) => card.edition === filters.edition);
+  // Filtrar por búsqueda en descripción
+  if (filters.descriptionSearch.trim()) {
+    const descriptionSearchLower = filters.descriptionSearch.toLowerCase().trim();
+    filtered = filtered.filter((card) =>
+      card.description.toLowerCase().includes(descriptionSearchLower)
+    );
   }
 
-  // Filtrar por tipo
-  if (filters.type) {
-    filtered = filtered.filter((card) => card.type === filters.type);
+  // Filtrar por edición (múltiples valores)
+  if (filters.edition.length > 0) {
+    filtered = filtered.filter((card) => filters.edition.includes(card.edition));
   }
 
-  // Filtrar por raza
-  if (filters.race) {
-    filtered = filtered.filter((card) => card.race === filters.race);
+  // Filtrar por tipo (múltiples valores)
+  if (filters.type.length > 0) {
+    filtered = filtered.filter((card) => filters.type.includes(card.type));
   }
 
-  // Filtrar por coste
-  if (filters.cost) {
-    const costValue = parseInt(filters.cost, 10);
-    filtered = filtered.filter((card) => card.cost === costValue);
+  // Filtrar por raza (múltiples valores)
+  if (filters.race.length > 0) {
+    filtered = filtered.filter((card) => 
+      card.race !== null && filters.race.includes(card.race)
+    );
+  }
+
+  // Filtrar por coste (múltiples valores)
+  if (filters.cost.length > 0) {
+    filtered = filtered.filter((card) => 
+      card.cost !== null && filters.cost.includes(card.cost)
+    );
   }
 
   return filtered;

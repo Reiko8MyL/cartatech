@@ -66,7 +66,7 @@ export function Navbar() {
               width={150}
               height={50}
               className="h-12 sm:h-14"
-              priority
+              priority={false}
             />
           </Link>
           <div className="hidden items-center gap-1 lg:flex">

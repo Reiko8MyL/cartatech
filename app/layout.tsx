@@ -20,11 +20,15 @@ import { GoogleAnalyticsProvider } from "@/components/analytics/google-analytics
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap", // Evitar FOIT (Flash of Invisible Text)
+  preload: true, // Precargar solo la fuente principal
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  // No usar preload para evitar warnings - Next.js lo manejará automáticamente cuando sea necesario
 });
 
 export const metadata: Metadata = {
@@ -121,21 +125,10 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
-        {/* Favicon explícito */}
+        {/* Favicon explícito - Consolidado para evitar múltiples preloads */}
         <link
           rel="icon"
           type="image/webp"
-          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
-          sizes="32x32"
-        />
-        <link
-          rel="icon"
-          type="image/webp"
-          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
-          sizes="16x16"
-        />
-        <link
-          rel="shortcut icon"
           href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
         />
         <link

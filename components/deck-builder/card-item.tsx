@@ -144,6 +144,7 @@ export const CardItem = memo(function CardItem({
           sizes={isCloudinaryOptimized ? undefined : "(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 300px"}
           loading={priority ? "eager" : "lazy"}
           priority={priority}
+          fetchPriority={priority ? "high" : "auto"}
           decoding="async"
           draggable={false}
           onContextMenu={(e) => e.preventDefault()}

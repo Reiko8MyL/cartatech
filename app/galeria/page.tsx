@@ -126,10 +126,11 @@ function GaleriaContent() {
   // Estado de filtros
   const [filters, setFilters] = useState<DeckFilters>({
     search: searchFromUrl,
-    edition: "",
-    type: "",
-    race: "",
-    cost: "",
+    descriptionSearch: "",
+    edition: [],
+    type: [],
+    race: [],
+    cost: [],
   })
 
   // Actualizar filtros cuando cambie el parámetro de búsqueda en la URL
@@ -324,9 +325,10 @@ function GaleriaContent() {
                 const editionCards = cardsByEdition.get(edition)
                 if (!editionCards || editionCards.length === 0) return null
 
-                // Marcar las primeras 12 imágenes de la primera edición como priority (above the fold)
+                // Marcar solo las primeras 2 imágenes de la primera edición como priority (above the fold)
+                // Reducido para evitar warnings de preload no usado - solo imágenes realmente visibles
                 const isFirstEdition = editionIndex === 0
-                const priorityCount = 12
+                const priorityCount = 2
 
                 return (
                   <div key={edition} className="space-y-3">

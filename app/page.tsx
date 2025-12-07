@@ -33,7 +33,7 @@ export default function Home() {
                 width={600}
                 height={200}
                 className="h-48 sm:h-56 md:h-64 lg:h-72 translate-x-[-3px]"
-                priority
+                priority={true}
               />
             </div>
             <h1 className="sr-only">Carta Tech - MyL Deck Builder</h1>

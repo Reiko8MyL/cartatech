@@ -107,6 +107,8 @@ export default function InicioSesionPage() {
                   height={67}
                   className="h-16 w-auto ml-auto scale-[1.2]"
                   priority
+                  fetchPriority="high"
+                  loading="eager"
                   unoptimized={isOptimized}
                 />
               )
