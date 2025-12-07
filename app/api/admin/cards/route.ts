@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 import { hasAdminAccess } from "@/lib/auth/authorization";
 import { clearCardsCache } from "@/lib/deck-builder/cards-db";
 import { getBaseCardId } from "@/lib/deck-builder/utils";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 /**
  * POST /api/admin/cards
@@ -10,6 +12,29 @@ import { getBaseCardId } from "@/lib/deck-builder/utils";
  * Solo accesible para administradores
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting para admin
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for admin card creation", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   let cardId: string | undefined;
   try {
     const body = await request.json();
@@ -196,6 +221,9 @@ export async function POST(request: NextRequest) {
     // Limpiar cache para que la nueva carta aparezca inmediatamente
     clearCardsCache();
 
+    const duration = Date.now() - startTime;
+    log.api('POST', '/api/admin/cards', 200, duration);
+
     return NextResponse.json({
       success: true,
       message: `Carta ${card.id} creada exitosamente`,
@@ -220,7 +248,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error al crear carta:", error);
+    const duration = Date.now() - startTime;
+    log.prisma('createCard', error, { duration, cardId });
 
     // Manejar errores de Prisma
     if (error && typeof error === "object" && "code" in error) {

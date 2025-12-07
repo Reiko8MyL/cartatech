@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCardFromDB, getAlternativeArtCardsFromDB } from "@/lib/deck-builder/cards-db";
 import { getBaseCardId } from "@/lib/deck-builder/utils";
+import { log } from "@/lib/logging/logger";
 
 /**
  * GET /api/cards/[cardId]
@@ -11,6 +12,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ cardId: string }> }
 ) {
+  const startTime = Date.now();
   let cardId: string | undefined;
   
   try {
@@ -51,8 +53,17 @@ export async function GET(
       card,
       ...(alternativeCards.length > 0 && { alternativeCards }),
     });
+    
+    const duration = Date.now() - startTime;
+    log.api('GET', `/api/cards/${cardId}`, 200, duration);
+    
+    return NextResponse.json({
+      card,
+      ...(alternativeCards.length > 0 && { alternativeCards }),
+    });
   } catch (error) {
-    console.error(`Error al obtener carta ${cardId || "desconocida"}:`, error);
+    const duration = Date.now() - startTime;
+    log.error(`Error al obtener carta ${cardId || "desconocida"}`, error, { duration });
     
     return NextResponse.json(
       {
