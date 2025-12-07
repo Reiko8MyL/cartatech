@@ -186,13 +186,40 @@ export const trackDeckExported = (deckId: string, exportType: "image" | "list" |
  * Trackea cuando se filtra en la galería de cartas
  */
 export const trackCardFiltered = (filters: {
-  edition?: string;
-  type?: string;
-  race?: string;
-  cost?: string;
+  edition?: string | string[];
+  type?: string | string[];
+  race?: string | string[];
+  cost?: string | number[];
 }) => {
+  // Convertir arrays a strings separados por comas para el tracking
+  const normalizedFilters: Record<string, string | undefined> = {};
+  
+  if (filters.edition) {
+    normalizedFilters.edition = Array.isArray(filters.edition) 
+      ? filters.edition.join(", ") 
+      : filters.edition;
+  }
+  
+  if (filters.type) {
+    normalizedFilters.type = Array.isArray(filters.type) 
+      ? filters.type.join(", ") 
+      : filters.type;
+  }
+  
+  if (filters.race) {
+    normalizedFilters.race = Array.isArray(filters.race) 
+      ? filters.race.join(", ") 
+      : filters.race;
+  }
+  
+  if (filters.cost) {
+    normalizedFilters.cost = Array.isArray(filters.cost) 
+      ? filters.cost.join(", ") 
+      : String(filters.cost);
+  }
+  
   event("card_filtered", {
-    ...filters,
+    ...normalizedFilters,
     event_category: "Search",
   });
 };
