@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/utils";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
+import { log } from "@/lib/logging/logger";
 
 export async function POST(request: NextRequest) {
+  // Rate limiting para autenticación
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for login", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiados intentos de inicio de sesión. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { username, password } = body;
@@ -41,6 +67,9 @@ export async function POST(request: NextRequest) {
     // Retornar usuario sin contraseña
     const { password: _, ...userWithoutPassword } = user;
 
+    const duration = Date.now() - startTime;
+    log.api('POST', '/api/auth/login', 200, duration);
+
     return NextResponse.json({
       user: {
         ...userWithoutPassword,
@@ -48,19 +77,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error en login:", error);
-    
-    // Log detallado para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Si es un error de Prisma, log más detalles
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error("Prisma error code:", (error as any).code);
-      console.error("Prisma error meta:", (error as any).meta);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('login', error, { duration });
     
     return NextResponse.json(
       { 

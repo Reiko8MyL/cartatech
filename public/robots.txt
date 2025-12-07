@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap (se actualizará automáticamente con tu dominio)
-Sitemap: https://cartatech.com/sitemap.xml
+Sitemap: https://cartatech.cl/sitemap.xml
 
 # Bloquear archivos de sistema
 Disallow: /api/

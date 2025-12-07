@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 // POST - Alternar like
 export async function POST(request: NextRequest) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for like toggle", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { userId, deckId } = body as { userId: string; deckId: string };
@@ -54,6 +79,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const duration = Date.now() - startTime;
+      log.api('POST', '/api/likes/toggle', 200, duration);
+
       return NextResponse.json({
         isLiked: false,
       });
@@ -66,23 +94,16 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const duration = Date.now() - startTime;
+      log.api('POST', '/api/likes/toggle', 200, duration);
+
       return NextResponse.json({
         isLiked: true,
       });
     }
   } catch (error) {
-    console.error("Error al alternar like:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Verificar si es un error de Prisma
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error("Prisma error code:", error.code);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('toggleLike', error, { duration });
     
     // Asegurar que siempre devolvemos un JSON válido
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al alternar like";
@@ -102,6 +123,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 
 
 

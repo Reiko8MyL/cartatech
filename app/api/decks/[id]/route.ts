@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { SavedDeck, DeckCard } from "@/lib/deck-builder/types";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 // GET - Obtener un mazo específico
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now();
   try {
     const { id } = await params;
 
@@ -37,6 +40,9 @@ export async function GET(
       });
     }
 
+    const duration = Date.now() - startTime;
+    log.api('GET', `/api/decks/${id}`, 200, duration);
+
     return NextResponse.json({
       deck: {
         id: deck.id,
@@ -56,7 +62,8 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error al obtener mazo:", error);
+    const duration = Date.now() - startTime;
+    log.prisma('getDeck', error, { duration });
     return NextResponse.json(
       { error: "Error al obtener mazo" },
       { status: 500 }
@@ -69,6 +76,29 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for deck update", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -150,6 +180,9 @@ export async function PUT(
       },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('PUT', `/api/decks/${id}`, 200, duration);
+
     return NextResponse.json({
       deck: {
         id: updatedDeck.id,
@@ -169,18 +202,8 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("Error al actualizar mazo:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Verificar si es un error de Prisma
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error("Prisma error code:", error.code);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('updateDeck', error, { duration });
     
     // Asegurar que siempre devolvemos un JSON válido
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al actualizar mazo";
@@ -206,6 +229,29 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for deck deletion", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const { id } = await params;
     const searchParams = request.nextUrl.searchParams;
@@ -242,9 +288,13 @@ export async function DELETE(
       where: { id },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('DELETE', `/api/decks/${id}`, 200, duration);
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error al eliminar mazo:", error);
+    const duration = Date.now() - startTime;
+    log.prisma('deleteDeck', error, { duration });
     return NextResponse.json(
       { error: "Error al eliminar mazo" },
       { status: 500 }

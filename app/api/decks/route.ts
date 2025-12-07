@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { SavedDeck, DeckCard } from "@/lib/deck-builder/types";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 // GET - Obtener mazos del usuario o mazos públicos
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -117,17 +120,21 @@ export async function GET(request: NextRequest) {
       tags: deck.tags,
     }));
 
-    return NextResponse.json({
-      decks: formattedUserDecks,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
+      const duration = Date.now() - startTime;
+      log.api('GET', '/api/decks', 200, duration);
+
+      return NextResponse.json({
+        decks: formattedUserDecks,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
   } catch (error) {
-    console.error("Error al obtener mazos:", error);
+    const duration = Date.now() - startTime;
+    log.prisma('getDecks', error, { duration });
     return NextResponse.json(
       { error: "Error al obtener mazos" },
       { status: 500 }
@@ -137,6 +144,29 @@ export async function GET(request: NextRequest) {
 
 // POST - Crear nuevo mazo
 export async function POST(request: NextRequest) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for deck creation", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { userId, deck } = body as { userId: string; deck: SavedDeck };
@@ -198,6 +228,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const duration = Date.now() - startTime;
+    log.api('POST', '/api/decks', 200, duration);
+
     return NextResponse.json({
       deck: {
         id: newDeck.id,
@@ -216,18 +249,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error al crear mazo:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    
-    // Verificar si es un error de Prisma
-    if (error && typeof error === 'object' && 'code' in error) {
-      console.error("Prisma error code:", error.code);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('createDeck', error, { duration });
     
     // Asegurar que siempre devolvemos un JSON válido
     const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear mazo";
