@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
+import { log } from "@/lib/logging/logger"
 
 // GET - Obtener notificaciones del usuario
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams
     const userId = searchParams.get("userId")
@@ -54,18 +56,16 @@ export async function GET(request: NextRequest) {
       createdAt: notification.createdAt.getTime(),
     }))
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/notifications', 200, duration);
+
     return NextResponse.json({ notifications: formattedNotifications })
   } catch (error) {
+    const duration = Date.now() - startTime;
+    
     // Loggear solo en desarrollo para debugging
     if (process.env.NODE_ENV === "development") {
-      console.error("Error al obtener notificaciones:", error)
-      if (error instanceof Error) {
-        console.error("Error message:", error.message)
-        console.error("Error stack:", error.stack)
-      }
-      if (error && typeof error === 'object' && 'code' in error) {
-        console.error("Prisma error code:", (error as any).code)
-      }
+      log.prisma('getNotifications', error, { duration });
     }
 
     // SIEMPRE retornar array vacío - las notificaciones son opcionales y no deben afectar UX
@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
 
 // PUT - Marcar notificaciones como leídas
 export async function PUT(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await request.json()
     const { userId, notificationIds } = body
@@ -128,18 +129,16 @@ export async function PUT(request: NextRequest) {
       throw dbError
     }
 
+    const duration = Date.now() - startTime;
+    log.api('PUT', '/api/notifications', 200, duration);
+
     return NextResponse.json({ success: true })
   } catch (error) {
+    const duration = Date.now() - startTime;
+    
     // Loggear solo en desarrollo para debugging
     if (process.env.NODE_ENV === "development") {
-      console.error("Error al marcar notificaciones como leídas:", error)
-      if (error instanceof Error) {
-        console.error("Error message:", error.message)
-        console.error("Error stack:", error.stack)
-      }
-      if (error && typeof error === 'object' && 'code' in error) {
-        console.error("Prisma error code:", (error as any).code)
-      }
+      log.prisma('markNotificationsAsRead', error, { duration });
     }
 
     // SIEMPRE retornar éxito - las notificaciones son opcionales y no deben afectar UX

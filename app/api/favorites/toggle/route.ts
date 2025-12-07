@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 // POST - Alternar estado de favorito
 export async function POST(request: NextRequest) {
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for favorite toggle", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { userId, deckId } = body;
@@ -46,6 +71,10 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+      
+      const duration = Date.now() - startTime;
+      log.api('POST', '/api/favorites/toggle', 200, duration);
+      
       return NextResponse.json({ isFavorite: false });
     } else {
       // Agregar a favoritos
@@ -55,34 +84,37 @@ export async function POST(request: NextRequest) {
           deckId,
         },
       });
+      
+      const duration = Date.now() - startTime;
+      log.api('POST', '/api/favorites/toggle', 200, duration);
+      
       return NextResponse.json({ isFavorite: true });
     }
   } catch (error) {
-    console.error("Error al alternar favorito:", error);
-    
-    // Log detallado del error para debugging
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    const duration = Date.now() - startTime;
     
     // Verificar si es un error de Prisma
     if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as any;
       // Error de foreign key constraint (el mazo o usuario no existe)
-      if (error.code === 'P2003') {
+      if (prismaError.code === 'P2003') {
+        log.warn("Favorite toggle: deck or user not found", { userId, deckId, duration });
         return NextResponse.json(
           { error: "El mazo o usuario no existe" },
           { status: 404 }
         );
       }
       // Error de unique constraint (ya existe)
-      if (error.code === 'P2002') {
+      if (prismaError.code === 'P2002') {
+        log.warn("Favorite toggle: duplicate entry", { userId, deckId, duration });
         return NextResponse.json(
           { error: "El favorito ya existe" },
           { status: 409 }
         );
       }
     }
+    
+    log.prisma('toggleFavorite', error, { userId, deckId, duration });
     
     return NextResponse.json(
       { 

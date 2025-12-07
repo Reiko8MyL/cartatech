@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
+import { log } from "@/lib/logging/logger"
 
 // GET - Obtener comentarios de un mazo
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now();
   try {
     const { id } = await params
 
@@ -95,7 +97,7 @@ export async function GET(
       if (tableNotFound) {
         // En desarrollo, loggear el error para debugging
         if (process.env.NODE_ENV === "development") {
-          console.warn("Tabla de comentarios no existe. Ejecuta las migraciones de Prisma:", dbError?.message)
+          log.warn("Tabla de comentarios no existe. Ejecuta las migraciones de Prisma", { error: dbError?.message })
         }
         return NextResponse.json({ 
           comments: [],
@@ -123,6 +125,9 @@ export async function GET(
       })),
     }))
 
+    const duration = Date.now() - startTime;
+    log.api('GET', `/api/decks/${id}/comments`, 200, duration);
+
     return NextResponse.json({ 
       comments: formattedComments,
       pagination: {
@@ -133,16 +138,11 @@ export async function GET(
       },
     })
   } catch (error) {
+    const duration = Date.now() - startTime;
+    
     // Loggear solo en desarrollo para debugging
     if (process.env.NODE_ENV === "development") {
-      console.error("Error al obtener comentarios:", error)
-      if (error instanceof Error) {
-        console.error("Error message:", error.message)
-        console.error("Error stack:", error.stack)
-      }
-      if (error && typeof error === 'object' && 'code' in error) {
-        console.error("Prisma error code:", (error as any).code)
-      }
+      log.prisma('getComments', error, { duration });
     }
 
     // SIEMPRE retornar array vacío - los comentarios son opcionales y no deben afectar UX
@@ -164,23 +164,47 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { checkRateLimit } = await import("@/lib/rate-limit/rate-limit");
+  
+  // Rate limiting para escritura
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for comment creation", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const { id } = await params
     
     // Logging detallado en desarrollo
     if (process.env.NODE_ENV === "development") {
-      console.log("=== POST /api/decks/[id]/comments ===")
-      console.log("Deck ID:", id)
+      log.debug("POST /api/decks/[id]/comments", { deckId: id });
     }
     
     let body
     try {
       body = await request.json()
       if (process.env.NODE_ENV === "development") {
-        console.log("Body recibido:", JSON.stringify(body, null, 2))
+        log.debug("Body recibido", { body });
       }
     } catch (parseError) {
-      console.error("Error al parsear body JSON:", parseError)
+      log.error("Error al parsear body JSON", parseError);
       return NextResponse.json(
         { error: "El cuerpo de la petición no es un JSON válido" },
         { status: 400 }
@@ -225,7 +249,7 @@ export async function POST(
 
     if (!userId || typeof userId !== "string" || userId.length === 0) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Error de validación: userId inválido", {
+        log.warn("Error de validación: userId inválido", {
           userId: rawUserId,
           userIdType: typeof rawUserId,
           userIdLength: rawUserId?.length,
@@ -250,7 +274,7 @@ export async function POST(
 
     if (!deck) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Error: Mazo no encontrado con ID:", id)
+        log.warn("Error: Mazo no encontrado", { deckId: id })
       }
       return NextResponse.json(
         { error: "Mazo no encontrado" },
@@ -260,7 +284,7 @@ export async function POST(
 
     if (!deck.isPublic) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Error: Intento de comentar en mazo privado. Deck ID:", id, "isPublic:", deck.isPublic)
+        log.warn("Error: Intento de comentar en mazo privado", { deckId: id, isPublic: deck.isPublic })
       }
       return NextResponse.json(
         { error: "Solo se pueden comentar mazos públicos" },
@@ -269,7 +293,7 @@ export async function POST(
     }
     
     if (process.env.NODE_ENV === "development") {
-      console.log("Mazo validado:", { id: deck.id, isPublic: deck.isPublic })
+      log.debug("Mazo validado", { id: deck.id, isPublic: deck.isPublic })
     }
 
     // Verificar que el usuario existe y obtener su username
@@ -280,7 +304,7 @@ export async function POST(
 
     if (!user) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Error: Usuario no encontrado con ID:", userId)
+        log.warn("Error: Usuario no encontrado", { userId })
       }
       return NextResponse.json(
         { 
@@ -294,7 +318,7 @@ export async function POST(
     }
     
     if (process.env.NODE_ENV === "development") {
-      console.log("Usuario validado:", { id: user.id, username: user.username })
+      log.debug("Usuario validado", { id: user.id, username: user.username })
     }
 
     // Si hay parentId, verificar que el comentario padre existe
@@ -413,16 +437,19 @@ export async function POST(
         } catch (notifError) {
           // Silenciar errores de notificaciones - no crítico
           if (process.env.NODE_ENV === "development") {
-            console.debug("Error al crear notificación (no crítico):", notifError)
+            log.debug("Error al crear notificación (no crítico)", { error: notifError })
           }
         }
       }
     } catch (notifError) {
       // Silenciar errores de notificaciones - no crítico
       if (process.env.NODE_ENV === "development") {
-        console.debug("Error al obtener dueño del mazo para notificación (no crítico):", notifError)
+        log.debug("Error al obtener dueño del mazo para notificación (no crítico)", { error: notifError })
       }
     }
+
+    const duration = Date.now() - startTime;
+    log.api('POST', `/api/decks/${id}/comments`, 200, duration);
 
     return NextResponse.json({
       comment: {
@@ -432,18 +459,11 @@ export async function POST(
       },
     })
   } catch (error) {
+    const duration = Date.now() - startTime;
+    
     // Loggear solo en desarrollo para debugging
     if (process.env.NODE_ENV === "development") {
-      console.error("Error al crear comentario:", error)
-      if (error instanceof Error) {
-        console.error("Error message:", error.message)
-        console.error("Error stack:", error.stack)
-      }
-      if (error && typeof error === 'object' && 'code' in error) {
-        const prismaError = error as any
-        console.error("Prisma error code:", prismaError.code)
-        console.error("Prisma error meta:", prismaError.meta)
-      }
+      log.prisma('createComment', error, { duration });
     }
 
     // Retornar error descriptivo pero no 500 para evitar errores en consola
