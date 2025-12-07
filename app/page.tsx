@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { ChevronDown } from "lucide-react";
 import { HeroSearch } from "@/components/home/hero-search";
 import { FeaturesCarousel } from "@/components/home/features-carousel";
 import { Footer } from "@/components/home/footer";
@@ -40,6 +41,14 @@ export default function Home() {
               La Base de datos más completa de Mitos y Leyendas Primer Bloque Extendido
             </p>
             <HeroSearch />
+          </div>
+
+          {/* "Y HAY MÁS!" con flecha animada */}
+          <div className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-0.5">
+            <span className="text-sm sm:text-base font-light italic text-foreground/90 uppercase tracking-tight font-sans">
+              Y HAY MÁS!
+            </span>
+            <ChevronDown className="h-8 w-8 sm:h-10 sm:w-10 text-foreground/90 animate-bounce-pulse" />
           </div>
         </section>
 
@@ -89,6 +98,7 @@ export default function Home() {
     </>
   );
 }
+
 
 
 

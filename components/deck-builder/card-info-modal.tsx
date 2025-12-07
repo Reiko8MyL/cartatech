@@ -211,6 +211,7 @@ export function CardInfoModal({
                     size="icon"
                     onClick={handleRemoveCard}
                     disabled={quantityInDeck === 0}
+                    className="transition-all duration-200 hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
                     aria-label={`Quitar una copia de ${card.name}`}
                   >
                     <Minus className="size-4" aria-hidden="true" />
@@ -223,6 +224,7 @@ export function CardInfoModal({
                     size="icon"
                     onClick={handleAddCard}
                     disabled={quantityInDeck >= maxQuantity}
+                    className="transition-all duration-200 hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
                     aria-label={`Agregar una copia de ${card.name}`}
                   >
                     <Plus className="size-4" aria-hidden="true" />

@@ -125,12 +125,48 @@
     transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 200ms;
+    /* Mejora: evitar layout shifts */
+    transform-origin: center;
+    /* Mejora: suavizar transiciones de transform */
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
   }
   
   /* Animaciones más fluidas para elementos interactivos */
   [class*="hover:"] {
     transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Mejora: Animación más suave para estados active */
+  button:active, a:active, [role="button"]:active {
+    transition-duration: 100ms;
+  }
+  
+  /* Mejora: Acelerar animaciones de dropdowns - ultra responsivo */
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"] {
+    --animate-in-duration: 50ms;
+    --animate-out-duration: 50ms;
+  }
+  
+  /* Acelerar animaciones específicas de dropdown */
+  [data-slot="dropdown-menu-content"][data-state="open"],
+  [data-slot="dropdown-menu-sub-content"][data-state="open"] {
+    animation-duration: 50ms !important;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1) !important;
+  }
+  
+  [data-slot="dropdown-menu-content"][data-state="closed"],
+  [data-slot="dropdown-menu-sub-content"][data-state="closed"] {
+    animation-duration: 50ms !important;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1) !important;
+  }
+  
+  /* Reducir delay de animaciones para respuesta instantánea */
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"] {
+    animation-delay: 0ms !important;
   }
 }
 
@@ -204,5 +240,23 @@
 
   .dark * {
     scrollbar-color: oklch(0.6 0 0 / 0.15) transparent;
+  }
+}
+
+/* Animación de palpito para la flecha "Y HAY MÁS!" */
+@keyframes bounce-pulse {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(8px) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@layer utilities {
+  .animate-bounce-pulse {
+    animation: bounce-pulse 1.5s ease-in-out infinite;
   }
 }
