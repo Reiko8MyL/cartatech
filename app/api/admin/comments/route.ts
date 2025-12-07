@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { hasModeratorAccess } from "@/lib/auth/authorization";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 /**
  * GET - Obtener comentarios recientes para moderación
  * Solo accesible para moderadores y administradores
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting para admin
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for admin comments", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -79,10 +104,7 @@ export async function GET(request: NextRequest) {
 
       if (tableNotFound) {
         if (process.env.NODE_ENV === "development") {
-          console.warn(
-            "Tabla de comentarios no existe. Ejecuta las migraciones de Prisma:",
-            dbError?.message
-          );
+          log.warn("Tabla de comentarios no existe", { error: dbError });
         }
         return NextResponse.json({ comments: [] });
       }
@@ -100,14 +122,13 @@ export async function GET(request: NextRequest) {
       parentId: comment.parentId,
     }));
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/admin/comments', 200, duration);
+
     return NextResponse.json({ comments: formattedComments });
   } catch (error) {
-    console.error("Error al obtener comentarios para moderación:", error);
-
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('getAdminComments', error, { duration });
 
     return NextResponse.json(
       {

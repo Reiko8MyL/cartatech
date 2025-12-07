@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { hasModeratorAccess } from "@/lib/auth/authorization";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 /**
  * GET - Obtener estadísticas para el dashboard de administración
  * Solo accesible para moderadores y administradores
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting para admin
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for admin stats", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -233,13 +258,28 @@ export async function GET(request: NextRequest) {
       recentUsers: formattedRecentUsers,
       recentDecks: formattedRecentDecks,
     });
+    
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/admin/stats', 200, duration);
+    
+    return NextResponse.json({
+      stats: {
+        totalUsers,
+        totalDecks,
+        totalPublicDecks,
+        totalComments,
+        recentComments,
+        usersInRange,
+        decksInRange,
+        commentsInRange,
+        timeRange,
+      },
+      recentUsers: formattedRecentUsers,
+      recentDecks: formattedRecentDecks,
+    });
   } catch (error) {
-    console.error("Error al obtener estadísticas:", error);
-
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('getAdminStats', error, { duration });
 
     return NextResponse.json(
       {

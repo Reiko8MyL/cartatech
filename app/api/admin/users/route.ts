@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { hasAdminAccess } from "@/lib/auth/authorization";
+import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
+import { log } from "@/lib/logging/logger";
 
 /**
  * GET - Obtener lista de usuarios
  * Solo accesible para administradores
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting para admin
+  const rateLimit = checkRateLimit(request);
+  if (rateLimit?.limit) {
+    log.warn("Rate limit exceeded for admin users", {
+      identifier: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return NextResponse.json(
+      { 
+        error: "Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.",
+        retryAfter: rateLimit.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+          'Retry-After': (rateLimit.retryAfter || 60).toString(),
+        },
+      }
+    );
+  }
+
+  const startTime = Date.now();
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -87,14 +112,13 @@ export async function GET(request: NextRequest) {
       },
     }));
 
+    const duration = Date.now() - startTime;
+    log.api('GET', '/api/admin/users', 200, duration);
+
     return NextResponse.json({ users: formattedUsers });
   } catch (error) {
-    console.error("Error al obtener usuarios:", error);
-
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
+    const duration = Date.now() - startTime;
+    log.prisma('getAdminUsers', error, { duration });
 
     return NextResponse.json(
       {
