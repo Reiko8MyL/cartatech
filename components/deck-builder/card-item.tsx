@@ -89,6 +89,9 @@ export const CardItem = memo(function CardItem({
   return (
     <div
       className="group relative aspect-[63/88] cursor-pointer rounded-2xl overflow-hidden select-none"
+      role="button"
+      tabIndex={0}
+      aria-label={`${card.name} - ${quantity > 0 ? `Cantidad: ${quantity}` : 'No está en el mazo'}`}
       onClick={() => {
         // Solo ejecutar click si no se activó el long press
         if (!touchTimeoutRef.current || Date.now() - (touchStartTimeRef.current || 0) < 800) {
@@ -98,6 +101,12 @@ export const CardItem = memo(function CardItem({
         if (touchTimeoutRef.current) {
           clearTimeout(touchTimeoutRef.current)
           touchTimeoutRef.current = null
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onCardClick(card);
         }
       }}
       onContextMenu={(e) => {

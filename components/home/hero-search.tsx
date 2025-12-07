@@ -80,7 +80,16 @@ export function HeroSearch() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className="pl-12 h-14 text-lg bg-white dark:bg-gray-800"
+            aria-label={
+              searchType === "carta"
+                ? "Buscar una carta"
+                : "Buscar un mazo"
+            }
+            aria-describedby="search-description"
           />
+          <span id="search-description" className="sr-only">
+            Presiona Enter para buscar o haz clic en el botón Buscar
+          </span>
         </div>
         <Button
           type="button"
@@ -92,6 +101,8 @@ export function HeroSearch() {
             "disabled:opacity-70 disabled:cursor-not-allowed",
             isSearching && "animate-pulse"
           )}
+          aria-label={isSearching ? "Buscando..." : `Buscar ${searchType === "carta" ? "carta" : "mazo"}`}
+          aria-busy={isSearching}
         >
           {isSearching ? (
             <>

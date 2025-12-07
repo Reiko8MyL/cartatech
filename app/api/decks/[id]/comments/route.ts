@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
 import { log } from "@/lib/logging/logger"
+import { sanitizeCommentContent } from "@/lib/validation/sanitize"
 
 // GET - Obtener comentarios de un mazo
 export async function GET(
@@ -218,7 +219,7 @@ export async function POST(
 
     if (!id) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Error: ID de mazo no proporcionado")
+        log.warn("Error: ID de mazo no proporcionado");
       }
       return NextResponse.json(
         { error: "ID de mazo es requerido" },
@@ -226,19 +227,19 @@ export async function POST(
       )
     }
 
-    // Validar que content sea un string no vacío
-    const contentStr = typeof content === "string" ? content.trim() : content
+    // Validar y sanitizar el contenido del comentario
+    const sanitizedContent = sanitizeCommentContent(content);
     
-    if (!contentStr || contentStr.length === 0) {
+    if (!sanitizedContent) {
       if (process.env.NODE_ENV === "development") {
-        console.error("Error de validación: content vacío o inválido", {
+        log.warn("Error de validación: content vacío o inválido", {
           content: content,
           contentType: typeof content,
-        })
+        });
       }
       return NextResponse.json(
         { 
-          error: "El contenido del comentario es requerido y no puede estar vacío",
+          error: "El contenido del comentario es requerido y no puede estar vacío (máximo 5000 caracteres)",
           ...(process.env.NODE_ENV === "development" && {
             received: { content: content, contentType: typeof content }
           })
@@ -349,7 +350,7 @@ export async function POST(
     try {
       comment = await prisma.comment.create({
         data: {
-          content: contentStr,
+          content: sanitizedContent,
           deckId: id,
           userId,
           parentId: parentId ? (typeof parentId === "string" ? parentId.trim() : parentId) : null,
@@ -367,10 +368,11 @@ export async function POST(
     } catch (dbError: any) {
       // Loggear el error completo en desarrollo
       if (process.env.NODE_ENV === "development") {
-        console.error("Error de Prisma al crear comentario:", dbError)
-        console.error("Error code:", dbError?.code)
-        console.error("Error message:", dbError?.message)
-        console.error("Error meta:", dbError?.meta)
+        log.prisma('createComment', dbError, {
+          code: dbError?.code,
+          message: dbError?.message,
+          meta: dbError?.meta,
+        });
       }
       
       // Detectar si la tabla no existe - varios códigos de error posibles

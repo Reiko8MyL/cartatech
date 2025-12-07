@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { SavedDeck, DeckCard } from "@/lib/deck-builder/types";
 import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
 import { log } from "@/lib/logging/logger";
+import { sanitizeDeckName, sanitizeDeckDescription } from "@/lib/validation/sanitize";
 
 // GET - Obtener un mazo específico
 export async function GET(
@@ -138,6 +139,17 @@ export async function PUT(
       );
     }
 
+    // Sanitizar nombre y descripción del mazo
+    const sanitizedName = sanitizeDeckName(deck.name);
+    if (!sanitizedName) {
+      return NextResponse.json(
+        { error: "El nombre del mazo es requerido y debe tener entre 1 y 100 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedDescription = sanitizeDeckDescription(deck.description);
+
     // Actualizar mazo
     // Si techCardId es undefined, establecerlo a null explícitamente para eliminar la carta tech
     const techCardIdValue = deck.techCardId !== undefined ? deck.techCardId : null;
@@ -147,8 +159,8 @@ export async function PUT(
     const updatedDeck = await prisma.deck.update({
       where: { id },
       data: {
-        name: deck.name,
-        description: deck.description,
+        name: sanitizedName,
+        description: sanitizedDescription,
         cards: deck.cards as any,
         format: deck.format || "RE",
         isPublic: deck.isPublic || false,

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { SavedDeck, DeckCard } from "@/lib/deck-builder/types";
 import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
 import { log } from "@/lib/logging/logger";
+import { sanitizeDeckName, sanitizeDeckDescription } from "@/lib/validation/sanitize";
 
 // GET - Obtener mazos del usuario o mazos públicos
 export async function GET(request: NextRequest) {
@@ -180,12 +181,23 @@ export async function POST(request: NextRequest) {
 
     // Si el mazo tiene un ID, NO crear uno nuevo - debería usar PUT en su lugar
     if (deck.id) {
-      console.warn(`[POST /api/decks] Intento de crear mazo con ID existente: ${deck.id}. Debería usar PUT en su lugar.`);
+      log.warn("Intento de crear mazo con ID existente", { deckId: deck.id });
       return NextResponse.json(
         { error: "No se puede crear un mazo con un ID existente. Use PUT para actualizar." },
         { status: 400 }
       );
     }
+
+    // Sanitizar nombre y descripción del mazo
+    const sanitizedName = sanitizeDeckName(deck.name);
+    if (!sanitizedName) {
+      return NextResponse.json(
+        { error: "El nombre del mazo es requerido y debe tener entre 1 y 100 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedDescription = sanitizeDeckDescription(deck.description);
 
     // Verificar que el usuario existe
     const user = await prisma.user.findUnique({
@@ -202,8 +214,8 @@ export async function POST(request: NextRequest) {
     // Crear mazo
     const newDeck = await prisma.deck.create({
       data: {
-        name: deck.name,
-        description: deck.description,
+        name: sanitizedName,
+        description: sanitizedDescription,
         cards: deck.cards as any,
         format: deck.format || "RE",
         userId,
