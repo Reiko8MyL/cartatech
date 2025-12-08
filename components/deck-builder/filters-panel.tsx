@@ -149,19 +149,20 @@ export function FiltersPanel({
 
   function toggleCostFilter(cost: number, checked: boolean) {
     const currentArray = filters.cost
+    const costString = String(cost)
     if (checked) {
       // Agregar coste si no existe
-      if (!currentArray.includes(cost)) {
+      if (!currentArray.includes(costString)) {
         onFiltersChange({
           ...filters,
-          cost: [...currentArray, cost],
+          cost: [...currentArray, costString],
         })
       }
     } else {
       // Remover coste
       onFiltersChange({
         ...filters,
-        cost: currentArray.filter((c) => c !== cost),
+        cost: currentArray.filter((c) => c !== costString),
       })
     }
   }
