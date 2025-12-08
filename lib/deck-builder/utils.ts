@@ -237,7 +237,7 @@ export function filterCards(cards: Card[], filters: DeckFilters): Card[] {
   }
 
   // Filtrar por búsqueda en descripción
-  if (filters.descriptionSearch.trim()) {
+  if (filters.descriptionSearch && filters.descriptionSearch.trim()) {
     const descriptionSearchLower = filters.descriptionSearch.toLowerCase().trim();
     filtered = filtered.filter((card) =>
       card.description.toLowerCase().includes(descriptionSearchLower)
@@ -264,7 +264,7 @@ export function filterCards(cards: Card[], filters: DeckFilters): Card[] {
   // Filtrar por coste (múltiples valores)
   if (filters.cost.length > 0) {
     filtered = filtered.filter((card) => 
-      card.cost !== null && filters.cost.includes(card.cost)
+      card.cost !== null && filters.cost.includes(String(card.cost))
     );
   }
 
