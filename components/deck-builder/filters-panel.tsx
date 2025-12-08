@@ -460,7 +460,7 @@ export function FiltersPanel({
           {availableCosts.map((cost) => (
             <DropdownMenuCheckboxItem
               key={cost}
-              checked={filters.cost.includes(cost)}
+              checked={filters.cost.includes(String(cost))}
               onCheckedChange={(checked) => {
                 toggleCostFilter(cost, checked)
               }}
