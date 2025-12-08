@@ -116,7 +116,7 @@ export function FiltersPanel({
           edition: filters.edition.length > 0 ? filters.edition : undefined,
           type: filters.type.length > 0 ? filters.type : undefined,
           race: filters.race.length > 0 ? filters.race : undefined,
-          cost: filters.cost.length > 0 ? filters.cost : undefined,
+          cost: filters.cost.length > 0 ? filters.cost.map(c => Number(c)) : undefined,
         });
       });
     }
