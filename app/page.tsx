@@ -7,7 +7,6 @@ import { Footer } from "@/components/home/footer";
 import { Logo } from "@/components/ui/logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateMetadata as genMeta } from "@/lib/metadata";
-
 export const metadata: Metadata = genMeta({
   title: "Inicio",
   description:

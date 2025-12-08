@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import Image from "next/image"
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Plus, Minus } from "lucide-react"
+import { Plus, Minus, ChevronLeft, ChevronRight, Sword, Users, Coins, Zap, BookOpen } from "lucide-react"
 import type { Card, DeckCard } from "@/lib/deck-builder/types"
 import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
 import { toastSuccess } from "@/lib/toast"
@@ -27,6 +27,8 @@ interface CardInfoModalProps {
   onAddCard: (cardId: string) => void
   onRemoveCard: (cardId: string) => void
   onReplaceCard: (oldCardId: string, newCardId: string) => void
+  filteredCards?: Card[] // Lista de cartas filtradas para navegación
+  onCardChange?: (card: Card) => void // Función para cambiar la carta actual
 }
 
 export function CardInfoModal({
@@ -40,8 +42,42 @@ export function CardInfoModal({
   onAddCard,
   onRemoveCard,
   onReplaceCard,
+  filteredCards = [],
+  onCardChange,
 }: CardInfoModalProps) {
   if (!card) return null
+
+  // Determinar si se debe mostrar la sección "En el mazo" (solo si hay deckCards)
+  const showDeckSection = deckCards.length > 0
+
+  // Navegación entre cartas filtradas
+  const navigateToCard = useMemo(() => {
+    if (!filteredCards.length || !onCardChange) return null
+
+    const currentIndex = filteredCards.findIndex((c) => c.id === card.id)
+    if (currentIndex === -1) return null
+
+    return {
+      currentIndex,
+      total: filteredCards.length,
+      hasPrevious: currentIndex > 0,
+      hasNext: currentIndex < filteredCards.length - 1,
+      previousCard: currentIndex > 0 ? filteredCards[currentIndex - 1] : null,
+      nextCard: currentIndex < filteredCards.length - 1 ? filteredCards[currentIndex + 1] : null,
+    }
+  }, [filteredCards, card.id, onCardChange])
+
+  const handlePreviousCard = useCallback(() => {
+    if (navigateToCard?.previousCard && onCardChange) {
+      onCardChange(navigateToCard.previousCard)
+    }
+  }, [navigateToCard, onCardChange])
+
+  const handleNextCard = useCallback(() => {
+    if (navigateToCard?.nextCard && onCardChange) {
+      onCardChange(navigateToCard.nextCard)
+    }
+  }, [navigateToCard, onCardChange])
 
   const [displayImage, setDisplayImage] = useState<string>(card.image)
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
@@ -60,6 +96,24 @@ export function CardInfoModal({
   useEffect(() => {
     setDisplayImage(card.image)
   }, [card.id, card.image])
+
+  // Navegación con teclado (flechas izquierda/derecha)
+  useEffect(() => {
+    if (!isOpen || !navigateToCard) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft" && navigateToCard.hasPrevious) {
+        e.preventDefault()
+        handlePreviousCard()
+      } else if (e.key === "ArrowRight" && navigateToCard.hasNext) {
+        e.preventDefault()
+        handleNextCard()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, navigateToCard, handlePreviousCard, handleNextCard])
 
   // Encontrar qué carta alternativa está siendo mostrada actualmente
   const selectedAlternativeCard = alternativeArts.find((altCard) => altCard.image === displayImage)
@@ -155,10 +209,41 @@ export function CardInfoModal({
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto [&]:!animate-none [&[data-state=open]]:!animate-none [&[data-state=closed]]:!animate-none [&]:!transition-none">
         <DialogHeader className="pb-2">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight">
-              {card.name}
-            </DialogTitle>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {/* Botón de navegación anterior */}
+              {navigateToCard && navigateToCard.hasPrevious && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePreviousCard}
+                  className="flex-shrink-0"
+                  aria-label="Carta anterior"
+                >
+                  <ChevronLeft className="size-5" />
+                </Button>
+              )}
+              <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight flex-1 min-w-0">
+                {card.name}
+              </DialogTitle>
+              {/* Botón de navegación siguiente */}
+              {navigateToCard && navigateToCard.hasNext && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleNextCard}
+                  className="flex-shrink-0"
+                  aria-label="Carta siguiente"
+                >
+                  <ChevronRight className="size-5" />
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              {navigateToCard && navigateToCard.total > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {navigateToCard.currentIndex + 1} / {navigateToCard.total}
+                </span>
+              )}
               {card.isUnique && (
                 <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs md:text-sm font-semibold">
                   Carta Única
@@ -196,44 +281,87 @@ export function CardInfoModal({
               })()}
             </div>
 
-            {/* Controles de cantidad bajo la carta */}
+            {/* Controles de cantidad bajo la carta - solo se muestra si hay deckCards */}
             <div className="flex flex-col gap-2 w-full max-w-[280px]">
-              <div className="flex items-center justify-between gap-3 p-3 bg-muted rounded-lg">
-                <span className="text-xs font-medium">
-                  En el mazo:{" "}
-                  <span className="font-semibold">
-                    {quantityInDeck} / {maxQuantity}
-                  </span>
-                </span>
-                <div className="flex items-center gap-2" role="group" aria-label="Cantidad de cartas en el mazo">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleRemoveCard}
-                    disabled={quantityInDeck === 0}
-                    className="transition-all duration-200 hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
-                    aria-label={`Quitar una copia de ${card.name}`}
-                  >
-                    <Minus className="size-4" aria-hidden="true" />
-                  </Button>
-                  <span className="text-base font-semibold w-8 text-center" aria-live="polite" aria-atomic="true">
-                    {quantityInDeck}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleAddCard}
-                    disabled={quantityInDeck >= maxQuantity}
-                    className="transition-all duration-200 hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
-                    aria-label={`Agregar una copia de ${card.name}`}
-                  >
-                    <Plus className="size-4" aria-hidden="true" />
-                  </Button>
-                </div>
-              </div>
+              {showDeckSection && (
+                <>
+                  <div className="flex items-center justify-between gap-3 p-3 bg-muted rounded-lg">
+                    <span className="text-xs font-medium">
+                      En el mazo:{" "}
+                      <span className="font-semibold">
+                        {quantityInDeck} / {maxQuantity}
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2" role="group" aria-label="Cantidad de cartas en el mazo">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleRemoveCard}
+                        disabled={quantityInDeck === 0}
+                        className="transition-all duration-200 hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
+                        aria-label={`Quitar una copia de ${card.name}`}
+                      >
+                        <Minus className="size-4" aria-hidden="true" />
+                      </Button>
+                      <span className="text-base font-semibold w-8 text-center" aria-live="polite" aria-atomic="true">
+                        {quantityInDeck}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleAddCard}
+                        disabled={quantityInDeck >= maxQuantity}
+                        className="transition-all duration-200 hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
+                        aria-label={`Agregar una copia de ${card.name}`}
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </div>
 
-              {/* Botón para volver al arte original si se ha seleccionado uno alternativo */}
-              {displayImage !== card.image && (
+                  {/* Botón para volver al arte original si se ha seleccionado uno alternativo */}
+                  {displayImage !== card.image && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => setDisplayImage(card.image)}
+                      aria-label="Volver al arte original de la carta"
+                    >
+                      Volver al arte original
+                    </Button>
+                  )}
+
+                  {/* Botón para usar la versión alternativa en el mazo (solo si NO está ya en el mazo) */}
+                  {isShowingAlternative && quantityInDeck > 0 && !isAlternativeInDeck && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={handleReplaceCard}
+                      aria-label={`Usar esta versión de ${selectedAlternativeCard?.name} en el mazo`}
+                    >
+                      Usar esta versión en el Mazo
+                    </Button>
+                  )}
+
+                  {/* Botón para usar la versión original en el mazo (cuando hay una alternativa en el mazo) */}
+                  {quantityInDeck > 0 && (isAlternativeInDeck || hasAlternativeInDeck) && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={handleReplaceToOriginal}
+                      aria-label="Usar versión original en el mazo"
+                    >
+                      Usar versión original en el Mazo
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Botón para volver al arte original si se ha seleccionado uno alternativo (solo si no hay deckCards) */}
+              {!showDeckSection && displayImage !== card.image && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -244,103 +372,105 @@ export function CardInfoModal({
                   Volver al arte original
                 </Button>
               )}
-
-              {/* Botón para usar la versión alternativa en el mazo (solo si NO está ya en el mazo) */}
-              {isShowingAlternative && quantityInDeck > 0 && !isAlternativeInDeck && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={handleReplaceCard}
-                  aria-label={`Usar esta versión de ${selectedAlternativeCard?.name} en el mazo`}
-                >
-                  Usar esta versión en el Mazo
-                </Button>
-              )}
-
-              {/* Botón para usar la versión original en el mazo (cuando hay una alternativa en el mazo) */}
-              {quantityInDeck > 0 && (isAlternativeInDeck || hasAlternativeInDeck) && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={handleReplaceToOriginal}
-                  aria-label="Usar versión original en el mazo"
-                >
-                  Usar versión original en el Mazo
-                </Button>
-              )}
             </div>
           </div>
 
           {/* Columna derecha: controles, info y arte alternativo */}
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Datos de la carta en layout horizontal */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Tipo
-                </span>
-                <span>{card.type}</span>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Sword className="size-5 text-primary" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Tipo
+                  </span>
+                  <span className="text-base font-semibold">{card.type}</span>
+                </div>
               </div>
               {card.race && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Raza
-                  </span>
-                  <span>{card.race}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Users className="size-5 text-primary" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Raza
+                    </span>
+                    <span className="text-base font-semibold">{card.race}</span>
+                  </div>
                 </div>
               )}
               {card.cost !== null && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Coste
-                  </span>
-                  <span>{card.cost}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Coins className="size-5 text-primary" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Coste
+                    </span>
+                    <span className="text-base font-semibold">{card.cost}</span>
+                  </div>
                 </div>
               )}
               {card.power !== null && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Fuerza
-                  </span>
-                  <span>{card.power}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Zap className="size-5 text-primary" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Fuerza
+                    </span>
+                    <span className="text-base font-semibold">{card.power}</span>
+                  </div>
                 </div>
               )}
-              <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Edición
-                </span>
-                <div className="flex items-center gap-2">
-                  {EDITION_LOGOS[card.edition] ? (
-                    <div className="relative w-20 h-20">
-                      {(() => {
-                        const logoUrl = EDITION_LOGOS[card.edition]
-                        const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                        const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                        return (
-                          <Image
-                            src={optimizedLogoUrl}
-                            alt={card.edition}
-                            fill
-                            className="object-contain rounded-full bg-background"
-                            sizes="80px"
-                            unoptimized={isOptimized}
-                          />
-                        )
-                      })()}
-                    </div>
-                  ) : (
-                    <span>{card.edition}</span>
-                  )}
+              <div className="flex items-center gap-3 col-span-2">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <BookOpen className="size-5 text-primary" />
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Edición
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {EDITION_LOGOS[card.edition] ? (
+                      <div className="relative w-28 h-28 sm:w-32 sm:h-32">
+                        {(() => {
+                          const logoUrl = EDITION_LOGOS[card.edition]
+                          const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                          const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                          return (
+                            <Image
+                              src={optimizedLogoUrl}
+                              alt={card.edition}
+                              fill
+                              className="object-contain rounded-full bg-background"
+                              sizes="128px"
+                              unoptimized={isOptimized}
+                            />
+                          )
+                        })()}
+                      </div>
+                    ) : (
+                      <span className="text-lg font-semibold">{card.edition}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Descripción */}
-            <div className="pt-1">
-              <h3 className="text-sm font-semibold mb-1.5">Texto de la carta</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="size-4 text-primary" />
+                <h3 className="text-base font-semibold">Habilidad de la carta</h3>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed pl-6">
                 {card.description}
               </p>
             </div>
@@ -381,4 +511,3 @@ export function CardInfoModal({
     </Dialog>
   )
 }
-

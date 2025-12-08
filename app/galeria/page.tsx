@@ -20,6 +20,8 @@ import {
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import type { Card, DeckCard, DeckFilters } from "@/lib/deck-builder/types"
+import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
+import Image from "next/image"
 
 const COLLECTION_STORAGE_KEY = "myl_collection"
 
@@ -288,39 +290,95 @@ function GaleriaContent() {
     "Drácula",
   ]
 
-  return (
-    <main className="w-full min-h-[calc(100vh-4rem)] flex flex-col px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 2xl:px-24 py-4">
-      <h1 className="sr-only">Galería de Cartas - Mitos y Leyendas Primer Bloque</h1>
-      {/* Panel de modo colección */}
-      <div className="mb-3">
-        <CollectionModePanel
-          isCollectionMode={isCollectionMode}
-          onToggleCollectionMode={setIsCollectionMode}
-          allCards={allCards}
-          collectedCards={collectedCards}
-        />
-      </div>
+  // Contador de cartas filtradas
+  const filteredCount = filteredCards.length
+  const totalCount = allCards.length
+  const hasActiveFilters = filters.search.trim() !== "" || 
+    filters.descriptionSearch.trim() !== "" ||
+    filters.edition.length > 0 ||
+    filters.type.length > 0 ||
+    filters.race.length > 0 ||
+    filters.cost.length > 0
 
-      {/* Panel de filtros */}
-      <div className="mb-3">
-        <FiltersPanel
-          filters={filters}
-          onFiltersChange={setFilters}
-          availableEditions={availableEditions}
-          availableTypes={availableTypes}
-          availableRaces={availableRaces}
-          availableCosts={availableCosts}
-        />
+  return (
+    <main className="w-full min-h-[calc(100vh-4rem)] flex flex-col px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 py-4 max-w-[1920px] mx-auto">
+      {/* Header con título y contador */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-1">
+              Galería de Cartas
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              {hasActiveFilters ? (
+                <>
+                  Mostrando <span className="font-semibold text-foreground">{filteredCount}</span> de{" "}
+                  <span className="font-semibold text-foreground">{totalCount}</span> cartas
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground">{totalCount}</span> cartas disponibles
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Panel de modo colección */}
+        <div className="mb-3">
+          <CollectionModePanel
+            isCollectionMode={isCollectionMode}
+            onToggleCollectionMode={setIsCollectionMode}
+            allCards={allCards}
+            collectedCards={collectedCards}
+          />
+        </div>
+
+        {/* Panel de filtros */}
+        <div className="mb-3">
+          <FiltersPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            availableEditions={availableEditions}
+            availableTypes={availableTypes}
+            availableRaces={availableRaces}
+            availableCosts={availableCosts}
+          />
+        </div>
       </div>
 
       {/* Galería de cartas */}
       <ErrorBoundary>
-        <div className="flex-1 border rounded-lg bg-card overflow-hidden">
+        <div className="flex-1 border rounded-lg bg-card overflow-hidden shadow-sm">
           <div className="h-full overflow-y-auto">
             {isLoadingCardsFromAPI || isLoading ? (
               <CardGridSkeleton count={12} columns={6} />
+            ) : filteredCards.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <svg
+                    className="size-8 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No se encontraron cartas</h3>
+                <p className="text-muted-foreground max-w-md">
+                  {hasActiveFilters
+                    ? "Intenta ajustar los filtros para ver más resultados."
+                    : "No hay cartas disponibles en este momento."}
+                </p>
+              </div>
             ) : (
-              <div className="space-y-4 sm:space-y-6 p-2 sm:p-3 lg:p-4 animate-in fade-in duration-300">
+              <div className="space-y-6 sm:space-y-8 p-3 sm:p-4 lg:p-6 animate-in fade-in duration-300">
                 {editionOrder.map((edition, editionIndex) => {
                 const editionCards = cardsByEdition.get(edition)
                 if (!editionCards || editionCards.length === 0) return null
@@ -331,11 +389,29 @@ function GaleriaContent() {
                 const priorityCount = 2
 
                 return (
-                  <div key={edition} className="space-y-3">
-                    <h2 className="text-lg font-semibold sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
-                      {edition}
-                    </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
+                  <div key={edition} className="space-y-4">
+                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b pb-3 -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6">
+                      <div className="flex items-center gap-3">
+                        {EDITION_LOGOS[edition] && (
+                          <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                            <Image
+                              src={EDITION_LOGOS[edition]}
+                              alt={edition}
+                              fill
+                              className="object-contain"
+                              sizes="(max-width: 640px) 40px, 48px"
+                            />
+                          </div>
+                        )}
+                        <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+                          {edition}
+                          <span className="text-sm font-normal text-muted-foreground">
+                            ({editionCards.length})
+                          </span>
+                        </h2>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6 gap-3 sm:gap-4">
                       {editionCards.map((card, cardIndex) => {
                         const isCollected = collectedCards.has(card.id)
                         const maxQuantity = card.banListRE
@@ -444,18 +520,22 @@ function GaleriaContent() {
             deckCards={[]}
             onAddCard={(cardId: string) => {
               if (isCollectionMode) {
-              toggleCardCollection(cardId)
-            }
-          }}
-          onRemoveCard={(cardId: string) => {
-            if (isCollectionMode) {
-              toggleCardCollection(cardId)
-            }
-          }}
-          onReplaceCard={(_oldCardId: string, _newCardId: string) => {
-            // No disponible en modo galería
-          }}
-        />
+                toggleCardCollection(cardId)
+              }
+            }}
+            onRemoveCard={(cardId: string) => {
+              if (isCollectionMode) {
+                toggleCardCollection(cardId)
+              }
+            }}
+            onReplaceCard={(_oldCardId: string, _newCardId: string) => {
+              // No disponible en modo galería
+            }}
+            filteredCards={filteredCards}
+            onCardChange={(newCard) => {
+              setSelectedCard(newCard)
+            }}
+          />
         )
       })()}
     </main>

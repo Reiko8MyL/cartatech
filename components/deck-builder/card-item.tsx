@@ -2,6 +2,7 @@
 
 import { memo, useRef, useState, useEffect } from "react"
 import Image from "next/image"
+import { Plus, Minus, X, Info } from "lucide-react"
 import type { Card } from "@/lib/deck-builder/types"
 import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
@@ -18,6 +19,10 @@ interface CardItemProps {
   onCardTouchEnd?: () => void
   priority?: boolean
   showBanListIndicator?: boolean
+  onAddCard?: (card: Card) => void
+  onRemoveCard?: (card: Card) => void
+  onRemoveAllCards?: (card: Card) => void
+  onOpenCardModal?: (card: Card) => void
 }
 
 export const CardItem = memo(function CardItem({
@@ -33,6 +38,10 @@ export const CardItem = memo(function CardItem({
   onCardTouchEnd,
   priority = false,
   showBanListIndicator = true,
+  onAddCard,
+  onRemoveCard,
+  onRemoveAllCards,
+  onOpenCardModal,
 }: CardItemProps) {
   const touchStartTimeRef = useRef<number | null>(null)
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -175,17 +184,91 @@ export const CardItem = memo(function CardItem({
               className="absolute inset-0 bg-black"
               style={{ opacity: overlayOpacity }}
             />
-            <div className="absolute inset-0 flex items-center justify-center text-neutral-100 font-bold text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-              {quantity}
+            
+            {/* Botón de quitar todas las copias en el centro de la parte superior */}
+            {onRemoveAllCards && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemoveAllCards(card)
+                }}
+                className="absolute top-1.5 sm:top-2 left-1/2 -translate-x-1/2 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
+                aria-label={`Quitar todas las copias de ${card.name}`}
+                disabled={quantity === 0}
+              >
+                <X className="size-3 sm:size-3.5 text-gray-800" />
+              </button>
+            )}
+            
+            {/* Contenedor central con fracción y controles */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-2">
+              {/* Indicador de cantidad: "cantidad / maxQuantity" */}
+              <div className="text-white font-bold text-lg sm:text-xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                {quantity} / {maxQuantity}
+              </div>
+              
+              {/* Controles de cantidad en rectángulo redondeado */}
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center gap-0 overflow-hidden shadow-lg">
+                {/* Botón de decremento */}
+                {onRemoveCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRemoveCard(card)
+                    }}
+                    disabled={quantity === 0}
+                    className="flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-200 active:bg-gray-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label={`Quitar una copia de ${card.name}`}
+                  >
+                    <Minus className="size-3.5 sm:size-4 text-gray-800" />
+                  </button>
+                )}
+                
+                {/* Separador vertical */}
+                {onAddCard && onRemoveCard && (
+                  <div className="w-px h-6 bg-gray-300" />
+                )}
+                
+                {/* Botón de incremento */}
+                {onAddCard && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAddCard(card)
+                    }}
+                    disabled={quantity >= maxQuantity || !canAddMore}
+                    className="flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-200 active:bg-gray-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label={`Agregar una copia de ${card.name}`}
+                  >
+                    <Plus className="size-3.5 sm:size-4 text-gray-800" />
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}
 
-        {/* Tooltip con nombre - escala junto con la imagen */}
-        <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out truncate text-center">
-          {card.name}
-        </div>
+        {/* Tooltip con nombre - solo se muestra cuando no hay cantidad o en hover si no hay controles */}
+        {quantity === 0 && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out truncate text-center z-10">
+            {card.name}
+          </div>
+        )}
       </div>
+
+      {/* Botón de información en la esquina inferior derecha - siempre visible */}
+      {onOpenCardModal && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenCardModal(card)
+          }}
+          className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
+          aria-label={`Ver información de ${card.name}`}
+        >
+          <Info className="size-3 sm:size-3.5 text-gray-800" />
+        </button>
+      )}
 
       {/* Indicadores en el centro del lado derecho */}
       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20 items-end text-[9px]">
@@ -251,6 +334,11 @@ export const CardItem = memo(function CardItem({
   // Comparar handlers de long press
   if (prevProps.onCardLongPress !== nextProps.onCardLongPress) return false
   if (prevProps.onCardTouchEnd !== nextProps.onCardTouchEnd) return false
+  // Comparar handlers de agregar/quitar cartas
+  if (prevProps.onAddCard !== nextProps.onAddCard) return false
+  if (prevProps.onRemoveCard !== nextProps.onRemoveCard) return false
+  if (prevProps.onRemoveAllCards !== nextProps.onRemoveAllCards) return false
+  if (prevProps.onOpenCardModal !== nextProps.onOpenCardModal) return false
   // Si las funciones cambian, no re-renderizar (son estables con useCallback)
   return true
 })

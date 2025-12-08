@@ -65,11 +65,10 @@ export const DECK_TAGS = [
 
 export interface DeckFilters {
   search: string;
-  descriptionSearch: string;
-  edition: string[];
-  type: string[];
-  race: string[];
-  cost: number[];
+  edition: string;
+  type: string;
+  race: string;
+  cost: string;
 }
 
 export interface DeckStats {

@@ -43,6 +43,7 @@ import { useBannerSettings, getBannerStyle, getOverlayStyle } from "@/hooks/use-
 import { useDeviceType } from "@/hooks/use-banner-settings";
 import { getAllBackgroundImages } from "@/lib/deck-builder/banner-utils";
 import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils";
+import { TourTestButton } from "@/components/onboarding/tour-test-button";
 
 interface AdminStats {
   totalUsers: number;
@@ -171,6 +172,7 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminGuard requiredRole="MODERATOR">
+      <TourTestButton />
       <div className="container mx-auto p-4 md:p-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

@@ -197,6 +197,26 @@ export function CardsPanel({
     return deckFormat === "RE" ? card.banListRE : deckFormat === "RL" ? card.banListRL : card.banListLI
   }, [deckFormat])
 
+  // Función para eliminar todas las copias de una carta (considerando todas las variantes)
+  const handleRemoveAllCards = useCallback((card: Card) => {
+    const baseId = getBaseCardId(card.id)
+    const currentQuantity = baseCardQuantityMap.get(baseId) || 0
+    
+    // Eliminar todas las copias llamando a onRemoveCard múltiples veces
+    // Encontrar todas las variantes de la carta en el mazo
+    const cardVariants = deckCards.filter((dc) => {
+      const dcBaseId = getBaseCardId(dc.cardId)
+      return dcBaseId === baseId
+    })
+    
+    // Eliminar todas las copias de cada variante
+    cardVariants.forEach((deckCard) => {
+      for (let i = 0; i < deckCard.quantity; i++) {
+        onRemoveCard(deckCard.cardId)
+      }
+    })
+  }, [baseCardQuantityMap, deckCards, onRemoveCard])
+
   // Agrupar cartas por edición - memoizado (solo cartas originales)
   const cardsByEdition = useMemo(() => {
     const map = new Map<string, Card[]>()
@@ -261,6 +281,28 @@ export function CardsPanel({
                         onCardLongPress={isMobile ? () => handleCardLongPress(card) : undefined}
                         onCardTouchEnd={isMobile ? () => handleCardTouchEnd(card) : undefined}
                         priority={shouldPrioritize}
+                        onAddCard={(displayedCard) => {
+                          // Obtener el ID correcto de la carta a agregar
+                          const cardIdToAdd = getCardIdToAdd(card)
+                          onAddCard(cardIdToAdd)
+                        }}
+                        onRemoveCard={(displayedCard) => {
+                          // Obtener el ID correcto de la carta a remover
+                          const cardIdToRemove = getCardIdToAdd(card)
+                          onRemoveCard(cardIdToRemove)
+                        }}
+                        onRemoveAllCards={(displayedCard) => {
+                          // Eliminar todas las copias de la carta (considerando todas las variantes)
+                          handleRemoveAllCards(card)
+                        }}
+                        onOpenCardModal={(displayedCard) => {
+                          // Abrir el modal de información de la carta
+                          // Buscar la carta original para el modal (similar a handleCardRightClick)
+                          const baseId = getBaseCardId(card.id)
+                          const originalCard = originalCards.find((c) => getBaseCardId(c.id) === baseId) || card
+                          setSelectedCard(originalCard)
+                          setIsModalOpen(true)
+                        }}
                       />
                     )
                   })}
@@ -279,6 +321,10 @@ export function CardsPanel({
           (card) => card.isCosmetic && getBaseCardId(card.id) === baseId
         )
         
+        // Obtener lista de cartas filtradas (las cartas que se están mostrando actualmente)
+        // Las cartas recibidas en 'cards' ya están filtradas, y originalCards son esas mismas cartas
+        const filteredCardsList = originalCards
+        
         return (
           <CardInfoModal
             card={selectedCard}
@@ -295,6 +341,10 @@ export function CardsPanel({
               onRemoveCard(cardId)
             }}
             onReplaceCard={onReplaceCard}
+            filteredCards={filteredCardsList}
+            onCardChange={(newCard) => {
+              setSelectedCard(newCard)
+            }}
           />
         )
       })()}
