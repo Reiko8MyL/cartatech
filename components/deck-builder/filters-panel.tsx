@@ -84,7 +84,7 @@ export function FiltersPanel({
       // Trackear después de 500ms de inactividad
       searchTimeoutRef.current = setTimeout(() => {
         import("@/lib/analytics/events").then(({ trackCardSearched }) => {
-          trackCardSearched(filters.descriptionSearch);
+          trackCardSearched(filters.descriptionSearch || "");
         });
       }, 500);
     }
