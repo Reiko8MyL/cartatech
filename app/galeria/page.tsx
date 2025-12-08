@@ -294,7 +294,7 @@ function GaleriaContent() {
   const filteredCount = filteredCards.length
   const totalCount = allCards.length
   const hasActiveFilters = filters.search.trim() !== "" || 
-    filters.descriptionSearch.trim() !== "" ||
+    (filters.descriptionSearch && filters.descriptionSearch.trim() !== "") ||
     filters.edition.length > 0 ||
     filters.type.length > 0 ||
     filters.race.length > 0 ||
