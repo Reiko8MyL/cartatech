@@ -12,6 +12,7 @@ import { getTemporaryDeck } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { Spinner } from "@/components/ui/spinner"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
+import { Logo } from "@/components/ui/logo"
 
 export default function InicioSesionPage() {
   const router = useRouter()
@@ -94,25 +95,13 @@ export default function InicioSesionPage() {
         {/* Gradiente difuminado en el borde izquierdo (que toca con el panel de datos) */}
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background via-background/50 to-transparent z-0" />
         <div className="relative z-10 flex flex-col items-end text-right">
-          <Link href="/" className="inline-block mb-8">
-            {(() => {
-              const logoUrl = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
-              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-              return (
-                <Image
-                  src={optimizedLogoUrl}
-                  alt="Carta Tech Logo"
-                  width={200}
-                  height={67}
-                  className="h-16 w-auto ml-auto scale-[1.2]"
-                  priority
-                  fetchPriority="high"
-                  loading="eager"
-                  unoptimized={isOptimized}
-                />
-              )
-            })()}
+          <Link href="/" className="inline-block mb-8 ml-auto">
+            <Logo
+              width={200}
+              height={67}
+              className="h-16 w-auto scale-[1.2]"
+              priority={true}
+            />
           </Link>
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
             El mejor constructor de<br />

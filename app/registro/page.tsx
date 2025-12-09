@@ -12,6 +12,7 @@ import { getTemporaryDeck } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { Spinner } from "@/components/ui/spinner"
 import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
+import { Logo } from "@/components/ui/logo"
 
 export default function RegistroPage() {
   const router = useRouter()
@@ -133,13 +134,11 @@ export default function RegistroPage() {
         <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-background via-background/50 to-transparent z-0" />
         <div className="relative z-10">
           <Link href="/" className="inline-block mb-8">
-            <Image
-              src="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
-              alt="Carta Tech Logo"
+            <Logo
               width={200}
               height={67}
               className="h-16 w-auto scale-[1.2]"
-              priority
+              priority={true}
             />
           </Link>
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">

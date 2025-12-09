@@ -623,6 +623,87 @@ export function getDeckRace(deckCards: DeckCard[], allCards: Card[]): string | n
 }
 
 /**
+ * Determina el icono dinámico para aliados basado en la raza dominante del mazo
+ * @param deckCards - Array de cartas del mazo
+ * @param allCards - Array de todas las cartas disponibles
+ * @returns URL del icono correspondiente
+ */
+export function getAllyIconUrl(deckCards: DeckCard[], allCards: Card[]): string {
+  const cardMap = new Map(allCards.map((card) => [card.id, card]));
+  
+  // Mapa de iconos por raza
+  const raceIcons: Record<string, string> = {
+    Caballero: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218636/icon_caballero_edplpa.webp",
+    Dragón: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/drag_psd49t.webp",
+    Faerie: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/faerie_ddfcsx.webp",
+    Héroe: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
+    Olímpico: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/olimpico_nvwqv0.webp",
+    Títan: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250225/titan_wl8gxy.webp",
+    Defensor: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/defe_mztno2.webp",
+    Desafiante: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218636/icon_vikingo_sgcbh3.webp",
+    Sombra: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250225/sombra_p4u2rh.webp",
+    Eterno: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/eterno_xefcre.webp",
+    Faraón: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/icon_faraon_rmz0c2.webp",
+    Sacerdote: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250220/sacer_qidnv4.webp",
+  };
+  
+  const iconDracula = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/icon_dracula_ms7dq4.webp";
+  const iconDefault = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/aliado_g3lv1c.webp";
+  
+  // Contar aliados por raza y edición
+  const raceCounts: Record<string, number> = {};
+  let draculaCount = 0;
+  let totalAllies = 0;
+  
+  for (const deckCard of deckCards) {
+    const card = cardMap.get(deckCard.cardId);
+    if (!card || card.type !== "Aliado") continue;
+    
+    totalAllies += deckCard.quantity;
+    
+    // Contar por edición Drácula
+    if (card.edition === "Drácula") {
+      draculaCount += deckCard.quantity;
+    }
+    
+    // Contar por raza
+    if (card.race) {
+      raceCounts[card.race] = (raceCounts[card.race] || 0) + deckCard.quantity;
+    }
+  }
+  
+  // Si no hay aliados, retornar icono por defecto
+  if (totalAllies === 0) {
+    return iconDefault;
+  }
+  
+  // Verificar si hay muchas cartas de la edición Drácula (más del 30% de los aliados)
+  const draculaThreshold = totalAllies * 0.3;
+  if (draculaCount > draculaThreshold) {
+    return iconDracula;
+  }
+  
+  // Encontrar la raza dominante
+  let dominantRace: string | null = null;
+  let maxCount = 0;
+  
+  for (const [race, count] of Object.entries(raceCounts)) {
+    if (count > maxCount) {
+      maxCount = count;
+      dominantRace = race;
+    }
+  }
+  
+  // Si hay una raza dominante (más del 40% de los aliados), usar su icono
+  if (dominantRace && maxCount > totalAllies * 0.4) {
+    return raceIcons[dominantRace] || iconDefault;
+  }
+  
+  // Si no hay raza dominante, usar icono por defecto
+  return iconDefault;
+}
+
+/**
  * Obtiene el nombre del formato del mazo
  * @returns El nombre del formato
  */

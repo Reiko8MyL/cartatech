@@ -58,6 +58,7 @@ import {
   getPrioritizedDeckTags,
   getSavedDecksFromStorage,
   getBaseCardId,
+  getAllyIconUrl,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { SaveDeckModal } from "./save-deck-modal"
@@ -557,9 +558,9 @@ export function DeckManagementPanel({
     const labelFont = "bold 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
     const countFont = "16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
 
-    // Mapa de URLs de iconos por tipo
+    // Mapa de URLs de iconos por tipo (icono de Aliado es dinámico)
     const iconUrls: Record<string, string> = {
-      Aliado: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
+      Aliado: getAllyIconUrl(deckCards, allCards),
       Arma: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/arma_icono_dgmgej.webp",
       Talismán: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/talisman_icono_kco7k9.webp",
       Tótem: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/totem_icono_fk5p2k.webp",

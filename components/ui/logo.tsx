@@ -15,7 +15,7 @@ interface LogoProps {
 }
 
 const LOGO_DARK = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
-const LOGO_LIGHT = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+const LOGO_LIGHT = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxdd_nh6iqf.webp"
 
 export function Logo({
   width = 150,

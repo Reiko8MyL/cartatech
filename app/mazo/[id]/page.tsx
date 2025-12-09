@@ -25,6 +25,7 @@ import {
   getDeckFormatName,
   generateDeckCode,
   getBaseCardId,
+  getAllyIconUrl,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { getDeckById } from "@/lib/api/decks"
@@ -286,14 +287,14 @@ export default function ViewDeckPage() {
       .sort((a, b) => a.cost - b.cost)
   }, [deck, allCards])
 
-  // Iconos de tipos de cartas
-  const typeIcons: Record<string, string> = {
-    Aliado: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
+  // Iconos de tipos de cartas (icono de Aliado es dinámico)
+  const typeIcons: Record<string, string> = useMemo(() => ({
+    Aliado: deck ? getAllyIconUrl(deck.cards, allCards) : "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/aliado_g3lv1c.webp",
     Arma: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/arma_icono_dgmgej.webp",
     Talismán: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/talisman_icono_kco7k9.webp",
     Tótem: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/totem_icono_fk5p2k.webp",
     Oro: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Oro_icono_godhwp.webp",
-  }
+  }), [deck, allCards])
 
   const typeLabels: Record<string, string> = {
     Aliado: "Aliados",
@@ -785,8 +786,9 @@ export default function ViewDeckPage() {
     const labelFont = "bold 18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
     const countFont = "16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
 
+    // Mapa de URLs de iconos por tipo (icono de Aliado es dinámico)
     const iconUrls: Record<string, string> = {
-      Aliado: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
+      Aliado: deck ? getAllyIconUrl(deck.cards, allCards) : "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/aliado_g3lv1c.webp",
       Arma: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/arma_icono_dgmgej.webp",
       Talismán: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/talisman_icono_kco7k9.webp",
       Tótem: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396473/totem_icono_fk5p2k.webp",
