@@ -10,6 +10,7 @@ import {
   getPublicDecksFromLocalStorage,
   getDeckRace,
   getDeckEdition,
+  getDeckEditionLogo,
   getDeckBackgroundImage,
   EDITION_LOGOS,
   getDeckLikeCount,
@@ -720,29 +721,28 @@ function MazosComunidadPage() {
                     </div>
                     <div className="relative">
                       {/* Logo de edición sobre el botón */}
-                      {deck.edition && EDITION_LOGOS[deck.edition] && (
-                        <div className="absolute -top-32 right-0 z-10">
-                          <div className="relative w-24 h-24" title={deck.edition}>
-                            {(() => {
-                              const logoUrl = EDITION_LOGOS[deck.edition]
-                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                              return (
-                                <Image
-                                  src={optimizedLogoUrl}
-                                  alt={deck.edition}
-                                  fill
-                                  className="object-contain"
-                                  sizes="96px"
-                                  loading="lazy"
-                                  decoding="async"
-                                  unoptimized={isOptimized}
-                                />
-                              )
-                            })()}
+                      {(() => {
+                        const logoUrl = getDeckEditionLogo(deck.cards, allCards)
+                        if (!logoUrl) return null
+                        const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                        const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                        return (
+                          <div className="absolute -top-32 right-0 z-10">
+                            <div className="relative w-24 h-24" title={deck.edition || "Múltiples ediciones"}>
+                              <Image
+                                src={optimizedLogoUrl}
+                                alt={deck.edition || "Múltiples ediciones"}
+                                fill
+                                className="object-contain"
+                                sizes="96px"
+                                loading="lazy"
+                                decoding="async"
+                                unoptimized={isOptimized}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )
+                      })()}
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1" asChild>
                           <Link href={`/mazo/${deck.id}`}>
@@ -912,27 +912,26 @@ function MazosComunidadPage() {
                           )}
                           <div className="relative flex gap-2">
                             {/* Logo de edición sobre los botones */}
-                            {deck.edition && EDITION_LOGOS[deck.edition] && (
-                              <div className="absolute -top-32 right-0 z-10">
-                                <div className="relative w-12 h-12" title={deck.edition}>
-                                  {(() => {
-                                    const logoUrl = EDITION_LOGOS[deck.edition]
-                                    const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                                    return (
-                                      <Image
-                                        src={optimizedLogoUrl}
-                                        alt={deck.edition}
-                                        fill
-                                        className="object-contain"
-                                        sizes="48px"
-                                        unoptimized={isOptimized}
-                                      />
-                                    )
-                                  })()}
+                            {(() => {
+                              const logoUrl = getDeckEditionLogo(deck.cards, allCards)
+                              if (!logoUrl) return null
+                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                              return (
+                                <div className="absolute -top-32 right-0 z-10">
+                                  <div className="relative w-12 h-12" title={deck.edition || "Múltiples ediciones"}>
+                                    <Image
+                                      src={optimizedLogoUrl}
+                                      alt={deck.edition || "Múltiples ediciones"}
+                                      fill
+                                      className="object-contain"
+                                      sizes="48px"
+                                      unoptimized={isOptimized}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )
+                            })()}
                             <Button variant="outline" size="sm" asChild>
                               <Link href={`/mazo/${deck.id}`}>
                                 <Eye className="h-4 w-4 mr-2" />

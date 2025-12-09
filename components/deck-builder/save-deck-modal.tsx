@@ -329,7 +329,7 @@ export function SaveDeckModal({
                   <SelectValue placeholder="Selecciona una imagen de fondo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="default">Por defecto (según raza)</SelectItem>
+                  <SelectItem value="default">Por defecto (Mazo no Racial)</SelectItem>
                   {getAllBackgroundImages().map((img) => (
                     <SelectItem key={img.id} value={img.url}>
                       {img.race}

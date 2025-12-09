@@ -52,6 +52,7 @@ import {
   saveTemporaryDeck,
   getDeckRace,
   getDeckEdition,
+  getDeckEditionLogo,
   getDeckBackgroundImage,
   calculateDeckStats,
   EDITION_LOGOS,
@@ -659,6 +660,21 @@ export function DeckManagementPanel({
     try {
       const layoutTop = await drawTitleAndBadges(ctx, width, deckName, stats)
 
+      // Dibujar logo de edición en la esquina superior derecha
+      const editionLogoUrl = getDeckEditionLogo(deckCards, allCards)
+      if (editionLogoUrl) {
+        try {
+          const editionLogo = await loadImage(editionLogoUrl)
+          const logoSize = 80 // Tamaño del logo
+          const logoMargin = 20 // Margen desde los bordes
+          const logoX = width - logoSize - logoMargin
+          const logoY = logoMargin
+          ctx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
+        } catch {
+          // Si falla la carga del logo, continuar sin él
+        }
+      }
+
       // Preparar cartas a dibujar, agrupadas por tipo
       interface CardToDraw {
         card: CardType
@@ -846,6 +862,21 @@ export function DeckManagementPanel({
     try {
       // Dibujar fondo cortado desde la derecha
       const layoutTop = await drawTitleAndBadges(ctx, width, deckName, stats, true)
+
+      // Dibujar logo de edición en la esquina superior derecha
+      const editionLogoUrl = getDeckEditionLogo(deckCards, allCards)
+      if (editionLogoUrl) {
+        try {
+          const editionLogo = await loadImage(editionLogoUrl)
+          const logoSize = 80 // Tamaño del logo
+          const logoMargin = 20 // Margen desde los bordes
+          const logoX = width - logoSize - logoMargin
+          const logoY = logoMargin
+          ctx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
+        } catch {
+          // Si falla la carga del logo, continuar sin él
+        }
+      }
 
       // Crear mapa de cantidad por carta
       const cardQuantityMap = new Map<string, number>()
@@ -1523,27 +1554,26 @@ export function DeckManagementPanel({
                     <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
                     
                     {/* Logo de edición */}
-                    {deck.edition && EDITION_LOGOS[deck.edition] && (
-                      <div className="absolute top-1.5 right-1.5 z-10">
-                        <div className="relative w-12 h-12" title={deck.edition}>
-                          {(() => {
-                            const logoUrl = EDITION_LOGOS[deck.edition]
-                            const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                            const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                            return (
-                              <Image
-                                src={optimizedLogoUrl}
-                                alt={deck.edition}
-                                fill
-                                className="object-contain drop-shadow-lg"
-                                sizes="48px"
-                                unoptimized={isOptimized}
-                              />
-                            )
-                          })()}
+                    {(() => {
+                      const logoUrl = getDeckEditionLogo(deck.cards, allCards)
+                      if (!logoUrl) return null
+                      const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                      const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                      return (
+                        <div className="absolute top-1.5 right-1.5 z-10">
+                          <div className="relative w-12 h-12" title={deck.edition || "Múltiples ediciones"}>
+                            <Image
+                              src={optimizedLogoUrl}
+                              alt={deck.edition || "Múltiples ediciones"}
+                              fill
+                              className="object-contain drop-shadow-lg"
+                              sizes="48px"
+                              unoptimized={isOptimized}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
 
                     {/* Información del mazo en la parte inferior */}
                     <div className="absolute bottom-0 left-0 right-0 p-2 z-10">

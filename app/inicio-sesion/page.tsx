@@ -97,11 +97,11 @@ export default function InicioSesionPage() {
         <div className="relative z-10 flex flex-col items-end text-right">
           <Link href="/" className="inline-block mb-8 ml-auto">
             <Logo
-              width={200}
-              height={67}
+                  width={200}
+                  height={67}
               className="h-16 w-auto scale-[1.2]"
               priority={true}
-            />
+                />
           </Link>
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
             El mejor constructor de<br />

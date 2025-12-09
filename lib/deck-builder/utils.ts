@@ -23,6 +23,9 @@ export const EDITION_LOGOS: Record<string, string> = {
     "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764388786/Dr_3Fcula_Logo_kfnuue.webp",
 };
 
+// Logo para mazos con múltiples ediciones
+export const ALL_EDITIONS_LOGO = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logo_all_ed_ty0esh.webp";
+
 // Cache síncrono para uso inmediato (se actualiza desde BD en background)
 let syncCardsCache: Card[] | null = null;
 let syncAltCardsCache: Card[] | null = null;
@@ -740,6 +743,39 @@ export function getDeckEdition(deckCards: DeckCard[], allCards: Card[]): string 
 }
 
 /**
+ * Obtiene la URL del logo de edición apropiado para el mazo
+ * @param deckCards - Array de cartas del mazo
+ * @param allCards - Array de todas las cartas disponibles
+ * @returns URL del logo de edición (logo específico si hay una sola edición, logo de todas las ediciones si hay múltiples)
+ */
+export function getDeckEditionLogo(deckCards: DeckCard[], allCards: Card[]): string | null {
+  const edition = getDeckEdition(deckCards, allCards);
+  
+  // Si hay una sola edición, retornar su logo
+  if (edition && EDITION_LOGOS[edition]) {
+    return EDITION_LOGOS[edition];
+  }
+  
+  // Si hay múltiples ediciones (o ninguna), retornar logo de todas las ediciones
+  const cardMap = new Map(allCards.map((card) => [card.id, card]));
+  const editions = new Set<string>();
+  
+  for (const deckCard of deckCards) {
+    const card = cardMap.get(deckCard.cardId);
+    if (!card) continue;
+    editions.add(card.edition);
+  }
+  
+  // Si hay múltiples ediciones, usar el logo de todas las ediciones
+  if (editions.size > 1) {
+    return ALL_EDITIONS_LOGO;
+  }
+  
+  // Si no hay cartas o no se puede determinar, retornar null
+  return null;
+}
+
+/**
  * Obtiene la URL de la imagen de fondo según la raza del mazo
  * @param race La raza del mazo o null
  * @returns La URL de la imagen de fondo en Cloudinary
@@ -747,7 +783,7 @@ export function getDeckEdition(deckCards: DeckCard[], allCards: Card[]): string 
 export function getDeckBackgroundImage(race: string | null): string {
   if (!race) {
     // Imagen por defecto cuando no hay raza específica
-    return "https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435845/Caballero_Lancelot_yktyqi.webp";
+    return "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765312691/banner_generico_qsmscv.webp";
   }
 
   // Mapeo de razas a URLs de Cloudinary
@@ -766,7 +802,7 @@ export function getDeckBackgroundImage(race: string | null): string {
     "Sacerdote": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435846/sacer_quika_gv4nzi.webp",
   };
 
-  return raceToImage[race] || raceToImage["Caballero"];
+  return raceToImage[race] || "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765312691/banner_generico_qsmscv.webp";
 }
 
 /**

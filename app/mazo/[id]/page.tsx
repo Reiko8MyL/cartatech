@@ -11,6 +11,7 @@ import {
   calculateDeckStats,
   getDeckRace,
   getDeckEdition,
+  getDeckEditionLogo,
   getDeckBackgroundImage,
   EDITION_LOGOS,
   sortCardsByEditionAndId,
@@ -885,6 +886,21 @@ export default function ViewDeckPage() {
     try {
       const layoutTop = await drawTitleAndBadges(ctx, width, deck.name, deckMetadata.stats)
 
+      // Dibujar logo de edición en la esquina superior derecha
+      const editionLogoUrl = getDeckEditionLogo(deck.cards, allCards)
+      if (editionLogoUrl) {
+        try {
+          const editionLogo = await loadImage(editionLogoUrl)
+          const logoSize = 80 // Tamaño del logo
+          const logoMargin = 20 // Margen desde los bordes
+          const logoX = width - logoSize - logoMargin
+          const logoY = logoMargin
+          ctx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
+        } catch {
+          // Si falla la carga del logo, continuar sin él
+        }
+      }
+
       interface CardToDraw {
         card: CardType
         quantity: number
@@ -1056,6 +1072,21 @@ export default function ViewDeckPage() {
 
     try {
       const layoutTop = await drawTitleAndBadges(ctx, width, deck.name, deckMetadata.stats, true)
+
+      // Dibujar logo de edición en la esquina superior derecha
+      const editionLogoUrl = getDeckEditionLogo(deck.cards, allCards)
+      if (editionLogoUrl) {
+        try {
+          const editionLogo = await loadImage(editionLogoUrl)
+          const logoSize = 80 // Tamaño del logo
+          const logoMargin = 20 // Margen desde los bordes
+          const logoX = width - logoSize - logoMargin
+          const logoY = logoMargin
+          ctx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
+        } catch {
+          // Si falla la carga del logo, continuar sin él
+        }
+      }
 
       const cardQuantityMap = new Map<string, number>()
       for (const deckCard of deck.cards) {
@@ -1455,27 +1486,26 @@ export default function ViewDeckPage() {
                     </p>
                   </div>
               </div>
-              {deckMetadata.edition && EDITION_LOGOS[deckMetadata.edition] && (
-                <div className="relative w-24 h-24 flex-shrink-0">
-                  {(() => {
-                    const logoUrl = EDITION_LOGOS[deckMetadata.edition]
-                    const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                    return (
-                      <Image
-                        src={optimizedLogoUrl}
-                        alt={deckMetadata.edition}
-                        fill
-                        className="object-contain"
-                        sizes="96px"
-                        loading="lazy"
-                        decoding="async"
-                        unoptimized={isOptimized}
-                      />
-                    )
-                  })()}
-                </div>
-              )}
+              {(() => {
+                const logoUrl = deck ? getDeckEditionLogo(deck.cards, allCards) : null
+                if (!logoUrl) return null
+                const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                return (
+                  <div className="relative w-24 h-24 flex-shrink-0">
+                    <Image
+                      src={optimizedLogoUrl}
+                      alt={deckMetadata.edition || "Múltiples ediciones"}
+                      fill
+                      className="object-contain"
+                      sizes="96px"
+                      loading="lazy"
+                      decoding="async"
+                      unoptimized={isOptimized}
+                    />
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
@@ -1959,7 +1989,7 @@ export default function ViewDeckPage() {
                     <SelectValue placeholder="Selecciona una imagen de fondo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="default">Por defecto (según raza)</SelectItem>
+                    <SelectItem value="default">Por defecto (Mazo no Racial)</SelectItem>
                     {getAllBackgroundImages().map((img) => (
                       <SelectItem key={img.id} value={img.url}>
                         {img.race}
