@@ -14,22 +14,8 @@ export default function DeckBuilderLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="relative min-h-screen">
-      {/* Fondo con logo muy transparente */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage: 'url(https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/minilogo_pc0v1m.webp)',
-          backgroundSize: 'contain',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          opacity: 0.05, // Opacidad muy baja (5%)
-        }}
-      />
-      {/* Contenido */}
-      <div className="relative z-10">
-        {children}
-      </div>
+    <div className="relative h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+      {children}
     </div>
   )
 }

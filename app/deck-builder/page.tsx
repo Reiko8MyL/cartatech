@@ -472,11 +472,11 @@ function DeckBuilderContent() {
         onConfirm={confirmClearDeck}
         variant="default"
       />
-      <main className="w-full h-[calc(100vh-4rem)] flex flex-col px-2 sm:px-4 lg:px-6 py-4">
+      <main className="w-full h-full flex flex-col px-2 sm:px-4 lg:px-6 pb-0">
         <h1 className="sr-only">Deck Builder - Constructor de Mazos</h1>
         
         {/* Panel de filtros - Solo visible en móvil/tablet */}
-        <div className="mb-3 lg:hidden">
+        <div className="mb-0 lg:hidden">
           <FiltersPanel
             filters={filters}
             onFiltersChange={setFilters}
@@ -488,11 +488,11 @@ function DeckBuilderContent() {
         </div>
 
         {/* Contenedor principal con dos paneles */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-0 min-h-0">
           {/* Panel izquierdo: Filtros compactos (solo desktop) + Cartas disponibles */}
           <div className="flex flex-col min-h-0">
             {/* Panel de filtros compacto - Solo visible en desktop */}
-            <div className="hidden lg:block mb-3">
+            <div className="hidden lg:block mb-0">
               <FiltersPanel
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -581,16 +581,16 @@ function DeckBuilderContent() {
 export default function DeckBuilderPage() {
   return (
     <Suspense fallback={
-      <main className="w-full h-[calc(100vh-4rem)] flex flex-col px-2 sm:px-4 lg:px-6 py-4">
+      <main className="w-full h-full flex flex-col px-2 sm:px-4 lg:px-6 pb-0">
         {/* Panel de filtros - Solo visible en móvil/tablet */}
-        <div className="mb-3 lg:hidden">
+        <div className="mb-0 lg:hidden">
           <div className="h-20 bg-muted animate-pulse rounded-lg" />
         </div>
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-3 min-h-0">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-0 min-h-0">
           {/* Panel izquierdo: Filtros compactos (solo desktop) + Cartas */}
           <div className="flex flex-col min-h-0">
             {/* Panel de filtros compacto - Solo visible en desktop */}
-            <div className="hidden lg:block mb-3">
+            <div className="hidden lg:block mb-0">
               <div className="h-20 bg-muted animate-pulse rounded-lg" />
             </div>
             <div className="flex-1 border rounded-lg bg-card overflow-hidden min-h-0">
