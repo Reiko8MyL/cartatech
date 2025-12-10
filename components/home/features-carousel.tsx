@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,6 +11,7 @@ interface CarouselSlide {
   description: string;
   cta: string;
   href: string;
+  videoUrl?: string;
 }
 
 const slides: CarouselSlide[] = [
@@ -20,6 +21,7 @@ const slides: CarouselSlide[] = [
       "Construye tus mazos con nuestra herramienta completa que cuenta con una base de datos actualizada de todas las cartas del formato Primer Bloque.",
     cta: "Comenzar a Construir",
     href: "/deck-builder",
+    videoUrl: "https://res.cloudinary.com/dpbmbrekj/video/upload/v1765344572/banner_1_carrusel_arq4zf.mp4",
   },
   {
     title: "Galería de Cartas",
@@ -39,14 +41,27 @@ const slides: CarouselSlide[] = [
 
 export function FeaturesCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000);
+    // Limpiar timeout anterior si existe
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
-    return () => clearInterval(interval);
-  }, []);
+    // El primer slide dura 8 segundos, los demás 5 segundos
+    const duration = currentSlide === 0 ? 8000 : 5000;
+    
+    timeoutRef.current = setTimeout(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, duration);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [currentSlide]);
 
   function goToSlide(index: number) {
     setCurrentSlide(index);
@@ -62,28 +77,50 @@ export function FeaturesCarousel() {
 
   return (
     <div className="relative w-full">
-      <div className="relative overflow-hidden bg-gradient-to-br from-accent/50 to-accent/20 min-h-[400px] sm:min-h-[450px]">
-        <div className="absolute inset-0 flex items-center justify-center p-8 sm:p-12">
-          <div className="text-center max-w-2xl">
-            <h2 className="text-3xl font-bold mb-4 sm:text-4xl md:text-5xl">
-              {slides[currentSlide].title}
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8 sm:text-xl">
-              {slides[currentSlide].description}
-            </p>
-            <Button asChild size="lg" className="text-base">
-              <Link href={slides[currentSlide].href}>
-                {slides[currentSlide].cta}
-              </Link>
-            </Button>
+      <div className="relative overflow-hidden bg-gradient-to-br from-accent/50 to-accent/20 aspect-[12/5] w-full">
+        {/* Video de fondo si está disponible */}
+        {slides[currentSlide].videoUrl && (
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            key={currentSlide}
+          >
+            <source src={slides[currentSlide].videoUrl} type="video/mp4" />
+          </video>
+        )}
+        
+        {/* Overlay para mejorar legibilidad del texto - solo si hay contenido de texto */}
+        {currentSlide !== 0 && (
+          <div className="absolute inset-0 bg-black/30 dark:bg-black/40" />
+        )}
+        
+        {/* Contenido de texto y botón - oculto en el primer slide */}
+        {currentSlide !== 0 && (
+          <div className="absolute inset-0 flex items-center justify-center p-8 sm:p-12 z-10">
+            <div className="text-center max-w-2xl">
+              <h2 className="text-3xl font-bold mb-4 sm:text-4xl md:text-5xl">
+                {slides[currentSlide].title}
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8 sm:text-xl">
+                {slides[currentSlide].description}
+              </p>
+              <Button asChild size="lg" className="text-base">
+                <Link href={slides[currentSlide].href}>
+                  {slides[currentSlide].cta}
+                </Link>
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         <Button
           variant="ghost"
           size="icon"
           onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 hover:bg-background"
+          className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 hover:bg-background z-20"
           aria-label="Slide anterior"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -93,7 +130,7 @@ export function FeaturesCarousel() {
           variant="ghost"
           size="icon"
           onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 hover:bg-background"
+          className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 hover:bg-background z-20"
           aria-label="Slide siguiente"
         >
           <ChevronRight className="h-5 w-5" />
