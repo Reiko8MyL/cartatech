@@ -21,7 +21,7 @@ const slides: CarouselSlide[] = [
       "Construye tus mazos con nuestra herramienta completa que cuenta con una base de datos actualizada de todas las cartas del formato Primer Bloque.",
     cta: "Comenzar a Construir",
     href: "/deck-builder",
-    videoUrl: "https://res.cloudinary.com/dpbmbrekj/video/upload/v1765344572/banner_1_carrusel_arq4zf.mp4",
+    videoUrl: "https://res.cloudinary.com/dpbmbrekj/video/upload/v1765346706/banner_1.1_carusel_otmgxc.mp4",
   },
   {
     title: "Galería de Cartas",
@@ -42,11 +42,20 @@ const slides: CarouselSlide[] = [
 export function FeaturesCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     // Limpiar timeout anterior si existe
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+    }
+
+    // Reiniciar el video si volvemos al primer slide
+    if (currentSlide === 0 && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => {
+        // Ignorar errores de reproducción automática
+      });
     }
 
     // El primer slide dura 8 segundos, los demás 5 segundos
@@ -75,16 +84,25 @@ export function FeaturesCarousel() {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   }
 
+  function handleVideoEnded() {
+    // Pausar el video al finalizar para que muestre el último frame
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+  }
+
   return (
     <div className="relative w-full">
       <div className="relative overflow-hidden bg-gradient-to-br from-accent/50 to-accent/20 aspect-[12/5] w-full">
         {/* Video de fondo si está disponible */}
         {slides[currentSlide].videoUrl && (
           <video
+            ref={videoRef}
             autoPlay
-            loop
             muted
             playsInline
+            loop={false}
+            onEnded={handleVideoEnded}
             className="absolute inset-0 w-full h-full object-cover"
             key={currentSlide}
           >
