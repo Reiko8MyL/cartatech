@@ -4,8 +4,10 @@ import { useState, useMemo, useCallback, useEffect, Suspense, useTransition, mem
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { FiltersPanel } from "@/components/deck-builder/filters-panel"
-import { CardItem } from "@/components/deck-builder/card-item"
 import { CollectionModePanel } from "@/components/galeria/collection-mode-panel"
+import { CardItemWrapper } from "@/components/galeria/card-item-wrapper"
+import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
+import Image from "next/image"
 
 // Lazy load del modal pesado - solo se carga cuando se necesita
 const CardInfoModal = dynamic(
@@ -27,120 +29,12 @@ import {
   getBaseCardId,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
+import { useQuery } from "@tanstack/react-query"
+import { getAllCardsFromAPI } from "@/lib/api/cards"
 import type { Card, DeckCard, DeckFilters } from "@/lib/deck-builder/types"
-import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
-import Image from "next/image"
 
 const COLLECTION_STORAGE_KEY = "myl_collection"
 
-// Componente memoizado para cada carta - reduce re-renders
-const CardItemWrapper = memo(function CardItemWrapper({
-  card,
-  isCollected,
-  maxQuantity,
-  hasPriority,
-  isCollectionMode,
-  loadingCards,
-  onCardClick,
-  onCardRightClick,
-  onToggleCollection,
-}: {
-  card: Card
-  isCollected: boolean
-  maxQuantity: number
-  hasPriority: boolean
-  isCollectionMode: boolean
-  loadingCards: Set<string>
-  onCardClick: (card: Card) => void
-  onCardRightClick: (e: React.MouseEvent, card: Card) => void
-  onToggleCollection: (cardId: string) => void
-}) {
-  return (
-    <div className="relative group/card">
-      <div className="w-full">
-        <CardItem
-          card={card}
-          quantity={0}
-          maxQuantity={maxQuantity}
-          canAddMore={true}
-          onCardClick={onCardClick}
-          onCardRightClick={onCardRightClick}
-          priority={hasPriority}
-          showBanListIndicator={false}
-        />
-      </div>
-      {/* Toggle de colección - visible cuando está en modo colección */}
-      {isCollectionMode && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleCollection(card.id)
-          }}
-          disabled={loadingCards.has(card.id)}
-          className={`absolute top-1 left-1/2 -translate-x-1/2 z-30 size-6 rounded-full border-2 transition-all duration-200 flex items-center justify-center shadow-lg ${
-            isCollected
-              ? "bg-green-500 border-background hover:bg-green-600"
-              : "bg-background/80 border-border hover:bg-background"
-          } ${loadingCards.has(card.id) ? "opacity-50 cursor-not-allowed animate-pulse" : ""}`}
-          aria-label={
-            isCollected
-              ? "Marcar como no tengo"
-              : "Marcar como la tengo"
-          }
-          title={
-            isCollected
-              ? "Marcar como no tengo"
-              : "Marcar como la tengo"
-          }
-        >
-          {isCollected && (
-            <svg
-              className="size-3 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          )}
-          {!isCollected && (
-            <svg
-              className="size-3 text-muted-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          )}
-        </button>
-      )}
-    </div>
-  )
-}, (prevProps, nextProps) => {
-  // Comparación optimizada para evitar re-renders innecesarios
-  const prevLoading = prevProps.loadingCards.has(prevProps.card.id)
-  const nextLoading = nextProps.loadingCards.has(nextProps.card.id)
-  
-  return (
-    prevProps.card.id === nextProps.card.id &&
-    prevProps.isCollected === nextProps.isCollected &&
-    prevProps.maxQuantity === nextProps.maxQuantity &&
-    prevProps.hasPriority === nextProps.hasPriority &&
-    prevProps.isCollectionMode === nextProps.isCollectionMode &&
-    prevLoading === nextLoading
-  )
-})
 
 /**
  * Carga la colección desde localStorage (fallback)
@@ -221,18 +115,31 @@ function GaleriaContent() {
   const { user } = useAuth()
   const [isPending, startTransition] = useTransition()
   
-  // Cargar todas las cartas desde la API con cache (incluyendo alternativas para el modal)
-  const { cards: allCardsWithAlternatives, isLoading: isLoadingCardsFromAPI } = useCards(true) // Incluir alternativas para el modal
+  // Cargar solo cartas originales (sin alternativas) para mejorar rendimiento inicial
+  // Las alternativas se cargarán solo cuando se abra el modal
+  const { cards: allCards, isLoading: isLoadingCardsFromAPI } = useCards(false) // NO incluir alternativas inicialmente
   
-  // Filtrar solo cartas originales para la galería - memoizado
-  const allCards = useMemo(() => {
-    if (allCardsWithAlternatives.length === 0) return []
-    const originalCards = allCardsWithAlternatives.filter((card) => !card.isCosmetic)
-    return sortCardsByEditionAndId(originalCards)
-  }, [allCardsWithAlternatives])
+  // Ordenar cartas por edición e ID - memoizado
+  const sortedCards = useMemo(() => {
+    if (allCards.length === 0) return []
+    return sortCardsByEditionAndId(allCards)
+  }, [allCards])
+  
+  // Estado del modal (declarar antes de usarlo en useQuery)
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  // Precargar alternativas cuando se abre el modal (usando React Query para cache)
+  const { data: allCardsWithAlternatives = [] } = useQuery<Card[]>({
+    queryKey: ["cards", "with-alternatives"],
+    queryFn: () => getAllCardsFromAPI(true),
+    enabled: isModalOpen, // Solo cargar cuando el modal está abierto
+    staleTime: 10 * 60 * 1000, // Cache por 10 minutos
+    gcTime: 30 * 60 * 1000,
+  })
   
   // Estado de carga - sin delay artificial
-  const isLoading = isLoadingCardsFromAPI || allCards.length === 0
+  const isLoading = isLoadingCardsFromAPI || sortedCards.length === 0
 
   // Leer el parámetro de búsqueda de la URL
   const searchFromUrl = searchParams.get("search") || ""
@@ -303,22 +210,18 @@ function GaleriaContent() {
 
   // Filtrar cartas según los filtros - optimizado con deferred value y startTransition
   const filteredCards = useMemo(() => {
-    if (allCards.length === 0) return []
-    return filterCards(allCards, deferredFilters)
-  }, [allCards, deferredFilters])
+    if (sortedCards.length === 0) return []
+    return filterCards(sortedCards, deferredFilters)
+  }, [sortedCards, deferredFilters])
 
   // Obtener opciones para los filtros
   const availableEditions = useMemo(
-    () => getUniqueEditions(allCards),
-    [allCards]
+    () => getUniqueEditions(sortedCards),
+    [sortedCards]
   )
-  const availableTypes = useMemo(() => getUniqueTypes(allCards), [allCards])
-  const availableRaces = useMemo(() => getUniqueRaces(allCards), [allCards])
-  const availableCosts = useMemo(() => getUniqueCosts(allCards), [allCards])
-
-  // Estado del modal
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const availableTypes = useMemo(() => getUniqueTypes(sortedCards), [sortedCards])
+  const availableRaces = useMemo(() => getUniqueRaces(sortedCards), [sortedCards])
+  const availableCosts = useMemo(() => getUniqueCosts(sortedCards), [sortedCards])
 
   // Funciones para manejar el modo colección (solo si el usuario está autenticado)
   const toggleCardCollection = useCallback(async (cardId: string) => {
@@ -382,6 +285,7 @@ function GaleriaContent() {
       // Siempre abrir modal con click izquierdo
       setSelectedCard(card)
       setIsModalOpen(true)
+      // React Query cargará las alternativas automáticamente cuando isModalOpen sea true
     },
     []
   )
@@ -453,7 +357,7 @@ function GaleriaContent() {
           <CollectionModePanel
             isCollectionMode={isCollectionMode}
             onToggleCollectionMode={setIsCollectionMode}
-            allCards={allCards}
+            allCards={sortedCards}
             collectedCards={collectedCards}
           />
         </div>
@@ -498,142 +402,146 @@ function GaleriaContent() {
         </div>
 
         <ErrorBoundary>
-          <div className="flex-1 border rounded-lg bg-card overflow-hidden shadow-sm">
-            <div className="h-full overflow-y-auto">
-              {isLoading ? (
+          <div className="flex-1 border rounded-lg bg-card overflow-hidden shadow-sm min-h-[600px]">
+            {isLoading ? (
+              <div className="p-3 sm:p-4 lg:p-6">
                 <CardGridSkeleton count={24} columns={8} />
-              ) : filteredCards.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                  <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <svg
-                      className="size-8 text-muted-foreground"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">No se encontraron cartas</h3>
-                  <p className="text-muted-foreground max-w-md">
-                    {hasActiveFilters
-                      ? "Intenta ajustar los filtros para ver más resultados."
-                      : "No hay cartas disponibles en este momento."}
-                  </p>
+              </div>
+            ) : filteredCards.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <svg
+                    className="size-8 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
                 </div>
+                <h3 className="text-xl font-semibold mb-2">No se encontraron cartas</h3>
+                <p className="text-muted-foreground max-w-md">
+                  {hasActiveFilters
+                    ? "Intenta ajustar los filtros para ver más resultados."
+                    : "No hay cartas disponibles en este momento."}
+                </p>
+              </div>
               ) : (
+                // Renderizado normal por ahora - la virtualización se puede activar después
                 <div className="space-y-6 sm:space-y-8 p-3 sm:p-4 lg:p-6 animate-in fade-in duration-300">
                   {editionOrder.map((edition, editionIndex) => {
-                  const editionCards = cardsByEdition.get(edition)
-                  if (!editionCards || editionCards.length === 0) return null
+                    const editionCards = cardsByEdition.get(edition)
+                    if (!editionCards || editionCards.length === 0) return null
 
-                  // Marcar solo las primeras 2 imágenes de la primera edición como priority (above the fold)
-                  const isFirstEdition = editionIndex === 0
-                  const priorityCount = 2
+                    // Marcar solo las primeras 2 imágenes de la primera edición como priority (above the fold)
+                    const isFirstEdition = editionIndex === 0
+                    const priorityCount = 2
 
-                  return (
-                    <div key={edition} className="space-y-4">
-                      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b pb-3 -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6">
-                        <div className="flex items-center gap-3">
-                          {EDITION_LOGOS[edition] && (
-                            <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
-                              <Image
-                                src={EDITION_LOGOS[edition]}
-                                alt={edition}
-                                fill
-                                className="object-contain"
-                                sizes="(max-width: 640px) 40px, 48px"
+                    return (
+                      <div key={edition} className="space-y-4">
+                        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b pb-3 -mx-3 sm:-mx-4 lg:-mx-6 px-3 sm:px-4 lg:px-6">
+                          <div className="flex items-center gap-3">
+                            {EDITION_LOGOS[edition] && (
+                              <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                                <Image
+                                  src={EDITION_LOGOS[edition]}
+                                  alt={edition}
+                                  fill
+                                  className="object-contain"
+                                  sizes="(max-width: 640px) 40px, 48px"
+                                />
+                              </div>
+                            )}
+                            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
+                              {edition}
+                              <span className="text-sm font-normal text-muted-foreground">
+                                ({editionCards.length})
+                              </span>
+                            </h2>
+                          </div>
+                        </div>
+                        {/* Grid optimizado con CSS contain */}
+                        <div 
+                          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 sm:gap-2.5 lg:gap-3"
+                          style={{ 
+                            contain: "layout style paint",
+                            contentVisibility: "auto",
+                          }}
+                        >
+                          {editionCards.map((card, cardIndex) => {
+                            const isCollected = collectedCards.has(card.id)
+                            const maxQuantity = card.banListRE
+                            const hasPriority = isFirstEdition && cardIndex < priorityCount
+
+                            return (
+                              <CardItemWrapper
+                                key={card.id}
+                                card={card}
+                                isCollected={isCollected}
+                                maxQuantity={maxQuantity}
+                                hasPriority={hasPriority}
+                                isCollectionMode={isCollectionMode}
+                                loadingCards={loadingCards}
+                                onCardClick={handleCardClick}
+                                onCardRightClick={handleCardRightClick}
+                                onToggleCollection={memoizedToggleCardCollection}
                               />
-                            </div>
-                          )}
-                          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
-                            {edition}
-                            <span className="text-sm font-normal text-muted-foreground">
-                              ({editionCards.length})
-                            </span>
-                          </h2>
+                            )
+                          })}
                         </div>
                       </div>
-                      {/* Grid más denso con cartas más pequeñas - Más columnas para mostrar más cartas */}
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2 sm:gap-2.5 lg:gap-3">
-                        {editionCards.map((card, cardIndex) => {
-                          const isCollected = collectedCards.has(card.id)
-                          const maxQuantity = card.banListRE
-                          // Solo las primeras imágenes de la primera edición tienen priority
-                          const hasPriority = isFirstEdition && cardIndex < priorityCount
-
-                          return (
-                            <CardItemWrapper
-                              key={card.id}
-                              card={card}
-                              isCollected={isCollected}
-                              maxQuantity={maxQuantity}
-                              hasPriority={hasPriority}
-                              isCollectionMode={isCollectionMode}
-                              loadingCards={loadingCards}
-                              onCardClick={handleCardClick}
-                              onCardRightClick={handleCardRightClick}
-                              onToggleCollection={memoizedToggleCardCollection}
-                            />
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
                 </div>
               )}
-            </div>
           </div>
         </ErrorBoundary>
       </div>
 
       {/* Modal de información de carta - Lazy loaded con Suspense */}
-      {isModalOpen && selectedCard && (() => {
-        // Obtener cartas alternativas desde el cache (ya cargado con useCards)
-        const baseId = getBaseCardId(selectedCard.id)
-        const alternativeArts = allCardsWithAlternatives.filter(
-          (card) => card.isCosmetic && getBaseCardId(card.id) === baseId
-        )
-        
-        return (
-          <Suspense fallback={null}>
-            <CardInfoModal
-              card={selectedCard}
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              alternativeArts={alternativeArts}
-              quantityInDeck={
-                isCollectionMode && collectedCards.has(selectedCard.id) ? 1 : 0
+      {isModalOpen && selectedCard && (
+        <Suspense fallback={null}>
+          <CardInfoModal
+            card={selectedCard}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            alternativeArts={(() => {
+              // Obtener cartas alternativas desde el cache (cargado bajo demanda)
+              const baseId = getBaseCardId(selectedCard.id)
+              return allCardsWithAlternatives.filter(
+                (card) => card.isCosmetic && getBaseCardId(card.id) === baseId
+              )
+            })()}
+            quantityInDeck={
+              isCollectionMode && collectedCards.has(selectedCard.id) ? 1 : 0
+            }
+            maxQuantity={isCollectionMode ? 1 : selectedCard.banListRE}
+            deckCards={[]}
+            onAddCard={(cardId: string) => {
+              if (isCollectionMode) {
+                toggleCardCollection(cardId)
               }
-              maxQuantity={isCollectionMode ? 1 : selectedCard.banListRE}
-              deckCards={[]}
-              onAddCard={(cardId: string) => {
-                if (isCollectionMode) {
-                  toggleCardCollection(cardId)
-                }
-              }}
-              onRemoveCard={(cardId: string) => {
-                if (isCollectionMode) {
-                  toggleCardCollection(cardId)
-                }
-              }}
-              onReplaceCard={(_oldCardId: string, _newCardId: string) => {
-                // No disponible en modo galería
-              }}
-              filteredCards={filteredCards}
-              onCardChange={(newCard) => {
-                setSelectedCard(newCard)
-              }}
-            />
-          </Suspense>
-        )
-      })()}
+            }}
+            onRemoveCard={(cardId: string) => {
+              if (isCollectionMode) {
+                toggleCardCollection(cardId)
+              }
+            }}
+            onReplaceCard={(_oldCardId: string, _newCardId: string) => {
+              // No disponible en modo galería
+            }}
+            filteredCards={filteredCards}
+            onCardChange={(newCard) => {
+              setSelectedCard(newCard)
+            }}
+          />
+        </Suspense>
+      )}
     </main>
   )
 }

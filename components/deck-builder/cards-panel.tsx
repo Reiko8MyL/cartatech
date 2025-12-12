@@ -6,6 +6,9 @@ import { CardItem } from "./card-item"
 import type { Card, DeckCard, DeckFormat } from "@/lib/deck-builder/types"
 import { getBaseCardId } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
+import { useQuery } from "@tanstack/react-query"
+import { getAllCardsFromAPI } from "@/lib/api/cards"
+import { useDeviceType } from "@/contexts/device-context"
 
 interface CardsPanelProps {
   cards: Card[]
@@ -28,22 +31,25 @@ export function CardsPanel({
 }: CardsPanelProps) {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const hoverTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
   
-  // Detectar si estamos en móvil/tablet
-  useEffect(() => {
-    function checkMobile() {
-      setIsMobile(window.innerWidth < 1024)
-    }
-    
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  // Usar contexto compartido para deviceType (más eficiente)
+  const deviceType = useDeviceType()
+  const isMobile = deviceType === 'mobile' || deviceType === 'tablet'
 
-  // Cargar cartas alternativas desde la API con cache (solo cuando se necesiten)
-  const { cards: allCardsWithAlternatives } = useCards(true) // Incluir alternativas
+  // Verificar si hay reemplazos activos (necesitamos alternativas para mostrarlos)
+  const hasActiveReplacements = cardReplacements.size > 0
+  
+  // Cargar cartas alternativas solo cuando:
+  // 1. El modal está abierto, O
+  // 2. Hay reemplazos activos (para mostrar las cartas alternativas)
+  const { data: allCardsWithAlternatives = [] } = useQuery({
+    queryKey: ["cards", "with-alternatives"],
+    queryFn: () => getAllCardsFromAPI(true),
+    enabled: isModalOpen || hasActiveReplacements, // Cargar cuando se necesita
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  })
   
   // Filtrar solo cartas originales (no alternativas) de las cartas recibidas
   const originalCards = useMemo(() => {
@@ -51,7 +57,9 @@ export function CardsPanel({
   }, [cards])
 
   // Crear mapa de cartas alternativas para búsqueda rápida (desde la BD)
+  // Si no hay alternativas cargadas aún, usar mapa vacío (se cargarán cuando se abra el modal)
   const altCardsMap = useMemo(() => {
+    if (allCardsWithAlternatives.length === 0) return new Map<string, Card>()
     const altCards = allCardsWithAlternatives.filter((card) => card.isCosmetic)
     return new Map(altCards.map((card) => [card.id, card]))
   }, [allCardsWithAlternatives])
@@ -298,7 +306,13 @@ export function CardsPanel({
                 <h2 className="text-lg font-semibold sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-30 border-b border-border/50">
                   {edition}
                 </h2>
-                <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3">
+                <div 
+                  className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3"
+                  style={{ 
+                    contain: "layout style paint",
+                    contentVisibility: "auto",
+                  }}
+                >
                   {editionCards.map((card, index) => {
                     // Obtener la carta a mostrar (puede ser alternativa si está reemplazada)
                     const cardToDisplay = getCardToDisplay(card)

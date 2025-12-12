@@ -286,20 +286,20 @@ export const FiltersPanel = memo(function FiltersPanel({
       </div>
 
       {/* Fila de búsquedas - Siempre visible */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <Input
           type="text"
           placeholder="Buscar por nombre..."
           value={filters.search}
           onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-          className="w-full h-9 text-sm"
+          className="w-full sm:flex-1 h-9 text-sm"
         />
         <Input
           type="text"
           placeholder="Buscar en descripciones..."
           value={filters.descriptionSearch}
           onChange={(e) => onFiltersChange({ ...filters, descriptionSearch: e.target.value })}
-          className="w-full h-9 text-sm"
+          className="w-full sm:flex-1 h-9 text-sm"
         />
       </div>
 

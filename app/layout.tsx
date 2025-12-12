@@ -14,6 +14,7 @@ import { AdBanner } from "@/components/ads/ad-banner";
 import { AdSenseScript } from "@/components/ads/adsense-script";
 import { WebsiteJsonLd } from "@/components/seo/json-ld";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { DeviceProvider } from "@/contexts/device-context";
 
 // Lazy load componentes pesados que no son críticos para el render inicial
 // WelcomeTour: Solo se muestra después de interacción del usuario
@@ -190,9 +191,10 @@ export default function RootLayout({
           storageKey="cartatech-theme"
         >
           <QueryProvider>
-            <ErrorBoundary>
-              <AuthProviderWrapper>
-                <Navbar />
+            <DeviceProvider>
+              <ErrorBoundary>
+                <AuthProviderWrapper>
+                  <Navbar />
               {/* Banner superior de anuncios - Solo visible en desktop */}
               {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la sección siguiente */}
               {/* {adsenseId && (
@@ -214,6 +216,7 @@ export default function RootLayout({
               </Suspense>
             </AuthProviderWrapper>
           </ErrorBoundary>
+            </DeviceProvider>
           </QueryProvider>
         </ThemeProvider>
         <WebsiteJsonLd />

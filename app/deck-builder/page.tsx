@@ -73,8 +73,9 @@ function DeckBuilderContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   
-  // Cargar todas las cartas desde la API con cache
-  const { cards: allCardsRaw, isLoading: isLoadingCardsFromAPI } = useCards(true) // Incluir alternativas
+  // Cargar solo cartas originales (sin alternativas) para mejorar rendimiento inicial
+  // Las alternativas se cargarán solo cuando se abra el modal en CardsPanel
+  const { cards: allCardsRaw, isLoading: isLoadingCardsFromAPI } = useCards(false) // NO incluir alternativas inicialmente
   const allCards = useMemo(() => {
     return sortCardsByEditionAndId(allCardsRaw)
   }, [allCardsRaw])

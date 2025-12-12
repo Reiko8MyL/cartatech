@@ -1,10 +1,11 @@
 "use client"
 
-import { memo, useRef, useState, useEffect } from "react"
+import { memo, useRef } from "react"
 import Image from "next/image"
 import { Plus, Minus, X, Info } from "lucide-react"
 import type { Card } from "@/lib/deck-builder/types"
-import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
+import { optimizeCloudinaryUrl } from "@/lib/deck-builder/cloudinary-utils"
+import { useDeviceType } from "@/contexts/device-context"
 
 interface CardItemProps {
   card: Card
@@ -45,18 +46,9 @@ export const CardItem = memo(function CardItem({
 }: CardItemProps) {
   const touchStartTimeRef = useRef<number | null>(null)
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
   
-  // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
-  useEffect(() => {
-    function updateDeviceType() {
-      setDeviceType(detectDeviceType(window.innerWidth))
-    }
-    
-    updateDeviceType()
-    window.addEventListener('resize', updateDeviceType)
-    return () => window.removeEventListener('resize', updateDeviceType)
-  }, [])
+  // Obtener tipo de dispositivo desde contexto (compartido, sin overhead)
+  const deviceType = useDeviceType()
   
   // Optimizar URL de Cloudinary con transformaciones fijas
   const optimizedImageUrl = optimizeCloudinaryUrl(card.image, deviceType)
@@ -133,7 +125,7 @@ export const CardItem = memo(function CardItem({
         touchAction: 'manipulation',
       }}
     >
-      {/* Contenedor que se anima en hover (imagen + nombre) */}
+      {/* Contenedor que se anima en hover (imagen + nombre + todos los elementos superiores) */}
       <div
         className={`relative w-full h-full transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
           canAddMore ? "group-hover:scale-105 group-hover:shadow-lg" : ""
@@ -254,63 +246,63 @@ export const CardItem = memo(function CardItem({
             {card.name}
           </div>
         )}
-      </div>
 
-      {/* Botón de información en la esquina inferior derecha - siempre visible */}
-      {onOpenCardModal && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onOpenCardModal(card)
-          }}
-          className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
-          aria-label={`Ver información de ${card.name}`}
-        >
-          <Info className="size-3 sm:size-3.5 text-gray-800" />
-        </button>
-      )}
-
-      {/* Indicadores en el centro del lado derecho */}
-      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20 items-end text-[9px]">
-        {/* Única (arriba) */}
-        <div
-          className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-yellow-500 text-white ${
-            card.isUnique ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Única
-        </div>
-
-        {/* Banlist (centro) - usa maxQuantity que ya viene calculado según el formato */}
-        {showBanListIndicator && (
-          <div
-            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg text-white ${
-              maxQuantity === 0
-                ? "bg-red-600 opacity-100"
-                : maxQuantity === 1 && !card.isUnique
-                ? "bg-red-500 opacity-100"
-                : maxQuantity === 2
-                ? "bg-red-500 opacity-100"
-                : "opacity-0"
-            }`}
+        {/* Botón de información en la esquina inferior derecha - siempre visible */}
+        {onOpenCardModal && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenCardModal(card)
+            }}
+            className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
+            aria-label={`Ver información de ${card.name}`}
           >
-            {maxQuantity === 0
-              ? "BAN"
-              : maxQuantity === 1 && !card.isUnique
-              ? "Max 1"
-              : maxQuantity === 2
-              ? "Max 2"
-              : ""}
-          </div>
+            <Info className="size-3 sm:size-3.5 text-gray-800" />
+          </button>
         )}
 
-        {/* Rework (abajo) */}
-        <div
-          className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-purple-500 text-white ${
-            card.isRework ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Rework
+        {/* Indicadores en el centro del lado derecho */}
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20 items-end text-[9px]">
+          {/* Única (arriba) */}
+          <div
+            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-yellow-500 text-white ${
+              card.isUnique ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            Única
+          </div>
+
+          {/* Banlist (centro) - usa maxQuantity que ya viene calculado según el formato */}
+          {showBanListIndicator && (
+            <div
+              className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg text-white ${
+                maxQuantity === 0
+                  ? "bg-red-600 opacity-100"
+                  : maxQuantity === 1 && !card.isUnique
+                  ? "bg-red-500 opacity-100"
+                  : maxQuantity === 2
+                  ? "bg-red-500 opacity-100"
+                  : "opacity-0"
+              }`}
+            >
+              {maxQuantity === 0
+                ? "BAN"
+                : maxQuantity === 1 && !card.isUnique
+                ? "Max 1"
+                : maxQuantity === 2
+                ? "Max 2"
+                : ""}
+            </div>
+          )}
+
+          {/* Rework (abajo) */}
+          <div
+            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-purple-500 text-white ${
+              card.isRework ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            Rework
+          </div>
         </div>
       </div>
     </div>
