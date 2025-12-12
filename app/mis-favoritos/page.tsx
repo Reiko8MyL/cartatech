@@ -748,14 +748,14 @@ export default function MisFavoritosPage() {
                                     const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
                                     const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
                                     return (
-                                <div className="absolute -top-32 right-0 z-10">
-                                  <div className="relative w-12 h-12" title={deck.edition || "Múltiples ediciones"}>
+                                <div className="absolute -top-20 right-0 z-10">
+                                  <div className="relative w-16 h-16" title={deck.edition || "Múltiples ediciones"}>
                                       <Image
                                         src={optimizedLogoUrl}
                                       alt={deck.edition || "Múltiples ediciones"}
                                         fill
                                         className="object-contain"
-                                        sizes="48px"
+                                        sizes="64px"
                                         unoptimized={isOptimized}
                                       />
                                   </div>

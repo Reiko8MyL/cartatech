@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export interface BannerSetting {
   context: string;
@@ -316,9 +316,15 @@ export function useBannerSettingsMap(
     return initialMap;
   });
   const [isLoading, setIsLoading] = useState(true);
+  // Usar useRef para mantener los ajustes anteriores durante la transición
+  const previousSettingsRef = useRef<Map<string | null, BannerSetting | null>>(new Map());
 
   useEffect(() => {
     async function loadSettings() {
+      // Guardar los ajustes actuales antes de cargar nuevos para mantenerlos durante la carga
+      const currentSettings = new Map(settingsMap);
+      previousSettingsRef.current = currentSettings;
+      
       try {
         const params = new URLSearchParams({
           context,
@@ -358,10 +364,27 @@ export function useBannerSettingsMap(
           newMap.set(imageId, setting);
         });
 
+        // Actualizar solo cuando todos los ajustes estén listos para evitar cambios visuales intermedios
         setSettingsMap(newMap);
+        previousSettingsRef.current = newMap;
       } catch (error) {
         console.error("Error al cargar ajustes de banners:", error);
-        // En caso de error, mantener los valores por defecto que ya están inicializados
+        // En caso de error, mantener los ajustes anteriores si existen
+        if (previousSettingsRef.current.size > 0) {
+          // Actualizar viewMode en los ajustes anteriores para mantener consistencia
+          const updatedMap = new Map<string | null, BannerSetting | null>();
+          previousSettingsRef.current.forEach((setting, imageId) => {
+            if (setting) {
+              updatedMap.set(imageId, {
+                ...setting,
+                viewMode,
+              });
+            } else {
+              updatedMap.set(imageId, defaultSetting);
+            }
+          });
+          setSettingsMap(updatedMap);
+        }
       } finally {
         setIsLoading(false);
       }
