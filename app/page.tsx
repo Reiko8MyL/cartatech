@@ -23,8 +23,8 @@ export default function Home() {
         <section
           className="relative h-screen flex items-start justify-center px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 md:pt-20 hero-section"
         >
-          {/* Overlay sutil para mejorar legibilidad del texto */}
-          <div className="absolute inset-0 bg-black/18 dark:bg-black/18" />
+          {/* Overlay sutil para mejorar legibilidad del texto - Reducido para aumentar opacidad de imagen */}
+          <div className="absolute inset-0 bg-black/30 dark:bg-black/30" />
 
           <div className="container mx-auto max-w-6xl text-center relative z-10">
             <div className="mb-4 flex justify-center">

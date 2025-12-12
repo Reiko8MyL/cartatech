@@ -228,7 +228,7 @@ export function sortCardsByEditionAndId(cards: Card[]): Card[] {
   });
 }
 
-export function filterCards(cards: Card[], filters: DeckFilters): Card[] {
+export function filterCards(cards: Card[], filters: DeckFilters, deckFormat?: DeckFormat): Card[] {
   let filtered = [...cards];
 
   // Filtrar por búsqueda de nombre
@@ -269,6 +269,36 @@ export function filterCards(cards: Card[], filters: DeckFilters): Card[] {
     filtered = filtered.filter((card) => 
       card.cost !== null && filters.cost.includes(String(card.cost))
     );
+  }
+
+  // Filtrar solo cartas únicas
+  if (filters.showOnlyUnique) {
+    filtered = filtered.filter((card) => card.isUnique);
+  }
+
+  // Filtrar solo cartas afectadas por ban list (según el formato del deck)
+  // Debe mostrar solo las cartas que tienen el tag rojo visible, igual que en card-item.tsx
+  // Tag rojo se muestra cuando: banListValue === 0 (BAN), banListValue === 1 && !isUnique (Max 1), banListValue === 2 (Max 2)
+  if (filters.showOnlyBanned && deckFormat) {
+    filtered = filtered.filter((card) => {
+      // Obtener el valor de ban list según el formato, con fallback a 3 (Libre) si es null/undefined
+      const banListValue = deckFormat === "RE" 
+        ? (card.banListRE ?? 3)
+        : deckFormat === "RL" 
+        ? (card.banListRL ?? 3)
+        : (card.banListLI ?? 3);
+      
+      // Replicar la lógica exacta de card-item.tsx para mostrar tag rojo
+      if (banListValue === 0) return true; // BAN (siempre muestra tag rojo)
+      if (banListValue === 1 && !card.isUnique) return true; // Max 1 (solo si no es única)
+      if (banListValue === 2) return true; // Max 2 (siempre muestra tag rojo)
+      return false; // banListValue === 3 (Libre) o banListValue === 1 con isUnique (no muestra tag rojo)
+    });
+  }
+
+  // Filtrar solo cartas con rework
+  if (filters.showOnlyRework) {
+    filtered = filtered.filter((card) => card.isRework);
   }
 
   return filtered;

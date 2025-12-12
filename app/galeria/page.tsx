@@ -152,6 +152,9 @@ function GaleriaContent() {
     type: [],
     race: [],
     cost: [],
+    showOnlyUnique: false,
+    showOnlyBanned: false,
+    showOnlyRework: false,
   })
   
   // Usar deferred value para búsquedas de texto - no bloquea la UI
@@ -209,9 +212,10 @@ function GaleriaContent() {
   }, [user, isCollectionMode])
 
   // Filtrar cartas según los filtros - optimizado con deferred value y startTransition
+  // En galería usamos formato RE por defecto para el filtro de ban list
   const filteredCards = useMemo(() => {
     if (sortedCards.length === 0) return []
-    return filterCards(sortedCards, deferredFilters)
+    return filterCards(sortedCards, deferredFilters, "RE")
   }, [sortedCards, deferredFilters])
 
   // Obtener opciones para los filtros
@@ -327,12 +331,15 @@ function GaleriaContent() {
     filters.edition.length > 0 ||
     filters.type.length > 0 ||
     filters.race.length > 0 ||
-    filters.cost.length > 0
+    filters.cost.length > 0 ||
+    filters.showOnlyUnique === true ||
+    filters.showOnlyBanned === true ||
+    filters.showOnlyRework === true
 
   return (
     <main className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 px-4 sm:px-6 md:px-8 lg:px-6 xl:px-8 py-4 max-w-[1920px] mx-auto">
-      {/* Sidebar izquierdo - Filtros y opciones */}
-      <aside className="w-full lg:w-80 xl:w-96 flex-shrink-0 space-y-4">
+      {/* Sidebar izquierdo - Filtros y opciones - 20% más estrecho */}
+      <aside className="w-full lg:w-64 xl:w-[307px] flex-shrink-0 space-y-4">
         {/* Header con título y contador - Solo visible en móvil */}
         <div className="lg:hidden mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1">
@@ -374,6 +381,7 @@ function GaleriaContent() {
             defaultExpanded={true}
             searchFieldsInRow={false}
             showFiltersExpanded={true}
+            deckFormat="RE"
           />
           {isPending && (
             <div className="mt-2 text-xs text-muted-foreground animate-pulse">

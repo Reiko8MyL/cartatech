@@ -70,6 +70,9 @@ export interface DeckFilters {
   type: string[];
   race: string[];
   cost: string[];
+  showOnlyUnique?: boolean;
+  showOnlyBanned?: boolean;
+  showOnlyRework?: boolean;
 }
 
 export interface DeckStats {

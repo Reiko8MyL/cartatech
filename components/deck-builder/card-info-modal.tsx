@@ -380,57 +380,57 @@ export function CardInfoModal({
             {/* Datos de la carta en layout horizontal */}
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
                   <Sword className="size-5 text-primary" />
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-xs font-medium text-muted-foreground">
                     Tipo
                   </span>
-                  <span className="text-base font-semibold">{card.type}</span>
+                  <span className="text-lg font-semibold">{card.type}</span>
                 </div>
               </div>
               {card.race && (
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
                     <Users className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium text-muted-foreground">
                       Raza
                     </span>
-                    <span className="text-base font-semibold">{card.race}</span>
+                    <span className="text-lg font-semibold">{card.race}</span>
                   </div>
                 </div>
               )}
               {card.cost !== null && (
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
                     <Coins className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium text-muted-foreground">
                       Coste
                     </span>
-                    <span className="text-base font-semibold">{card.cost}</span>
+                    <span className="text-lg font-semibold">{card.cost}</span>
                   </div>
                 </div>
               )}
               {card.power !== null && (
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
                     <Zap className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium text-muted-foreground">
                       Fuerza
                     </span>
-                    <span className="text-base font-semibold">{card.power}</span>
+                    <span className="text-lg font-semibold">{card.power}</span>
                   </div>
                 </div>
               )}
               <div className="flex items-center gap-3 col-span-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
                   <BookOpen className="size-5 text-primary" />
                 </div>
                 <div className="flex flex-col gap-2 flex-1">

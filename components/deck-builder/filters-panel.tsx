@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Filter, X, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
-import type { DeckFilters } from "@/lib/deck-builder/types"
+import type { DeckFilters, DeckFormat } from "@/lib/deck-builder/types"
 
 interface FiltersPanelProps {
   filters: DeckFilters
@@ -25,6 +25,7 @@ interface FiltersPanelProps {
   defaultExpanded?: boolean // Prop para controlar si los filtros avanzados están expandidos por defecto
   searchFieldsInRow?: boolean // Prop para controlar si los campos de búsqueda están en la misma fila (default: true)
   showFiltersExpanded?: boolean // Prop para mostrar los filtros siempre expandidos (sin dropdowns) - solo para galería
+  deckFormat?: DeckFormat // Formato del deck para filtrar por ban list (solo deck builder)
 }
 
 // Mapeo de razas a ediciones
@@ -53,6 +54,7 @@ export const FiltersPanel = memo(function FiltersPanel({
   defaultExpanded = false, // Por defecto, no expandido (comportamiento original)
   searchFieldsInRow = true, // Por defecto, en la misma fila (comportamiento del deck builder)
   showFiltersExpanded = false, // Por defecto, usar dropdowns (comportamiento original)
+  deckFormat, // Formato del deck (opcional, solo para deck builder)
 }: FiltersPanelProps) {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previousFiltersRef = useRef<DeckFilters>(filters)
@@ -243,6 +245,9 @@ export const FiltersPanel = memo(function FiltersPanel({
       type: [],
       race: [],
       cost: [],
+      showOnlyUnique: false,
+      showOnlyBanned: false,
+      showOnlyRework: false,
     })
   }
 
@@ -252,7 +257,10 @@ export const FiltersPanel = memo(function FiltersPanel({
     filters.edition.length > 0 ||
     filters.type.length > 0 ||
     filters.race.length > 0 ||
-    filters.cost.length > 0
+    filters.cost.length > 0 ||
+    filters.showOnlyUnique === true ||
+    filters.showOnlyBanned === true ||
+    filters.showOnlyRework === true
 
   // Funciones helper para mostrar texto en los botones
   function getFilterButtonText(
@@ -276,9 +284,9 @@ export const FiltersPanel = memo(function FiltersPanel({
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(defaultExpanded)
   
   // Estado para controlar qué filtros individuales están expandidos (solo cuando showFiltersExpanded es true)
-  // Por defecto, todos expandidos cuando showFiltersExpanded es true
+  // Por defecto, todos cerrados cuando showFiltersExpanded es true (para galería)
   const [expandedFilters, setExpandedFilters] = useState<Set<string>>(() => 
-    showFiltersExpanded ? new Set(["edition", "type", "race", "cost"]) : new Set()
+    new Set() // Todos los filtros individuales cerrados por defecto
   )
   
   const toggleFilterSection = useCallback((filterKey: string) => {
@@ -597,6 +605,66 @@ export const FiltersPanel = memo(function FiltersPanel({
                 </div>
                 )}
               </div>
+
+              {/* Filtros adicionales - Abajo de coste en modo expandido (galería) */}
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="filter-unique-expanded"
+                    checked={filters.showOnlyUnique === true}
+                    onCheckedChange={(checked) => {
+                      onFiltersChange({
+                        ...filters,
+                        showOnlyUnique: checked === true,
+                      })
+                    }}
+                  />
+                  <label
+                    htmlFor="filter-unique-expanded"
+                    className="text-sm cursor-pointer select-none"
+                  >
+                    Solo Únicas
+                  </label>
+                </div>
+                {deckFormat && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="filter-banned-expanded"
+                      checked={filters.showOnlyBanned === true}
+                      onCheckedChange={(checked) => {
+                        onFiltersChange({
+                          ...filters,
+                          showOnlyBanned: checked === true,
+                        })
+                      }}
+                    />
+                    <label
+                      htmlFor="filter-banned-expanded"
+                      className="text-sm cursor-pointer select-none"
+                    >
+                      En Ban List
+                    </label>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="filter-rework-expanded"
+                    checked={filters.showOnlyRework === true}
+                    onCheckedChange={(checked) => {
+                      onFiltersChange({
+                        ...filters,
+                        showOnlyRework: checked === true,
+                      })
+                    }}
+                  />
+                  <label
+                    htmlFor="filter-rework-expanded"
+                    className="text-sm cursor-pointer select-none"
+                  >
+                    Solo Rework
+                  </label>
+                </div>
+              </div>
             </>
           ) : (
             // Vista con dropdowns (comportamiento original)
@@ -765,6 +833,54 @@ export const FiltersPanel = memo(function FiltersPanel({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Filtros adicionales - En la misma fila que los otros filtros (modo dropdown, deck builder) */}
+              {/* Solo Únicas */}
+              <Button
+                variant={filters.showOnlyUnique ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  onFiltersChange({
+                    ...filters,
+                    showOnlyUnique: !filters.showOnlyUnique,
+                  })
+                }}
+                className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                Solo Únicas
+              </Button>
+              
+              {/* En Ban List - Solo visible si hay deckFormat */}
+              {deckFormat && (
+                <Button
+                  variant={filters.showOnlyBanned ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    onFiltersChange({
+                      ...filters,
+                      showOnlyBanned: !filters.showOnlyBanned,
+                    })
+                  }}
+                  className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  En Ban List
+                </Button>
+              )}
+              
+              {/* Solo Rework */}
+              <Button
+                variant={filters.showOnlyRework ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  onFiltersChange({
+                    ...filters,
+                    showOnlyRework: !filters.showOnlyRework,
+                  })
+                }}
+                className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                Solo Rework
+              </Button>
             </div>
           )}
         </div>

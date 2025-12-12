@@ -107,14 +107,17 @@ function DeckBuilderContent() {
     type: [],
     race: [],
     cost: [],
+    showOnlyUnique: false,
+    showOnlyBanned: false,
+    showOnlyRework: false,
   })
 
   // Filtrar cartas según los filtros (solo cartas originales, no alternativas)
   const filteredCards = useMemo(() => {
     // Filtrar solo cartas originales (no isCosmetic)
     const originalCardsOnly = allCards.filter((card) => !card.isCosmetic)
-    return filterCards(originalCardsOnly, filters)
-  }, [allCards, filters])
+    return filterCards(originalCardsOnly, filters, deckFormat)
+  }, [allCards, filters, deckFormat])
 
   // Calcular estadísticas del mazo - optimizado
   const deckStats = useMemo(() => {
@@ -519,6 +522,7 @@ function DeckBuilderContent() {
             availableTypes={availableTypes}
             availableRaces={availableRaces}
             availableCosts={availableCosts}
+            deckFormat={deckFormat}
           />
         </div>
 
@@ -535,6 +539,7 @@ function DeckBuilderContent() {
                 availableTypes={availableTypes}
                 availableRaces={availableRaces}
                 availableCosts={availableCosts}
+                deckFormat={deckFormat}
               />
             </div>
             
