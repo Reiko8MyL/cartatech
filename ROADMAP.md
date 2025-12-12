@@ -100,30 +100,32 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 
 ---
 
-### 1.3 Analytics - Eventos Faltantes 🔴
+### 1.3 Analytics - Eventos Faltantes ✅
 
-**Estado Actual:** ✅ Google Analytics configurado, pero faltan eventos críticos
+**Estado Actual:** ✅ Todos los eventos críticos implementados y funcionando
 
-**Mejoras Necesarias:**
+**Eventos Implementados:**
 
-- [ ] **Implementar eventos faltantes** (ver `GOOGLE_ANALYTICS.md`)
-  - `trackDeckCreated` - Al crear mazo
-  - `trackDeckPublished` - Al publicar mazo
-  - `trackDeckSaved` - Al guardar mazo
-  - `trackDeckDeleted` - Al eliminar mazo
-  - `trackDeckFavorited` - Al agregar a favoritos
-  - `trackDeckCommented` - Al comentar mazo
-  - `trackDeckVoted` - Al votar mazo
-  - `trackDeckExported` - Al exportar mazo
-  - `trackCardSearched` - Al buscar cartas
-  - `trackCardFiltered` - Al filtrar cartas
-  - `trackCardAddedToDeck` - Al agregar carta al mazo
+- [x] **Eventos de Mazos:**
+  - ✅ `trackDeckCreated` - Implementado en `deck-management-panel.tsx` (al crear mazo)
+  - ✅ `trackDeckPublished` - Implementado en `deck-management-panel.tsx` (al publicar mazo)
+  - ✅ `trackDeckSaved` - Implementado en `deck-management-panel.tsx` (al guardar mazo)
+  - ✅ `trackDeckDeleted` - Implementado en `deck-management-panel.tsx` (al eliminar mazo)
+  - ✅ `trackDeckFavorited` - Implementado en `lib/deck-builder/utils.ts` (al agregar a favoritos)
+  - ✅ `trackDeckCommented` - Implementado en `components/deck/comments-section.tsx` (al comentar mazo)
+  - ⚠️ `trackDeckVoted` - No aplica (el sistema de votación actual es para cartas por raza, no mazos)
+  - ✅ `trackDeckExported` - Implementado en `deck-management-panel.tsx` (al exportar como lista o imagen)
+  
+- [x] **Eventos de Cartas:**
+  - ✅ `trackCardSearched` - Implementado en `components/deck-builder/filters-panel.tsx` (con debounce de 500ms)
+  - ✅ `trackCardFiltered` - Implementado en `components/deck-builder/filters-panel.tsx` (al aplicar filtros)
+  - ✅ `trackCardAddedToDeck` - Implementado en `app/deck-builder/page.tsx` (al agregar carta al mazo)
 
-**Archivos a modificar:**
-- `lib/analytics/events.ts` (agregar funciones)
-- Componentes que realizan estas acciones (agregar tracking)
+**Archivos modificados:**
+- ✅ `lib/analytics/events.ts` - Todas las funciones implementadas
+- ✅ Componentes actualizados con tracking en todas las acciones críticas
 
-**Impacto esperado:** Mejor tracking de comportamiento y conversiones
+**Impacto esperado:** ✅ Tracking completo de comportamiento y conversiones implementado
 
 ---
 
