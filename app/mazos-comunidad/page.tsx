@@ -680,7 +680,7 @@ function MazosComunidadPage() {
                   <Card className="flex flex-col overflow-hidden group">
                   <div
                         className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                        style={getBannerStyle(deck.backgroundImage, deck.deckBannerSetting, deviceType, viewMode)}
+                        style={getBannerStyle(deck.backgroundImage ?? "", deck.deckBannerSetting ?? null, deviceType, viewMode)}
                   >
                         <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
@@ -817,7 +817,7 @@ function MazosComunidadPage() {
                   <div className="flex flex-col sm:flex-row">
                     <div
                       className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20 min-h-[128px] sm:min-h-0"
-                      style={getBannerStyle(deck.backgroundImage, deck.deckBannerSetting, deviceType, viewMode)}
+                      style={getBannerStyle(deck.backgroundImage ?? "", deck.deckBannerSetting ?? null, deviceType, viewMode)}
                     >
                       <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">
