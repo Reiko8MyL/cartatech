@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { Navbar } from "@/components/navigation/navbar";
+import { ScrollToTop } from "@/components/navigation/scroll-to-top";
 import { AuthProviderWrapper } from "@/components/providers/auth-provider-wrapper";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "sonner";
@@ -194,6 +195,7 @@ export default function RootLayout({
             <DeviceProvider>
           <ErrorBoundary>
             <AuthProviderWrapper>
+              <ScrollToTop />
               <Navbar />
               {/* Banner superior de anuncios - Solo visible en desktop */}
               {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la sección siguiente */}

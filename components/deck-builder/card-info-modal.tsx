@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import Image from "next/image"
 import {
   Dialog,
@@ -29,6 +29,7 @@ interface CardInfoModalProps {
   onReplaceCard: (oldCardId: string, newCardId: string) => void
   filteredCards?: Card[] // Lista de cartas filtradas para navegación
   onCardChange?: (card: Card) => void // Función para cambiar la carta actual
+  showDeckControls?: boolean // Mostrar controles de mazo (por defecto true para deck builder)
 }
 
 export function CardInfoModal({
@@ -44,11 +45,9 @@ export function CardInfoModal({
   onReplaceCard,
   filteredCards = [],
   onCardChange,
+  showDeckControls = true,
 }: CardInfoModalProps) {
   if (!card) return null
-
-  // Determinar si se debe mostrar la sección "En el mazo" (solo si hay deckCards)
-  const showDeckSection = deckCards.length > 0
 
   // Navegación entre cartas filtradas
   const navigateToCard = useMemo(() => {
@@ -81,6 +80,174 @@ export function CardInfoModal({
 
   const [displayImage, setDisplayImage] = useState<string>(card.image)
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+  
+  // Ref y estado para drag scroll del arte alternativo
+  const alternativeArtsRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const startXRef = useRef(0)
+  const scrollLeftRef = useRef(0)
+  const [hasMoved, setHasMoved] = useState(false)
+  const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isClickRef = useRef(true)
+  const isMouseDownRef = useRef(false)
+
+  // Handlers para drag scroll
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement | HTMLButtonElement>) => {
+    if (!alternativeArtsRef.current) return
+    
+    isMouseDownRef.current = true
+    isClickRef.current = true
+    setHasMoved(false)
+    
+    // Calcular posición relativa al contenedor, no al botón
+    const containerRect = alternativeArtsRef.current.getBoundingClientRect()
+    startXRef.current = e.pageX - containerRect.left
+    scrollLeftRef.current = alternativeArtsRef.current.scrollLeft
+    
+    // Esperar un poco antes de activar el drag para distinguir click de drag
+    dragTimeoutRef.current = setTimeout(() => {
+      if (isMouseDownRef.current) {
+        setIsDragging(true)
+      }
+    }, 150) // Delay de 150ms para detectar si es click o drag
+  }, [])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isMouseDownRef.current || !alternativeArtsRef.current) return
+    
+    const containerRect = alternativeArtsRef.current.getBoundingClientRect()
+    const currentX = e.pageX - containerRect.left
+    const movement = Math.abs(currentX - startXRef.current)
+    
+    // Si aún no se activó el drag, verificar si hay movimiento significativo
+    if (!isDragging && dragTimeoutRef.current && movement > 10) {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current)
+        dragTimeoutRef.current = null
+      }
+      setIsDragging(true)
+      isClickRef.current = false
+      e.preventDefault()
+      return
+    }
+    
+    if (!isDragging || !alternativeArtsRef.current) return
+    
+    e.preventDefault()
+    e.stopPropagation()
+    const x = e.pageX - containerRect.left
+    const walk = (x - startXRef.current) * 2 // Velocidad del scroll
+    const newScrollLeft = scrollLeftRef.current - walk
+    alternativeArtsRef.current.scrollLeft = newScrollLeft
+    isClickRef.current = false
+    setHasMoved(true)
+  }, [isDragging])
+
+  const handleMouseUp = useCallback(() => {
+    isMouseDownRef.current = false
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current)
+      dragTimeoutRef.current = null
+    }
+    setIsDragging(false)
+    // Resetear después de un pequeño delay
+    setTimeout(() => {
+      setHasMoved(false)
+      isClickRef.current = true
+    }, 50)
+  }, [])
+
+  const handleMouseLeave = useCallback(() => {
+    isMouseDownRef.current = false
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current)
+      dragTimeoutRef.current = null
+    }
+    setIsDragging(false)
+    setTimeout(() => {
+      setHasMoved(false)
+      isClickRef.current = true
+    }, 50)
+  }, [])
+
+  // Touch handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement | HTMLButtonElement>) => {
+    if (!alternativeArtsRef.current) return
+    
+    isClickRef.current = true
+    setHasMoved(false)
+    
+    const containerRect = alternativeArtsRef.current.getBoundingClientRect()
+    startXRef.current = e.touches[0].pageX - containerRect.left
+    scrollLeftRef.current = alternativeArtsRef.current.scrollLeft
+    
+    // Para touch, activar más rápido pero aún con un pequeño delay
+    dragTimeoutRef.current = setTimeout(() => {
+      setIsDragging(true)
+    }, 100)
+  }, [])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement | HTMLButtonElement>) => {
+    if (!alternativeArtsRef.current) return
+    
+    const containerRect = alternativeArtsRef.current.getBoundingClientRect()
+    const currentX = e.touches[0].pageX - containerRect.left
+    const movement = Math.abs(currentX - startXRef.current)
+    
+    // Si aún no se activó el drag, verificar si hay movimiento significativo
+    if (!isDragging && dragTimeoutRef.current && movement > 10) {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current)
+        dragTimeoutRef.current = null
+      }
+      setIsDragging(true)
+      isClickRef.current = false
+      e.preventDefault()
+      return
+    }
+    
+    if (!isDragging || !alternativeArtsRef.current) return
+    
+    e.preventDefault()
+    const x = e.touches[0].pageX - containerRect.left
+    const walk = (x - startXRef.current) * 2 // Velocidad del scroll
+    const newScrollLeft = scrollLeftRef.current - walk
+    alternativeArtsRef.current.scrollLeft = newScrollLeft
+    isClickRef.current = false
+    setHasMoved(true)
+  }, [isDragging])
+
+  const handleTouchEnd = useCallback(() => {
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current)
+      dragTimeoutRef.current = null
+    }
+    setIsDragging(false)
+    setTimeout(() => {
+      setHasMoved(false)
+      isClickRef.current = true
+    }, 50)
+  }, [])
+
+  // Efecto para manejar eventos globales de mouse
+  useEffect(() => {
+    // Siempre escuchar mousemove para detectar movimiento temprano
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [handleMouseMove, handleMouseUp])
+
+  // Limpiar timeout al desmontar
+  useEffect(() => {
+    return () => {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
   useEffect(() => {
@@ -207,7 +374,19 @@ export function CardInfoModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto [&]:!animate-none [&[data-state=open]]:!animate-none [&[data-state=closed]]:!animate-none [&]:!transition-none">
-        <DialogHeader className="pb-2">
+        {/* Imagen de fondo con 95% de transparencia */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'url(https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp)',
+            backgroundSize: 'contain',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.05,
+          }}
+          aria-hidden="true"
+        />
+        <DialogHeader className="pb-2 relative">
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {/* Botón de navegación anterior */}
@@ -222,7 +401,7 @@ export function CardInfoModal({
                   <ChevronLeft className="size-5" />
                 </Button>
               )}
-              <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight flex-1 min-w-0">
+              <DialogTitle className="text-3xl md:text-4xl font-bold tracking-tight flex-1 min-w-0">
                 {card.name}
               </DialogTitle>
               {/* Botón de navegación siguiente */}
@@ -281,12 +460,12 @@ export function CardInfoModal({
               })()}
             </div>
 
-            {/* Controles de cantidad bajo la carta - solo se muestra si hay deckCards */}
+            {/* Controles de cantidad bajo la carta - solo en deck builder */}
             <div className="flex flex-col gap-2 w-full max-w-[280px]">
-              {showDeckSection && (
+              {showDeckControls && (
                 <>
                   <div className="flex items-center justify-between gap-3 p-3 bg-muted rounded-lg">
-                    <span className="text-xs font-medium">
+                    <span className="text-sm font-medium">
                       En el mazo:{" "}
                       <span className="font-semibold">
                         {quantityInDeck} / {maxQuantity}
@@ -319,19 +498,6 @@ export function CardInfoModal({
                     </div>
                   </div>
 
-                  {/* Botón para volver al arte original si se ha seleccionado uno alternativo */}
-                  {displayImage !== card.image && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={() => setDisplayImage(card.image)}
-                      aria-label="Volver al arte original de la carta"
-                    >
-                      Volver al arte original
-                    </Button>
-                  )}
-
                   {/* Botón para usar la versión alternativa en el mazo (solo si NO está ya en el mazo) */}
                   {isShowingAlternative && quantityInDeck > 0 && !isAlternativeInDeck && (
                     <Button
@@ -360,12 +526,12 @@ export function CardInfoModal({
                 </>
               )}
 
-              {/* Botón para volver al arte original si se ha seleccionado uno alternativo (solo si no hay deckCards) */}
-              {!showDeckSection && displayImage !== card.image && (
+              {/* Botón para volver al arte original si se ha seleccionado uno alternativo */}
+              {displayImage !== card.image && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full text-xs"
+                  className="w-full text-sm"
                   onClick={() => setDisplayImage(card.image)}
                   aria-label="Volver al arte original de la carta"
                 >
@@ -378,16 +544,16 @@ export function CardInfoModal({
           {/* Columna derecha: controles, info y arte alternativo */}
           <div className="space-y-6">
             {/* Datos de la carta en layout horizontal */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-base">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
                   <Sword className="size-5 text-primary" />
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Tipo
                   </span>
-                  <span className="text-lg font-semibold">{card.type}</span>
+                  <span className="text-xl font-semibold">{card.type}</span>
                 </div>
               </div>
               {card.race && (
@@ -396,10 +562,10 @@ export function CardInfoModal({
                     <Users className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-medium text-muted-foreground">
+                    <span className="text-sm font-medium text-muted-foreground">
                       Raza
                     </span>
-                    <span className="text-lg font-semibold">{card.race}</span>
+                    <span className="text-xl font-semibold">{card.race}</span>
                   </div>
                 </div>
               )}
@@ -409,10 +575,10 @@ export function CardInfoModal({
                     <Coins className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-medium text-muted-foreground">
+                    <span className="text-sm font-medium text-muted-foreground">
                       Coste
                     </span>
-                    <span className="text-lg font-semibold">{card.cost}</span>
+                    <span className="text-xl font-semibold">{card.cost}</span>
                   </div>
                 </div>
               )}
@@ -422,10 +588,10 @@ export function CardInfoModal({
                     <Zap className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-medium text-muted-foreground">
+                    <span className="text-sm font-medium text-muted-foreground">
                       Fuerza
                     </span>
-                    <span className="text-lg font-semibold">{card.power}</span>
+                    <span className="text-xl font-semibold">{card.power}</span>
                   </div>
                 </div>
               )}
@@ -467,10 +633,10 @@ export function CardInfoModal({
             {/* Descripción */}
             <div className="pt-2">
               <div className="flex items-center gap-2 mb-3">
-                <BookOpen className="size-4 text-primary" />
-                <h3 className="text-base font-semibold">Habilidad de la carta</h3>
+                <BookOpen className="size-5 text-primary" />
+                <h3 className="text-lg font-semibold">Habilidad de la carta</h3>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed pl-6">
+              <p className="text-base text-foreground leading-relaxed pl-6 font-medium">
                 {card.description}
               </p>
             </div>
@@ -479,15 +645,40 @@ export function CardInfoModal({
             {alternativeArts.length > 0 && (
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold">Arte alternativo</h3>
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div 
+                  ref={alternativeArtsRef}
+                  draggable={false}
+                  className={`flex gap-2 overflow-x-auto pb-1 ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+                  onMouseDown={handleMouseDown}
+                  onMouseLeave={handleMouseLeave}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onDragStart={(e) => e.preventDefault()} // Prevenir drag nativo
+                  style={{ userSelect: isDragging ? 'none' : 'auto' }}
+                >
                   {alternativeArts.map((altCard) => {
                     const optimizedAltImageUrl = optimizeCloudinaryUrl(altCard.image, deviceType)
                     const isAltOptimized = isCloudinaryOptimized(optimizedAltImageUrl)
                     return (
                       <button
                         key={altCard.id}
+                        draggable={false}
                         className="relative aspect-[63/88] w-24 sm:w-28 md:w-32 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity duration-200 ease-out"
-                        onClick={() => setDisplayImage(altCard.image)}
+                        onMouseDown={handleMouseDown}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        onDragStart={(e) => e.preventDefault()} // Prevenir drag nativo
+                        onClick={(e) => {
+                          // Prevenir click si hubo movimiento durante el drag o si se está arrastrando
+                          if (hasMoved || !isClickRef.current) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            return
+                          }
+                          setDisplayImage(altCard.image)
+                        }}
                         aria-label={`Ver variante de ${altCard.name}`}
                         role="button"
                       >

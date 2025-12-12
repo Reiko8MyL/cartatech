@@ -550,6 +550,7 @@ function GaleriaContent() {
             onCardChange={(newCard) => {
               setSelectedCard(newCard)
             }}
+            showDeckControls={false}
           />
         </Suspense>
       )}

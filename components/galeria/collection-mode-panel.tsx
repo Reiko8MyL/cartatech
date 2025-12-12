@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/auth-context"
 import type { Card } from "@/lib/deck-builder/types"
 import { EDITION_ORDER } from "@/lib/deck-builder/types"
 import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
+import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
+import { useDeviceType } from "@/contexts/device-context"
 
 interface CollectionModePanelProps {
   isCollectionMode: boolean
@@ -24,6 +26,9 @@ export const CollectionModePanel = memo(function CollectionModePanel({
   allCards,
   collectedCards,
 }: CollectionModePanelProps) {
+  // Obtener tipo de dispositivo para optimizar URLs
+  const deviceType = useDeviceType()
+
   // Calcular cartas por edición
   const collectionStats = useMemo(() => {
     const stats: Record<string, { collected: number; total: number }> = {}
@@ -117,25 +122,31 @@ export const CollectionModePanel = memo(function CollectionModePanel({
           if (!stat) return null
 
           const percentage = stat.total > 0 
-            ? Math.round((stat.collected / stat.total) * 100) 
-            : 0
+            ? ((stat.collected / stat.total) * 100).toFixed(2)
+            : '0.00'
 
           return (
             <div
               key={edition}
               className="rounded-lg border bg-muted/50 p-2 flex items-center gap-2"
             >
-              {EDITION_LOGOS[edition] && (
-                <div className="relative w-12 h-12 flex-shrink-0">
-                  <Image
-                    src={EDITION_LOGOS[edition]}
-                    alt={edition}
-                    fill
-                    className="object-contain"
-                    sizes="48px"
-                  />
-                </div>
-              )}
+              {EDITION_LOGOS[edition] && (() => {
+                const logoUrl = EDITION_LOGOS[edition]
+                const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                return (
+                  <div className="relative w-12 h-12 flex-shrink-0">
+                    <Image
+                      src={optimizedLogoUrl}
+                      alt={edition}
+                      fill
+                      className="object-contain"
+                      sizes="48px"
+                      unoptimized={isOptimized}
+                    />
+                  </div>
+                )
+              })()}
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium mb-0.5 truncate">
                   {edition}
