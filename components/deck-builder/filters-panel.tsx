@@ -376,7 +376,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       id="edition-all"
                       checked={filters.edition.length === 0}
                       onCheckedChange={(checked) => {
-                        if (checked) clearFilterArray("edition")
+                        if (checked === true) clearFilterArray("edition")
                       }}
                     />
                     <label
@@ -392,7 +392,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                         id={`edition-${edition}`}
                         checked={filters.edition.includes(edition)}
                         onCheckedChange={(checked) => {
-                          toggleFilterValue("edition", edition, checked)
+                          toggleFilterValue("edition", edition, checked === true)
                         }}
                       />
                       <label
@@ -434,7 +434,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       id="type-all"
                       checked={filters.type.length === 0}
                       onCheckedChange={(checked) => {
-                        if (checked) {
+                        if (checked === true) {
                           onFiltersChange({
                             ...filters,
                             type: [],
@@ -456,7 +456,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                         id={`type-${type}`}
                         checked={filters.type.includes(type)}
                         onCheckedChange={(checked) => {
-                          handleTypeFilterChange(type, checked)
+                          handleTypeFilterChange(type, checked === true)
                         }}
                       />
                       <label
@@ -498,7 +498,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       id="race-all"
                       checked={filters.race.length === 0}
                       onCheckedChange={(checked) => {
-                        if (checked) {
+                        if (checked === true) {
                           onFiltersChange({
                             ...filters,
                             race: [],
@@ -522,7 +522,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                         id={`race-${race}`}
                         checked={filters.race.includes(race)}
                         onCheckedChange={(checked) => {
-                          toggleRaceFilter(race, checked)
+                          toggleRaceFilter(race, checked === true)
                         }}
                         disabled={filters.type.length > 0 && !hasAliadoType}
                       />
@@ -567,7 +567,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       id="cost-all"
                       checked={filters.cost.length === 0}
                       onCheckedChange={(checked) => {
-                        if (checked) clearCostFilter()
+                        if (checked === true) clearCostFilter()
                       }}
                     />
                     <label
@@ -583,7 +583,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                         id={`cost-${cost}`}
                         checked={filters.cost.includes(String(cost))}
                         onCheckedChange={(checked) => {
-                          toggleCostFilter(cost, checked)
+                          toggleCostFilter(cost, checked === true)
                         }}
                       />
                       <label
