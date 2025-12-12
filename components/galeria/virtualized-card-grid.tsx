@@ -6,12 +6,14 @@ import type { Card } from "@/lib/deck-builder/types"
 
 interface VirtualizedCardGridProps {
   cards: Card[]
-  collectedCards: Set<string>
+  collectedCards: Map<string, number>
   loadingCards: Set<string>
   isCollectionMode: boolean
   onCardClick: (card: Card) => void
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
   onToggleCollection: (cardId: string) => void
+  onIncrementQuantity: (cardId: string) => void
+  onDecrementQuantity: (cardId: string) => void
   columns?: number
   cardHeight?: number
   gap?: number
@@ -29,6 +31,8 @@ export function VirtualizedCardGrid({
   onCardClick,
   onCardRightClick,
   onToggleCollection,
+  onIncrementQuantity,
+  onDecrementQuantity,
   columns = 8,
   cardHeight = 200,
   gap = 12,
@@ -94,7 +98,7 @@ export function VirtualizedCardGrid({
                 }}
               >
                 {rowCards.map((card) => {
-                  const isCollected = collectedCards.has(card.id)
+                  const quantity = collectedCards.get(card.id) || 0
                   const maxQuantity = card.banListRE
                   
                   return (
