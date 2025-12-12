@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const skip = (page - 1) * limit;
 
     if (!userId) {
       return NextResponse.json(
@@ -67,11 +69,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener comentarios recientes (incluyendo respuestas)
+    // Obtener comentarios recientes (incluyendo respuestas) con paginación
     // Ordenar por fecha más reciente
     let comments = [];
+    let total = 0;
     try {
+      // Obtener total de comentarios
+      total = await prisma.comment.count();
+
+      // Obtener comentarios con paginación
       comments = await prisma.comment.findMany({
+        skip,
         take: limit,
         include: {
           user: {
@@ -106,7 +114,15 @@ export async function GET(request: NextRequest) {
         if (process.env.NODE_ENV === "development") {
           log.warn("Tabla de comentarios no existe", { error: dbError });
         }
-        return NextResponse.json({ comments: [] });
+        return NextResponse.json({ 
+          comments: [],
+          pagination: {
+            page: 1,
+            limit: 20,
+            total: 0,
+            totalPages: 0,
+          },
+        });
       }
       throw dbError;
     }
@@ -125,7 +141,15 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime;
     log.api('GET', '/api/admin/comments', 200, duration);
 
-    return NextResponse.json({ comments: formattedComments });
+    return NextResponse.json({ 
+      comments: formattedComments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     const duration = Date.now() - startTime;
     log.prisma('getAdminComments', error, { duration });

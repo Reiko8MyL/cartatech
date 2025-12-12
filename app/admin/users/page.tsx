@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toastSuccess, toastError } from "@/lib/toast";
+import { Pagination } from "@/components/ui/pagination";
 
 interface User {
   id: string;
@@ -44,6 +45,13 @@ interface User {
   };
 }
 
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 const ROLE_LABELS: Record<string, { label: string; color: string; bgColor: string }> = {
   ADMIN: { label: "Administrador", color: "text-red-600", bgColor: "bg-red-600/10 border-red-600/20" },
   MODERATOR: { label: "Moderador", color: "text-blue-600", bgColor: "bg-blue-600/10 border-blue-600/20" },
@@ -53,10 +61,11 @@ const ROLE_LABELS: Record<string, { label: string; color: string; bgColor: strin
 export default function AdminUsersPage() {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [newRole, setNewRole] = useState<string>("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -69,8 +78,8 @@ export default function AdminUsersPage() {
 
     try {
       const url = searchTerm
-        ? `/api/admin/users?userId=${user.id}&search=${encodeURIComponent(searchTerm)}`
-        : `/api/admin/users?userId=${user.id}`;
+        ? `/api/admin/users?userId=${user.id}&search=${encodeURIComponent(searchTerm)}&page=${currentPage}&limit=20`
+        : `/api/admin/users?userId=${user.id}&page=${currentPage}&limit=20`;
 
       const response = await fetch(url);
 
@@ -80,7 +89,7 @@ export default function AdminUsersPage() {
 
       const data = await response.json();
       setUsers(data.users || []);
-      setFilteredUsers(data.users || []);
+      setPagination(data.pagination || null);
     } catch (error) {
       console.error("Error al cargar usuarios:", error);
       toastError("Error al cargar usuarios");
@@ -88,11 +97,16 @@ export default function AdminUsersPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [user?.id, searchTerm]);
+  }, [user?.id, searchTerm, currentPage]);
 
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  // Resetear a página 1 cuando cambia el término de búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   async function handleUpdateRole(targetUserId: string, role: string) {
     if (!user?.id) return;
@@ -119,9 +133,6 @@ export default function AdminUsersPage() {
 
       // Actualizar estado local
       setUsers((prev) =>
-        prev.map((u) => (u.id === targetUserId ? { ...u, role } : u))
-      );
-      setFilteredUsers((prev) =>
         prev.map((u) => (u.id === targetUserId ? { ...u, role } : u))
       );
 
@@ -190,7 +201,7 @@ export default function AdminUsersPage() {
               <Users className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+              <div className="text-2xl font-bold">{pagination?.total || users.length}</div>
             </CardContent>
           </Card>
           <Card>
@@ -221,7 +232,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredUsers.length === 0 ? (
+        ) : users.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Users className="size-12 text-muted-foreground mb-4" />
@@ -231,8 +242,9 @@ export default function AdminUsersPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {filteredUsers.map((targetUser) => {
+          <>
+            <div className="space-y-4">
+              {users.map((targetUser) => {
               const roleLabel = getRoleLabel(targetUser.role);
               const isEditing = editingUserId === targetUser.id;
               const isCurrentUser = targetUser.id === user?.id;
@@ -343,7 +355,22 @@ export default function AdminUsersPage() {
                 </Card>
               );
             })}
-          </div>
+            </div>
+            
+            {/* Paginación */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-8 flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </AdminGuard>

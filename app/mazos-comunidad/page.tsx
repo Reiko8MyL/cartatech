@@ -84,10 +84,11 @@ function MazosComunidadPage() {
   const { cards: allCards } = useCards(false);
   
   // Obtener mazos públicos usando React Query (optimizado con cache)
-  // Cargar todos los mazos (límite alto) para aplicar filtros en cliente
-  const { data: decksData, isLoading: isLoadingDecks } = usePublicDecksQuery(1, 1000)
+  // Usar paginación del servidor (12 mazos por página)
+  const ITEMS_PER_PAGE = 12
+  const { data: decksData, isLoading: isLoadingDecks } = usePublicDecksQuery(currentPage, ITEMS_PER_PAGE)
   const publicDecks = decksData?.decks || []
-  const pagination = decksData?.pagination || null
+  const serverPagination = decksData?.pagination || null
   
   // Obtener todos los IDs de imágenes únicos de los decks
   const deckImageIds = useMemo(() => {
@@ -201,7 +202,9 @@ function MazosComunidadPage() {
     })
   }, [publicDecks, allCards, likes, favorites, user])
 
-  // Filtrar mazos
+  // Filtrar mazos (solo a los mazos de la página actual del servidor)
+  // Nota: Los filtros se aplican solo a los mazos cargados de la página actual
+  // Para filtros más avanzados, se podría implementar filtrado en el servidor
   const filteredDecks = useMemo(() => {
     let filtered = decksWithMetadata.filter((deck) => {
       if (filters.search) {
@@ -257,14 +260,8 @@ function MazosComunidadPage() {
     return filtered
   }, [decksWithMetadata, filters, sortBy, sortDirection, user])
 
-  // Paginación en el cliente (después de filtros)
-  const ITEMS_PER_PAGE = 12
-  const totalFilteredPages = Math.ceil(filteredDecks.length / ITEMS_PER_PAGE)
-  const paginatedDecks = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    const end = start + ITEMS_PER_PAGE
-    return filteredDecks.slice(start, end)
-  }, [filteredDecks, currentPage])
+  // Usar los mazos filtrados directamente (ya están paginados por el servidor)
+  const paginatedDecks = filteredDecks
 
   // Pre-calcular valores para cada deck - optimización de rendimiento
   const decksWithComputedValues = useMemo(() => {
@@ -937,11 +934,11 @@ function MazosComunidadPage() {
         )}
         
         {/* Paginación */}
-        {totalFilteredPages > 1 && (
+        {serverPagination && serverPagination.totalPages > 1 && (
           <div className="mt-8 flex justify-center">
             <Pagination
               currentPage={currentPage}
-              totalPages={totalFilteredPages}
+              totalPages={serverPagination.totalPages}
               onPageChange={(page) => {
                 setCurrentPage(page);
                 // Scroll al inicio de la lista

@@ -35,8 +35,10 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
-    const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
     const search = searchParams.get("search") || "";
+    const skip = (page - 1) * limit;
 
     if (!userId) {
       return NextResponse.json(
@@ -77,9 +79,13 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Obtener usuarios
+    // Obtener total de usuarios para paginación
+    const total = await prisma.user.count({ where });
+
+    // Obtener usuarios con paginación
     const users = await prisma.user.findMany({
       where,
+      skip,
       take: limit,
       select: {
         id: true,
@@ -115,7 +121,15 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime;
     log.api('GET', '/api/admin/users', 200, duration);
 
-    return NextResponse.json({ users: formattedUsers });
+    return NextResponse.json({ 
+      users: formattedUsers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     const duration = Date.now() - startTime;
     log.prisma('getAdminUsers', error, { duration });

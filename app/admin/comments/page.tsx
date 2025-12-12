@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Loader2, Trash2, MessageSquare, RefreshCw, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { toastSuccess, toastError } from "@/lib/toast";
+import { Pagination } from "@/components/ui/pagination";
 
 interface Comment {
   id: string;
@@ -24,11 +25,20 @@ interface Comment {
   };
 }
 
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export default function AdminCommentsPage() {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadComments = useCallback(async () => {
@@ -39,7 +49,7 @@ export default function AdminCommentsPage() {
 
     try {
       const response = await fetch(
-        `/api/admin/comments?userId=${user.id}&limit=50`
+        `/api/admin/comments?userId=${user.id}&page=${currentPage}&limit=20`
       );
 
       if (!response.ok) {
@@ -48,6 +58,7 @@ export default function AdminCommentsPage() {
 
       const data = await response.json();
       setComments(data.comments || []);
+      setPagination(data.pagination || null);
     } catch (error) {
       console.error("Error al cargar comentarios:", error);
       toastError("Error al cargar comentarios");
@@ -55,7 +66,7 @@ export default function AdminCommentsPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [user?.id]);
+  }, [user?.id, currentPage]);
 
   useEffect(() => {
     loadComments();
@@ -143,58 +154,74 @@ export default function AdminCommentsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {comments.map((comment) => (
-              <Card key={comment.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">
-                          {comment.user.username}
-                        </CardTitle>
-                        {comment.parentId && (
-                          <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded">
-                            Respuesta
-                          </span>
+          <>
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <Card key={comment.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg">
+                            {comment.user.username}
+                          </CardTitle>
+                          {comment.parentId && (
+                            <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded">
+                              Respuesta
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm text-muted-foreground">
+                            En mazo: {comment.deck.name}
+                          </p>
+                          <Link
+                            href={`/mazo/${comment.deck.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="size-3 text-muted-foreground hover:text-foreground" />
+                          </Link>
+                        </div>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteComment(comment.id)}
+                        disabled={deletingId === comment.id}
+                      >
+                        {deletingId === comment.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
                         )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-muted-foreground">
-                          En mazo: {comment.deck.name}
-                        </p>
-                        <Link
-                          href={`/mazo/${comment.deck.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ExternalLink className="size-3 text-muted-foreground hover:text-foreground" />
-                        </Link>
-                      </div>
+                      </Button>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteComment(comment.id)}
-                      disabled={deletingId === comment.id}
-                    >
-                      {deletingId === comment.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm">{comment.content}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(comment.createdAt).toLocaleString("es-ES")}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm">{comment.content}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(comment.createdAt).toLocaleString("es-ES")}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Paginación */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-8 flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </AdminGuard>
