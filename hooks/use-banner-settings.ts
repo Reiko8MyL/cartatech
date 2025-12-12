@@ -358,9 +358,12 @@ export function useBannerSettingsMap(
 
   useEffect(() => {
     async function loadSettings() {
-      // Guardar los ajustes actuales antes de cargar nuevos para mantenerlos durante la carga
-      const currentSettings = new Map(settingsMap);
-      previousSettingsRef.current = currentSettings;
+      // Usar una función de actualización para obtener el estado más reciente
+      setSettingsMap(currentMap => {
+        // Guardar los ajustes actuales antes de cargar nuevos para mantenerlos durante la carga
+        previousSettingsRef.current = new Map(currentMap);
+        return currentMap; // No cambiar el estado todavía
+      });
       
       try {
         const params = new URLSearchParams({
@@ -395,34 +398,57 @@ export function useBannerSettingsMap(
         });
 
         const results = await Promise.all(settingsPromises);
-        const newMap = new Map<string | null, BannerSetting | null>();
         
-        results.forEach(({ imageId, setting }) => {
-          newMap.set(imageId, setting);
-        });
-
-        // Actualizar solo cuando todos los ajustes estén listos para evitar cambios visuales intermedios
-        setSettingsMap(newMap);
-        previousSettingsRef.current = newMap;
-      } catch (error) {
-        console.error("Error al cargar ajustes de banners:", error);
-        // En caso de error, mantener los ajustes anteriores si existen
-        if (previousSettingsRef.current.size > 0) {
-          // Actualizar viewMode en los ajustes anteriores para mantener consistencia
-          const updatedMap = new Map<string | null, BannerSetting | null>();
-          const newDefaultSetting = getDefaultSetting(context, viewMode, device);
-          previousSettingsRef.current.forEach((setting, imageId) => {
-            if (setting) {
-              updatedMap.set(imageId, {
-                ...setting,
-                viewMode,
-              });
-            } else {
-              updatedMap.set(imageId, newDefaultSetting);
+        // Usar función de actualización para asegurar que usamos el estado más reciente
+        setSettingsMap(currentMap => {
+          const newMap = new Map<string | null, BannerSetting | null>();
+          
+          results.forEach(({ imageId, setting }) => {
+            // Si el setting del servidor tiene viewMode diferente al actual, actualizarlo
+            if (setting && setting.viewMode !== viewMode) {
+              setting = { ...setting, viewMode };
+            }
+            newMap.set(imageId, setting);
+          });
+          
+          // Si hay imageIds que no están en los resultados pero sí en el mapa actual, mantenerlos
+          currentMap.forEach((setting, imageId) => {
+            if (!newMap.has(imageId)) {
+              // Mantener el ajuste actual pero actualizar viewMode si es necesario
+              if (setting && setting.viewMode !== viewMode) {
+                newMap.set(imageId, { ...setting, viewMode });
+              } else {
+                newMap.set(imageId, setting);
+              }
             }
           });
-          setSettingsMap(updatedMap);
-        }
+          
+          previousSettingsRef.current = newMap;
+          return newMap;
+        });
+      } catch (error) {
+        console.error("Error al cargar ajustes de banners:", error);
+        // En caso de error, mantener los ajustes actuales (ya actualizados por el primer efecto)
+        setSettingsMap(currentMap => {
+          // Solo actualizar viewMode si es necesario
+          const updatedMap = new Map<string | null, BannerSetting | null>();
+          currentMap.forEach((setting, imageId) => {
+            if (setting && setting.viewMode !== viewMode) {
+              updatedMap.set(imageId, { ...setting, viewMode });
+            } else {
+              updatedMap.set(imageId, setting);
+            }
+          });
+          // Si el mapa está vacío, usar defaults
+          if (updatedMap.size === 0 && imageIds.length > 0) {
+            const newDefaultSetting = getDefaultSetting(context, viewMode, device);
+            imageIds.forEach(imageId => {
+              updatedMap.set(imageId, newDefaultSetting);
+            });
+          }
+          previousSettingsRef.current = updatedMap;
+          return updatedMap;
+        });
       } finally {
         setIsLoading(false);
       }
