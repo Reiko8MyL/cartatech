@@ -32,6 +32,11 @@ import { useCards } from "@/hooks/use-cards"
 import { useQuery } from "@tanstack/react-query"
 import { getAllCardsFromAPI } from "@/lib/api/cards"
 import type { Card, DeckCard, DeckFilters } from "@/lib/deck-builder/types"
+import { 
+  cardIdsArrayToMap, 
+  mapToCardIdsArray,
+  updateCardQuantityInCollection 
+} from "@/lib/api/collection"
 
 const COLLECTION_STORAGE_KEY = "myl_collection"
 
@@ -39,27 +44,27 @@ const COLLECTION_STORAGE_KEY = "myl_collection"
 /**
  * Carga la colección desde localStorage (fallback)
  */
-function loadCollectionFromLocalStorage(): Set<string> {
-  if (typeof window === "undefined") return new Set()
+function loadCollectionFromLocalStorage(): Map<string, number> {
+  if (typeof window === "undefined") return new Map()
 
   try {
     const data = localStorage.getItem(COLLECTION_STORAGE_KEY)
-    if (!data) return new Set()
+    if (!data) return new Map()
     const cardIds = JSON.parse(data) as string[]
-    return new Set(cardIds)
+    return cardIdsArrayToMap(cardIds)
   } catch {
-    return new Set()
+    return new Map()
   }
 }
 
 /**
  * Guarda la colección en localStorage (fallback)
  */
-function saveCollectionToLocalStorage(cardIds: Set<string>): void {
+function saveCollectionToLocalStorage(collection: Map<string, number>): void {
   if (typeof window === "undefined") return
 
   try {
-    const array = Array.from(cardIds)
+    const array = mapToCardIdsArray(collection)
     localStorage.setItem(COLLECTION_STORAGE_KEY, JSON.stringify(array))
   } catch {
     // Ignorar errores de localStorage
@@ -69,13 +74,13 @@ function saveCollectionToLocalStorage(cardIds: Set<string>): void {
 /**
  * Carga la colección desde la API con fallback a localStorage
  */
-async function loadCollectionFromStorage(userId: string): Promise<Set<string>> {
-  if (typeof window === "undefined") return new Set()
+async function loadCollectionFromStorage(userId: string): Promise<Map<string, number>> {
+  if (typeof window === "undefined") return new Map()
 
   try {
     const { getUserCollection } = await import("@/lib/api/collection");
     const cardIds = await getUserCollection(userId);
-    return new Set(cardIds);
+    return cardIdsArrayToMap(cardIds);
   } catch (error) {
     console.error("Error al cargar colección desde API, usando localStorage:", error);
     return loadCollectionFromLocalStorage();
@@ -88,22 +93,58 @@ async function loadCollectionFromStorage(userId: string): Promise<Set<string>> {
 async function toggleCardInCollectionStorage(
   userId: string,
   cardId: string,
-  currentCollection: Set<string>
-): Promise<Set<string>> {
+  currentCollection: Map<string, number>
+): Promise<Map<string, number>> {
   if (typeof window === "undefined") return currentCollection
 
   try {
     const { toggleCardInCollection } = await import("@/lib/api/collection");
     const result = await toggleCardInCollection(userId, cardId);
-    return new Set(result.cardIds);
+    return cardIdsArrayToMap(result.cardIds);
   } catch (error) {
     console.error("Error al actualizar colección en API, usando localStorage:", error);
     // Fallback: actualizar localStorage
-    const newCollection = new Set(currentCollection);
-    if (newCollection.has(cardId)) {
+    const newCollection = new Map(currentCollection);
+    const currentQuantity = newCollection.get(cardId) || 0;
+    if (currentQuantity > 0) {
       newCollection.delete(cardId);
     } else {
-      newCollection.add(cardId);
+      newCollection.set(cardId, 1);
+    }
+    saveCollectionToLocalStorage(newCollection);
+    return newCollection;
+  }
+}
+
+/**
+ * Actualiza la cantidad de una carta en la colección
+ */
+async function updateCardQuantityInCollectionStorage(
+  userId: string,
+  cardId: string,
+  quantity: number,
+  currentCollection: Map<string, number>
+): Promise<Map<string, number>> {
+  if (typeof window === "undefined") return currentCollection
+
+  try {
+    await updateCardQuantityInCollection(userId, cardId, quantity);
+    const updatedCollection = new Map(currentCollection);
+    if (quantity <= 0) {
+      updatedCollection.delete(cardId);
+    } else {
+      updatedCollection.set(cardId, quantity);
+    }
+    saveCollectionToLocalStorage(updatedCollection);
+    return updatedCollection;
+  } catch (error) {
+    console.error("Error al actualizar cantidad en API, usando localStorage:", error);
+    // Fallback: actualizar localStorage
+    const newCollection = new Map(currentCollection);
+    if (quantity <= 0) {
+      newCollection.delete(cardId);
+    } else {
+      newCollection.set(cardId, quantity);
     }
     saveCollectionToLocalStorage(newCollection);
     return newCollection;
@@ -115,9 +156,11 @@ function GaleriaContent() {
   const { user } = useAuth()
   const [isPending, startTransition] = useTransition()
   
-  // Cargar solo cartas originales (sin alternativas) para mejorar rendimiento inicial
-  // Las alternativas se cargarán solo cuando se abra el modal
-  const { cards: allCards, isLoading: isLoadingCardsFromAPI } = useCards(false) // NO incluir alternativas inicialmente
+  // Estado del modo hardcore - solo disponible cuando modo colección está activo
+  const [isHardcoreMode, setIsHardcoreMode] = useState(false)
+  
+  // Cargar cartas: incluir alternativas si el modo hardcore está activo
+  const { cards: allCards, isLoading: isLoadingCardsFromAPI } = useCards(isHardcoreMode)
   
   // Ordenar cartas por edición e ID - memoizado
   const sortedCards = useMemo(() => {
@@ -175,8 +218,8 @@ function GaleriaContent() {
 
   // Estado del modo colección - solo disponible para usuarios autenticados
   const [isCollectionMode, setIsCollectionMode] = useState(false)
-  const [collectedCards, setCollectedCards] = useState<Set<string>>(() =>
-    user ? loadCollectionFromLocalStorage() : new Set()
+  const [collectedCards, setCollectedCards] = useState<Map<string, number>>(() =>
+    user ? loadCollectionFromLocalStorage() : new Map()
   )
   const [isLoadingCollection, setIsLoadingCollection] = useState(false)
   const [loadingCards, setLoadingCards] = useState<Set<string>>(new Set())
@@ -200,16 +243,24 @@ function GaleriaContent() {
         });
     } else {
       // Si no hay usuario, limpiar la colección
-      setCollectedCards(new Set());
+      setCollectedCards(new Map());
     }
   }, [user])
 
-  // Desactivar modo colección si el usuario cierra sesión
+  // Desactivar modo colección y hardcore si el usuario cierra sesión
   useEffect(() => {
-    if (!user && isCollectionMode) {
+    if (!user) {
       setIsCollectionMode(false)
+      setIsHardcoreMode(false)
     }
-  }, [user, isCollectionMode])
+  }, [user])
+  
+  // Desactivar modo hardcore si se desactiva el modo colección
+  useEffect(() => {
+    if (!isCollectionMode && isHardcoreMode) {
+      setIsHardcoreMode(false)
+    }
+  }, [isCollectionMode, isHardcoreMode])
 
   // Filtrar cartas según los filtros - optimizado con deferred value y startTransition
   // En galería usamos formato RE por defecto para el filtro de ban list
@@ -236,18 +287,19 @@ function GaleriaContent() {
     setLoadingCards((prev) => new Set(prev).add(cardId));
     
     // Guardar el estado anterior para poder revertir si falla
-    let previousCollection: Set<string> = new Set();
+    let previousCollection: Map<string, number> = new Map();
     
     // Actualización optimista: actualizar UI inmediatamente
     setCollectedCards((prev) => {
-      previousCollection = new Set(prev); // Guardar estado anterior
-      const newSet = new Set(prev)
-      if (newSet.has(cardId)) {
-        newSet.delete(cardId)
+      previousCollection = new Map(prev); // Guardar estado anterior
+      const newMap = new Map(prev)
+      const currentQuantity = newMap.get(cardId) || 0;
+      if (currentQuantity > 0) {
+        newMap.delete(cardId)
       } else {
-        newSet.add(cardId)
+        newMap.set(cardId, 1)
       }
-      return newSet
+      return newMap
     })
 
     // Actualizar en la API (con fallback a localStorage)
@@ -267,6 +319,102 @@ function GaleriaContent() {
       setCollectedCards(previousCollection);
       const { toastError } = await import("@/lib/toast");
       toastError("Error al actualizar la colección. Por favor, intenta nuevamente.");
+    } finally {
+      setLoadingCards((prev) => {
+        const next = new Set(prev);
+        next.delete(cardId);
+        return next;
+      });
+    }
+  }, [user, loadingCards])
+
+  // Función para incrementar cantidad (sin restricciones en modo colección)
+  const incrementCardQuantity = useCallback(async (cardId: string) => {
+    if (!user) return
+    
+    // Prevenir múltiples clicks
+    if (loadingCards.has(cardId)) return;
+    setLoadingCards((prev) => new Set(prev).add(cardId));
+    
+    // Guardar el estado anterior para poder revertir si falla
+    let previousCollection: Map<string, number> = new Map();
+    let updatedCollection: Map<string, number> = new Map();
+    
+    // Actualización optimista: actualizar UI inmediatamente (sin límite de cantidad)
+    setCollectedCards((prev) => {
+      previousCollection = new Map(prev);
+      updatedCollection = new Map(prev);
+      const currentQuantity = updatedCollection.get(cardId) || 0;
+      updatedCollection.set(cardId, currentQuantity + 1);
+      return updatedCollection;
+    });
+
+    // Actualizar en la API usando el estado completo actualizado (evita condiciones de carrera)
+    try {
+      const { updateUserCollection } = await import("@/lib/api/collection");
+      const cardIdsArray = mapToCardIdsArray(updatedCollection);
+      const finalCardIds = await updateUserCollection(user.id, cardIdsArray);
+      const finalCollection = cardIdsArrayToMap(finalCardIds);
+      
+      // Actualizar con la respuesta de la API
+      setCollectedCards(finalCollection);
+      saveCollectionToLocalStorage(finalCollection);
+    } catch (error) {
+      console.error("Error al incrementar cantidad:", error);
+      // Revertir cambio optimista si falla
+      setCollectedCards(previousCollection);
+      const { toastError } = await import("@/lib/toast");
+      toastError("Error al actualizar la cantidad. Por favor, intenta nuevamente.");
+    } finally {
+      setLoadingCards((prev) => {
+        const next = new Set(prev);
+        next.delete(cardId);
+        return next;
+      });
+    }
+  }, [user, loadingCards])
+
+  // Función para decrementar cantidad
+  const decrementCardQuantity = useCallback(async (cardId: string) => {
+    if (!user) return
+    
+    // Prevenir múltiples clicks
+    if (loadingCards.has(cardId)) return;
+    setLoadingCards((prev) => new Set(prev).add(cardId));
+    
+    // Guardar el estado anterior para poder revertir si falla
+    let previousCollection: Map<string, number> = new Map();
+    let updatedCollection: Map<string, number> = new Map();
+    
+    // Actualización optimista: actualizar UI inmediatamente
+    setCollectedCards((prev) => {
+      previousCollection = new Map(prev);
+      updatedCollection = new Map(prev);
+      const currentQuantity = updatedCollection.get(cardId) || 0;
+      if (currentQuantity > 1) {
+        updatedCollection.set(cardId, currentQuantity - 1);
+      } else {
+        updatedCollection.delete(cardId);
+      }
+      return updatedCollection;
+    });
+
+    // Actualizar en la API usando el estado completo actualizado (evita condiciones de carrera)
+    try {
+      const { updateUserCollection } = await import("@/lib/api/collection");
+      const cardIdsArray = mapToCardIdsArray(updatedCollection);
+      const finalCardIds = await updateUserCollection(user.id, cardIdsArray);
+      const finalCollection = cardIdsArrayToMap(finalCardIds);
+      
+      // Actualizar con la respuesta de la API
+      setCollectedCards(finalCollection);
+      saveCollectionToLocalStorage(finalCollection);
+    } catch (error) {
+      console.error("Error al decrementar cantidad:", error);
+      // Revertir cambio optimista si falla
+      setCollectedCards(previousCollection);
+      const { toastError } = await import("@/lib/toast");
+      toastError("Error al actualizar la cantidad. Por favor, intenta nuevamente.");
     } finally {
       setLoadingCards((prev) => {
         const next = new Set(prev);
@@ -364,6 +512,8 @@ function GaleriaContent() {
           <CollectionModePanel
             isCollectionMode={isCollectionMode}
             onToggleCollectionMode={setIsCollectionMode}
+            isHardcoreMode={isHardcoreMode}
+            onToggleHardcoreMode={setIsHardcoreMode}
             allCards={sortedCards}
             collectedCards={collectedCards}
           />
@@ -485,7 +635,7 @@ function GaleriaContent() {
                           }}
                         >
                           {editionCards.map((card, cardIndex) => {
-                            const isCollected = collectedCards.has(card.id)
+                            const quantity = collectedCards.get(card.id) || 0
                             const maxQuantity = card.banListRE
                             const hasPriority = isFirstEdition && cardIndex < priorityCount
 
@@ -493,7 +643,7 @@ function GaleriaContent() {
                               <CardItemWrapper
                                 key={card.id}
                                 card={card}
-                                isCollected={isCollected}
+                                quantity={quantity}
                                 maxQuantity={maxQuantity}
                                 hasPriority={hasPriority}
                                 isCollectionMode={isCollectionMode}
@@ -501,6 +651,8 @@ function GaleriaContent() {
                                 onCardClick={handleCardClick}
                                 onCardRightClick={handleCardRightClick}
                                 onToggleCollection={memoizedToggleCardCollection}
+                                onIncrementQuantity={incrementCardQuantity}
+                                onDecrementQuantity={decrementCardQuantity}
                               />
                             )
                           })}
@@ -529,7 +681,7 @@ function GaleriaContent() {
               )
             })()}
             quantityInDeck={
-              isCollectionMode && collectedCards.has(selectedCard.id) ? 1 : 0
+              isCollectionMode ? (collectedCards.get(selectedCard.id) || 0) : 0
             }
             maxQuantity={isCollectionMode ? 1 : selectedCard.banListRE}
             deckCards={[]}
