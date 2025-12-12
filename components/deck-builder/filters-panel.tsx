@@ -302,37 +302,37 @@ export const FiltersPanel = memo(function FiltersPanel({
   }, [])
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 lg:p-4">
+    <div className="flex flex-col gap-2 rounded-lg border bg-card p-2 lg:p-3">
       {/* Header con título y botón de expandir/colapsar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Filter className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Filtros</span>
+        <div className="flex items-center gap-1.5">
+          <Filter className="size-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium">Filtros</span>
         </div>
         {/* Botón para limpiar filtros */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs px-2">
-            <X className="size-3.5" />
-            <span className="hidden sm:inline ml-1">Limpiar</span>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs px-1.5">
+            <X className="size-3" />
+            <span className="hidden sm:inline ml-0.5">Limpiar</span>
           </Button>
         )}
       </div>
 
       {/* Fila de búsquedas - Siempre visible */}
-      <div className={searchFieldsInRow ? "flex flex-col sm:flex-row gap-2" : "flex flex-col gap-2"}>
+      <div className={searchFieldsInRow ? "flex flex-col sm:flex-row gap-1.5" : "flex flex-col gap-1.5"}>
         <Input
           type="text"
           placeholder="Buscar por nombre..."
           value={filters.search}
           onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-          className={searchFieldsInRow ? "w-full sm:flex-1 h-9 text-sm" : "w-full h-9 text-sm"}
+          className={searchFieldsInRow ? "w-full sm:flex-1 h-8 text-xs" : "w-full h-8 text-xs"}
         />
         <Input
           type="text"
           placeholder="Buscar en descripciones..."
           value={filters.descriptionSearch}
           onChange={(e) => onFiltersChange({ ...filters, descriptionSearch: e.target.value })}
-          className={searchFieldsInRow ? "w-full sm:flex-1 h-9 text-sm" : "w-full h-9 text-sm"}
+          className={searchFieldsInRow ? "w-full sm:flex-1 h-8 text-xs" : "w-full h-8 text-xs"}
         />
       </div>
 
@@ -341,45 +341,45 @@ export const FiltersPanel = memo(function FiltersPanel({
         variant="outline"
         size="sm"
         onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-        className="w-full justify-between h-9"
+        className="w-full justify-between h-8 text-xs"
       >
-        <span className="text-sm">Filtros avanzados</span>
+        <span className="text-xs">Filtros avanzados</span>
         {isFiltersExpanded ? (
-          <ChevronUp className="size-4" />
+          <ChevronUp className="size-3.5" />
         ) : (
-          <ChevronDown className="size-4" />
+          <ChevronDown className="size-3.5" />
         )}
       </Button>
 
       {/* Filtros avanzados - Desplegables o expandidos según showFiltersExpanded */}
       {isFiltersExpanded && (
-        <div className="flex flex-col gap-4 pt-2 border-t">
+        <div className="flex flex-col gap-2.5 pt-2 border-t">
           {showFiltersExpanded ? (
             // Vista expandida: todas las opciones siempre visibles
             <>
               {/* Filtro por edición - Expandido */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => toggleFilterSection("edition")}
-                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors"
                   >
                     {expandedFilters.has("edition") ? (
-                      <Minus className="size-4" />
+                      <Minus className="size-3.5" />
                     ) : (
-                      <Plus className="size-4" />
+                      <Plus className="size-3.5" />
                     )}
                     <span>Edición</span>
                   </button>
                   {filters.edition.length > 0 && (
-                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                    <span className="text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
                       {filters.edition.length}
                     </span>
                   )}
                 </div>
                 {expandedFilters.has("edition") && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center space-x-1.5">
                     <Checkbox
                       id="edition-all"
                       checked={filters.edition.length === 0}
@@ -389,13 +389,13 @@ export const FiltersPanel = memo(function FiltersPanel({
                     />
                     <label
                       htmlFor="edition-all"
-                      className="text-sm cursor-pointer select-none"
+                      className="text-xs cursor-pointer select-none"
                     >
                       Todas
                     </label>
                   </div>
                   {availableEditions.map((edition) => (
-                    <div key={edition} className="flex items-center space-x-2">
+                    <div key={edition} className="flex items-center space-x-1.5">
                       <Checkbox
                         id={`edition-${edition}`}
                         checked={filters.edition.includes(edition)}
@@ -405,7 +405,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       />
                       <label
                         htmlFor={`edition-${edition}`}
-                        className="text-sm cursor-pointer select-none"
+                        className="text-xs cursor-pointer select-none"
                       >
                         {edition}
                       </label>
@@ -416,28 +416,28 @@ export const FiltersPanel = memo(function FiltersPanel({
               </div>
 
               {/* Filtro por tipo - Expandido */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => toggleFilterSection("type")}
-                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors"
                   >
                     {expandedFilters.has("type") ? (
-                      <Minus className="size-4" />
+                      <Minus className="size-3.5" />
                     ) : (
-                      <Plus className="size-4" />
+                      <Plus className="size-3.5" />
                     )}
                     <span>Tipo</span>
                   </button>
                   {filters.type.length > 0 && (
-                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                    <span className="text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
                       {filters.type.length}
                     </span>
                   )}
                 </div>
                 {expandedFilters.has("type") && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center space-x-1.5">
                     <Checkbox
                       id="type-all"
                       checked={filters.type.length === 0}
@@ -453,13 +453,13 @@ export const FiltersPanel = memo(function FiltersPanel({
                     />
                     <label
                       htmlFor="type-all"
-                      className="text-sm cursor-pointer select-none"
+                      className="text-xs cursor-pointer select-none"
                     >
                       Todos
                     </label>
                   </div>
                   {availableTypes.map((type) => (
-                    <div key={type} className="flex items-center space-x-2">
+                    <div key={type} className="flex items-center space-x-1.5">
                       <Checkbox
                         id={`type-${type}`}
                         checked={filters.type.includes(type)}
@@ -469,7 +469,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       />
                       <label
                         htmlFor={`type-${type}`}
-                        className="text-sm cursor-pointer select-none"
+                        className="text-xs cursor-pointer select-none"
                       >
                         {type}
                       </label>
@@ -480,28 +480,28 @@ export const FiltersPanel = memo(function FiltersPanel({
               </div>
 
               {/* Filtro por raza - Expandido */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => toggleFilterSection("race")}
-                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors"
                   >
                     {expandedFilters.has("race") ? (
-                      <Minus className="size-4" />
+                      <Minus className="size-3.5" />
                     ) : (
-                      <Plus className="size-4" />
+                      <Plus className="size-3.5" />
                     )}
                     <span>Raza</span>
                   </button>
                   {filters.race.length > 0 && (
-                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                    <span className="text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
                       {filters.race.length}
                     </span>
                   )}
                 </div>
                 {expandedFilters.has("race") && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center space-x-1.5">
                     <Checkbox
                       id="race-all"
                       checked={filters.race.length === 0}
@@ -517,7 +517,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                     />
                     <label
                       htmlFor="race-all"
-                      className={`text-sm cursor-pointer select-none ${
+                      className={`text-xs cursor-pointer select-none ${
                         filters.type.length > 0 && !hasAliadoType ? "opacity-50" : ""
                       }`}
                     >
@@ -525,7 +525,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                     </label>
                   </div>
                   {availableRaces.map((race) => (
-                    <div key={race} className="flex items-center space-x-2">
+                    <div key={race} className="flex items-center space-x-1.5">
                       <Checkbox
                         id={`race-${race}`}
                         checked={filters.race.includes(race)}
@@ -536,7 +536,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       />
                       <label
                         htmlFor={`race-${race}`}
-                        className={`text-sm cursor-pointer select-none ${
+                        className={`text-xs cursor-pointer select-none ${
                           filters.type.length > 0 && !hasAliadoType ? "opacity-50" : ""
                         }`}
                       >
@@ -549,28 +549,28 @@ export const FiltersPanel = memo(function FiltersPanel({
               </div>
 
               {/* Filtro por coste - Expandido */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => toggleFilterSection("cost")}
-                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors"
                   >
                     {expandedFilters.has("cost") ? (
-                      <Minus className="size-4" />
+                      <Minus className="size-3.5" />
                     ) : (
-                      <Plus className="size-4" />
+                      <Plus className="size-3.5" />
                     )}
                     <span>Coste</span>
                   </button>
                   {filters.cost.length > 0 && (
-                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                    <span className="text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
                       {filters.cost.length}
                     </span>
                   )}
                 </div>
                 {expandedFilters.has("cost") && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center space-x-1.5">
                     <Checkbox
                       id="cost-all"
                       checked={filters.cost.length === 0}
@@ -580,13 +580,13 @@ export const FiltersPanel = memo(function FiltersPanel({
                     />
                     <label
                       htmlFor="cost-all"
-                      className="text-sm cursor-pointer select-none"
+                      className="text-xs cursor-pointer select-none"
                     >
                       Todos
                     </label>
                   </div>
                   {availableCosts.map((cost) => (
-                    <div key={cost} className="flex items-center space-x-2">
+                    <div key={cost} className="flex items-center space-x-1.5">
                       <Checkbox
                         id={`cost-${cost}`}
                         checked={filters.cost.includes(String(cost))}
@@ -596,7 +596,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       />
                       <label
                         htmlFor={`cost-${cost}`}
-                        className="text-sm cursor-pointer select-none"
+                        className="text-xs cursor-pointer select-none"
                       >
                         {cost}
                       </label>
@@ -607,8 +607,8 @@ export const FiltersPanel = memo(function FiltersPanel({
               </div>
 
               {/* Filtros adicionales - Abajo de coste en modo expandido (galería) */}
-              <div className="space-y-2 pt-2 border-t">
-                <div className="flex items-center space-x-2">
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center space-x-1.5">
                   <Checkbox
                     id="filter-unique-expanded"
                     checked={filters.showOnlyUnique === true}
@@ -621,13 +621,13 @@ export const FiltersPanel = memo(function FiltersPanel({
                   />
                   <label
                     htmlFor="filter-unique-expanded"
-                    className="text-sm cursor-pointer select-none"
+                    className="text-xs cursor-pointer select-none"
                   >
                     Solo Únicas
                   </label>
                 </div>
                 {deckFormat && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1.5">
                     <Checkbox
                       id="filter-banned-expanded"
                       checked={filters.showOnlyBanned === true}
@@ -640,13 +640,13 @@ export const FiltersPanel = memo(function FiltersPanel({
                     />
                     <label
                       htmlFor="filter-banned-expanded"
-                      className="text-sm cursor-pointer select-none"
+                      className="text-xs cursor-pointer select-none"
                     >
                       En Ban List
                     </label>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
                   <Checkbox
                     id="filter-rework-expanded"
                     checked={filters.showOnlyRework === true}
@@ -659,7 +659,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                   />
                   <label
                     htmlFor="filter-rework-expanded"
-                    className="text-sm cursor-pointer select-none"
+                    className="text-xs cursor-pointer select-none"
                   >
                     Solo Rework
                   </label>
@@ -668,14 +668,14 @@ export const FiltersPanel = memo(function FiltersPanel({
             </>
           ) : (
             // Vista con dropdowns (comportamiento original)
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {/* Filtro por edición */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="relative h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                  <Button variant="outline" size="sm" className="relative h-7 text-xs px-2">
                     {getFilterButtonText("Edición", filters.edition)}
                     {filters.edition.length > 0 && (
-                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                      <span className="ml-1 text-[9px] bg-primary text-primary-foreground rounded-full px-1 py-0.5">
                         {filters.edition.length}
                       </span>
                     )}
@@ -709,10 +709,10 @@ export const FiltersPanel = memo(function FiltersPanel({
               {/* Filtro por tipo */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                  <Button variant="outline" size="sm" className="h-7 text-xs px-2">
                     {getFilterButtonText("Tipo", filters.type)}
                     {filters.type.length > 0 && (
-                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                      <span className="ml-1 text-[9px] bg-primary text-primary-foreground rounded-full px-1 py-0.5">
                         {filters.type.length}
                       </span>
                     )}
@@ -757,11 +757,11 @@ export const FiltersPanel = memo(function FiltersPanel({
                     variant="outline" 
                     size="sm"
                     disabled={filters.type.length > 0 && !hasAliadoType}
-                    className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                    className="h-7 text-xs px-2"
                   >
                     {getFilterButtonText("Raza", filters.race)}
                     {filters.race.length > 0 && (
-                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                      <span className="ml-1 text-[9px] bg-primary text-primary-foreground rounded-full px-1 py-0.5">
                         {filters.race.length}
                       </span>
                     )}
@@ -800,10 +800,10 @@ export const FiltersPanel = memo(function FiltersPanel({
               {/* Filtro por coste */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                  <Button variant="outline" size="sm" className="h-7 text-xs px-2">
                     {getFilterButtonText("Coste", filters.cost)}
                     {filters.cost.length > 0 && (
-                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                      <span className="ml-1 text-[9px] bg-primary text-primary-foreground rounded-full px-1 py-0.5">
                         {filters.cost.length}
                       </span>
                     )}
@@ -845,7 +845,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                     showOnlyUnique: !filters.showOnlyUnique,
                   })
                 }}
-                className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                className="h-7 text-xs px-2"
               >
                 Solo Únicas
               </Button>
@@ -861,7 +861,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                       showOnlyBanned: !filters.showOnlyBanned,
                     })
                   }}
-                  className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                  className="h-7 text-xs px-2"
                 >
                   En Ban List
                 </Button>
@@ -877,7 +877,7 @@ export const FiltersPanel = memo(function FiltersPanel({
                     showOnlyRework: !filters.showOnlyRework,
                   })
                 }}
-                className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                className="h-7 text-xs px-2"
               >
                 Solo Rework
               </Button>

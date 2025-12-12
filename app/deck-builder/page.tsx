@@ -54,6 +54,8 @@ import {
   clearTemporaryDeck,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
+import { useQuery } from "@tanstack/react-query"
+import { getAllCardsFromAPI } from "@/lib/api/cards"
 import { getDeckById } from "@/lib/api/decks"
 import type {
   Card,
@@ -80,6 +82,28 @@ function DeckBuilderContent() {
     return sortCardsByEditionAndId(allCardsRaw)
   }, [allCardsRaw])
 
+  // Estado del mazo
+  const [deckName, setDeckName] = useState("Mi Mazo")
+  const [deckCards, setDeckCards] = useState<DeckCard[]>([])
+
+  // Cargar cartas alternativas cuando hay cartas en el mazo (para calcular estadísticas correctamente)
+  const hasCardsInDeck = deckCards.length > 0
+  const { data: allCardsWithAlternatives = [] } = useQuery({
+    queryKey: ["cards", "with-alternatives"],
+    queryFn: () => getAllCardsFromAPI(true),
+    enabled: hasCardsInDeck, // Solo cargar cuando hay cartas en el mazo
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  })
+
+  // Usar cartas con alternativas para calcular estadísticas si hay cartas en el mazo
+  const allCardsForStats = useMemo(() => {
+    if (hasCardsInDeck && allCardsWithAlternatives.length > 0) {
+      return sortCardsByEditionAndId(allCardsWithAlternatives)
+    }
+    return allCards
+  }, [hasCardsInDeck, allCardsWithAlternatives, allCards])
+
   // Actualizar estado de carga
   useEffect(() => {
     if (!isLoadingCardsFromAPI && allCards.length > 0) {
@@ -87,10 +111,6 @@ function DeckBuilderContent() {
       return () => clearTimeout(timer)
     }
   }, [isLoadingCardsFromAPI, allCards.length])
-
-  // Estado del mazo
-  const [deckName, setDeckName] = useState("Mi Mazo")
-  const [deckCards, setDeckCards] = useState<DeckCard[]>([])
   const [deckFormat, setDeckFormat] = useState<DeckFormat>("RE")
   const [currentDeck, setCurrentDeck] = useState<SavedDeck | null>(null) // Guardar el mazo completo cuando se carga desde URL
   const [hasLoadedFromUrl, setHasLoadedFromUrl] = useState(false)
@@ -120,6 +140,7 @@ function DeckBuilderContent() {
   }, [allCards, filters, deckFormat])
 
   // Calcular estadísticas del mazo - optimizado
+  // Usar allCardsForStats que incluye alternativas cuando hay cartas en el mazo
   const deckStats = useMemo(() => {
     if (deckCards.length === 0) {
       return {
@@ -131,8 +152,8 @@ function DeckBuilderContent() {
         hasOroIni: false,
       }
     }
-    return calculateDeckStats(deckCards, allCards)
-  }, [deckCards, allCards])
+    return calculateDeckStats(deckCards, allCardsForStats)
+  }, [deckCards, allCardsForStats])
 
   // Obtener opciones para los filtros
   const availableEditions = useMemo(
