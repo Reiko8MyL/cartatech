@@ -25,7 +25,7 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver el 
 Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
 
 ```env
-NEXT_PUBLIC_SITE_URL=https://cartatech.com
+NEXT_PUBLIC_SITE_URL=https://www.cartatech.cl
 ```
 
 ## 📦 Scripts Disponibles
@@ -51,7 +51,7 @@ NEXT_PUBLIC_SITE_URL=https://cartatech.com
 
 3. **Configurar Variables de Entorno:**
    - En la configuración del proyecto, ve a "Environment Variables"
-   - Agrega: `NEXT_PUBLIC_SITE_URL` con el valor de tu dominio (ej: `https://cartatech.com`)
+   - Agrega: `NEXT_PUBLIC_SITE_URL` con el valor de tu dominio (ej: `https://www.cartatech.cl`)
 
 4. **Configurar el Directorio Raíz (si es necesario):**
    - Si tu proyecto Next.js está en la carpeta `cartatech`, en "Root Directory" selecciona `cartatech`
@@ -90,7 +90,7 @@ vercel --prod
 
 Asegúrate de configurar estas variables en el dashboard de Vercel:
 
-- `NEXT_PUBLIC_SITE_URL` - URL completa de tu sitio (ej: `https://cartatech.com`)
+- `NEXT_PUBLIC_SITE_URL` - URL completa de tu sitio (ej: `https://www.cartatech.cl`)
 
 ## 🛠️ Tecnologías
 

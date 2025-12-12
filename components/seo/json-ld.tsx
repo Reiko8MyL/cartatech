@@ -60,20 +60,121 @@ export function DeckJsonLd({
 
 // Schema.org para el sitio web
 export function WebsiteJsonLd() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.cartatech.cl"
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Carta Tech - MyL Deck Builder",
-    description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque",
-    url: process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.cl",
+    name: "CartaTech",
+    alternateName: "Carta Tech - MyL Deck Builder",
+    description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque. Construye, comparte y explora mazos de la comunidad.",
+    url: siteUrl,
+    logo: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxd_poxmjq.webp",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.cl"}/galeria?search={search_term_string}`,
+        urlTemplate: `${siteUrl}/galeria?search={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
+    sameAs: [
+      // Agregar redes sociales cuando estén disponibles
+      // "https://twitter.com/cartatech",
+      // "https://facebook.com/cartatech",
+    ],
+  }
+
+  return <JsonLd data={data} />
+}
+
+// Schema.org para un usuario (Person)
+export function PersonJsonLd({
+  username,
+  name,
+  description,
+  url,
+}: {
+  username: string
+  name?: string
+  description?: string
+  url: string
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.cartatech.cl"
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: name || username,
+    url,
+    description: description || `Perfil de ${username} en CartaTech`,
+    identifier: {
+      "@type": "PropertyValue",
+      name: "username",
+      value: username,
+    },
+    sameAs: [
+      `${siteUrl}/perfil/${username}`,
+    ],
+  }
+
+  return <JsonLd data={data} />
+}
+
+// Schema.org para una lista de mazos (ItemList)
+export function DeckListJsonLd({
+  name,
+  description,
+  url,
+  items,
+}: {
+  name: string
+  description?: string
+  url: string
+  items: Array<{
+    name: string
+    url: string
+    description?: string
+  }>
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name,
+    description: description || `Lista de mazos: ${name}`,
+    url,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: {
+        "@type": "Article",
+        name: item.name,
+        url: item.url,
+        description: item.description,
+      },
+    })),
+  }
+
+  return <JsonLd data={data} />
+}
+
+// Schema.org para Breadcrumbs (BreadcrumbList)
+export function BreadcrumbJsonLd({
+  items,
+}: {
+  items: Array<{
+    name: string
+    url: string
+  }>
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
   }
 
   return <JsonLd data={data} />
