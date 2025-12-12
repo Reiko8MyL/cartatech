@@ -80,6 +80,9 @@ function MazosComunidadPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const deviceType = useDeviceType()
   
+  // Estado de paginación
+  const [currentPage, setCurrentPage] = useState(1)
+  
   // Obtener todas las cartas
   const { cards: allCards } = useCards(false);
   
@@ -122,7 +125,6 @@ function MazosComunidadPage() {
     favorites: "",
     liked: "",
   })
-  const [currentPage, setCurrentPage] = useState(1)
   
   // Estado de carga combinado
   const isLoading = isLoadingDecks
