@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, memo } from "react"
+import { useEffect, useRef, useState, memo, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Filter, X, ChevronDown, ChevronUp } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Filter, X, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
 import type { DeckFilters } from "@/lib/deck-builder/types"
 
 interface FiltersPanelProps {
@@ -21,6 +22,9 @@ interface FiltersPanelProps {
   availableTypes: string[]
   availableRaces: string[]
   availableCosts: number[]
+  defaultExpanded?: boolean // Prop para controlar si los filtros avanzados están expandidos por defecto
+  searchFieldsInRow?: boolean // Prop para controlar si los campos de búsqueda están en la misma fila (default: true)
+  showFiltersExpanded?: boolean // Prop para mostrar los filtros siempre expandidos (sin dropdowns) - solo para galería
 }
 
 // Mapeo de razas a ediciones
@@ -46,6 +50,9 @@ export const FiltersPanel = memo(function FiltersPanel({
   availableTypes,
   availableRaces,
   availableCosts,
+  defaultExpanded = false, // Por defecto, no expandido (comportamiento original)
+  searchFieldsInRow = true, // Por defecto, en la misma fila (comportamiento del deck builder)
+  showFiltersExpanded = false, // Por defecto, usar dropdowns (comportamiento original)
 }: FiltersPanelProps) {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previousFiltersRef = useRef<DeckFilters>(filters)
@@ -266,7 +273,25 @@ export const FiltersPanel = memo(function FiltersPanel({
   }
 
   const hasAliadoType = filters.type.includes("Aliado")
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(defaultExpanded)
+  
+  // Estado para controlar qué filtros individuales están expandidos (solo cuando showFiltersExpanded es true)
+  // Por defecto, todos expandidos cuando showFiltersExpanded es true
+  const [expandedFilters, setExpandedFilters] = useState<Set<string>>(() => 
+    showFiltersExpanded ? new Set(["edition", "type", "race", "cost"]) : new Set()
+  )
+  
+  const toggleFilterSection = useCallback((filterKey: string) => {
+    setExpandedFilters((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(filterKey)) {
+        newSet.delete(filterKey)
+      } else {
+        newSet.add(filterKey)
+      }
+      return newSet
+    })
+  }, [])
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 lg:p-4">
@@ -286,20 +311,20 @@ export const FiltersPanel = memo(function FiltersPanel({
       </div>
 
       {/* Fila de búsquedas - Siempre visible */}
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className={searchFieldsInRow ? "flex flex-col sm:flex-row gap-2" : "flex flex-col gap-2"}>
         <Input
           type="text"
           placeholder="Buscar por nombre..."
           value={filters.search}
           onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-          className="w-full sm:flex-1 h-9 text-sm"
+          className={searchFieldsInRow ? "w-full sm:flex-1 h-9 text-sm" : "w-full h-9 text-sm"}
         />
         <Input
           type="text"
           placeholder="Buscar en descripciones..."
           value={filters.descriptionSearch}
           onChange={(e) => onFiltersChange({ ...filters, descriptionSearch: e.target.value })}
-          className="w-full sm:flex-1 h-9 text-sm"
+          className={searchFieldsInRow ? "w-full sm:flex-1 h-9 text-sm" : "w-full h-9 text-sm"}
         />
       </div>
 
@@ -318,175 +343,430 @@ export const FiltersPanel = memo(function FiltersPanel({
         )}
       </Button>
 
-      {/* Filtros avanzados - Desplegables */}
+      {/* Filtros avanzados - Desplegables o expandidos según showFiltersExpanded */}
       {isFiltersExpanded && (
-        <div className="flex flex-col gap-2 pt-2 border-t">
-          <div className="flex flex-wrap items-center gap-2">
-      {/* Filtro por edición */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="relative h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
-            {getFilterButtonText("Edición", filters.edition)}
-            {filters.edition.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-                {filters.edition.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
-          <DropdownMenuLabel>Edición</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={filters.edition.length === 0}
-            onCheckedChange={(checked) => {
-              if (checked) clearFilterArray("edition")
-            }}
-          >
-            Todas
-          </DropdownMenuCheckboxItem>
-          {availableEditions.map((edition) => (
-            <DropdownMenuCheckboxItem
-              key={edition}
-              checked={filters.edition.includes(edition)}
-              onCheckedChange={(checked) => {
-                toggleFilterValue("edition", edition, checked)
-              }}
-            >
-              {edition}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <div className="flex flex-col gap-4 pt-2 border-t">
+          {showFiltersExpanded ? (
+            // Vista expandida: todas las opciones siempre visibles
+            <>
+              {/* Filtro por edición - Expandido */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => toggleFilterSection("edition")}
+                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {expandedFilters.has("edition") ? (
+                      <Minus className="size-4" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    <span>Edición</span>
+                  </button>
+                  {filters.edition.length > 0 && (
+                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                      {filters.edition.length}
+                    </span>
+                  )}
+                </div>
+                {expandedFilters.has("edition") && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edition-all"
+                      checked={filters.edition.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) clearFilterArray("edition")
+                      }}
+                    />
+                    <label
+                      htmlFor="edition-all"
+                      className="text-sm cursor-pointer select-none"
+                    >
+                      Todas
+                    </label>
+                  </div>
+                  {availableEditions.map((edition) => (
+                    <div key={edition} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edition-${edition}`}
+                        checked={filters.edition.includes(edition)}
+                        onCheckedChange={(checked) => {
+                          toggleFilterValue("edition", edition, checked)
+                        }}
+                      />
+                      <label
+                        htmlFor={`edition-${edition}`}
+                        className="text-sm cursor-pointer select-none"
+                      >
+                        {edition}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                )}
+              </div>
 
-      {/* Filtro por tipo */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
-            {getFilterButtonText("Tipo", filters.type)}
-            {filters.type.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-                {filters.type.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
-          <DropdownMenuLabel>Tipo</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={filters.type.length === 0}
-            onCheckedChange={(checked) => {
-              if (checked) {
-                // Si se selecciona "Todos", resetear también la raza
-                onFiltersChange({
-                  ...filters,
-                  type: [],
-                  race: [],
-                })
-              }
-            }}
-          >
-            Todos
-          </DropdownMenuCheckboxItem>
-          {availableTypes.map((type) => (
-            <DropdownMenuCheckboxItem
-              key={type}
-              checked={filters.type.includes(type)}
-              onCheckedChange={(checked) => {
-                handleTypeFilterChange(type, checked)
-              }}
-            >
-              {type}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+              {/* Filtro por tipo - Expandido */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => toggleFilterSection("type")}
+                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {expandedFilters.has("type") ? (
+                      <Minus className="size-4" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    <span>Tipo</span>
+                  </button>
+                  {filters.type.length > 0 && (
+                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                      {filters.type.length}
+                    </span>
+                  )}
+                </div>
+                {expandedFilters.has("type") && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="type-all"
+                      checked={filters.type.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          onFiltersChange({
+                            ...filters,
+                            type: [],
+                            race: [],
+                          })
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="type-all"
+                      className="text-sm cursor-pointer select-none"
+                    >
+                      Todos
+                    </label>
+                  </div>
+                  {availableTypes.map((type) => (
+                    <div key={type} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`type-${type}`}
+                        checked={filters.type.includes(type)}
+                        onCheckedChange={(checked) => {
+                          handleTypeFilterChange(type, checked)
+                        }}
+                      />
+                      <label
+                        htmlFor={`type-${type}`}
+                        className="text-sm cursor-pointer select-none"
+                      >
+                        {type}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                )}
+              </div>
 
-      {/* Filtro por raza */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm"
-            disabled={filters.type.length > 0 && !hasAliadoType}
-            className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
-          >
-            {getFilterButtonText("Raza", filters.race)}
-            {filters.race.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-                {filters.race.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
-          <DropdownMenuLabel>Raza</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={filters.race.length === 0}
-            onCheckedChange={(checked) => {
-              if (checked) {
-                onFiltersChange({
-                  ...filters,
-                  race: [],
-                })
-              }
-            }}
-          >
-            Todas
-          </DropdownMenuCheckboxItem>
-          {availableRaces.map((race) => (
-            <DropdownMenuCheckboxItem
-              key={race}
-              checked={filters.race.includes(race)}
-              onCheckedChange={(checked) => {
-                toggleRaceFilter(race, checked)
-              }}
-            >
-              {race}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+              {/* Filtro por raza - Expandido */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => toggleFilterSection("race")}
+                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {expandedFilters.has("race") ? (
+                      <Minus className="size-4" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    <span>Raza</span>
+                  </button>
+                  {filters.race.length > 0 && (
+                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                      {filters.race.length}
+                    </span>
+                  )}
+                </div>
+                {expandedFilters.has("race") && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="race-all"
+                      checked={filters.race.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          onFiltersChange({
+                            ...filters,
+                            race: [],
+                          })
+                        }
+                      }}
+                      disabled={filters.type.length > 0 && !hasAliadoType}
+                    />
+                    <label
+                      htmlFor="race-all"
+                      className={`text-sm cursor-pointer select-none ${
+                        filters.type.length > 0 && !hasAliadoType ? "opacity-50" : ""
+                      }`}
+                    >
+                      Todas
+                    </label>
+                  </div>
+                  {availableRaces.map((race) => (
+                    <div key={race} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`race-${race}`}
+                        checked={filters.race.includes(race)}
+                        onCheckedChange={(checked) => {
+                          toggleRaceFilter(race, checked)
+                        }}
+                        disabled={filters.type.length > 0 && !hasAliadoType}
+                      />
+                      <label
+                        htmlFor={`race-${race}`}
+                        className={`text-sm cursor-pointer select-none ${
+                          filters.type.length > 0 && !hasAliadoType ? "opacity-50" : ""
+                        }`}
+                      >
+                        {race}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                )}
+              </div>
 
-      {/* Filtro por coste */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
-            {getFilterButtonText("Coste", filters.cost)}
-            {filters.cost.length > 0 && (
-              <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
-                {filters.cost.length}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
-          <DropdownMenuLabel>Coste</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuCheckboxItem
-            checked={filters.cost.length === 0}
-            onCheckedChange={(checked) => {
-              if (checked) clearCostFilter()
-            }}
-          >
-            Todos
-          </DropdownMenuCheckboxItem>
-          {availableCosts.map((cost) => (
-            <DropdownMenuCheckboxItem
-              key={cost}
-              checked={filters.cost.includes(String(cost))}
-              onCheckedChange={(checked) => {
-                toggleCostFilter(cost, checked)
-              }}
-            >
-              {cost}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-          </div>
+              {/* Filtro por coste - Expandido */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => toggleFilterSection("cost")}
+                    className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {expandedFilters.has("cost") ? (
+                      <Minus className="size-4" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    <span>Coste</span>
+                  </button>
+                  {filters.cost.length > 0 && (
+                    <span className="text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                      {filters.cost.length}
+                    </span>
+                  )}
+                </div>
+                {expandedFilters.has("cost") && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="cost-all"
+                      checked={filters.cost.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) clearCostFilter()
+                      }}
+                    />
+                    <label
+                      htmlFor="cost-all"
+                      className="text-sm cursor-pointer select-none"
+                    >
+                      Todos
+                    </label>
+                  </div>
+                  {availableCosts.map((cost) => (
+                    <div key={cost} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cost-${cost}`}
+                        checked={filters.cost.includes(String(cost))}
+                        onCheckedChange={(checked) => {
+                          toggleCostFilter(cost, checked)
+                        }}
+                      />
+                      <label
+                        htmlFor={`cost-${cost}`}
+                        className="text-sm cursor-pointer select-none"
+                      >
+                        {cost}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                )}
+              </div>
+            </>
+          ) : (
+            // Vista con dropdowns (comportamiento original)
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Filtro por edición */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="relative h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                    {getFilterButtonText("Edición", filters.edition)}
+                    {filters.edition.length > 0 && (
+                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                        {filters.edition.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                  <DropdownMenuLabel>Edición</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={filters.edition.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) clearFilterArray("edition")
+                    }}
+                  >
+                    Todas
+                  </DropdownMenuCheckboxItem>
+                  {availableEditions.map((edition) => (
+                    <DropdownMenuCheckboxItem
+                      key={edition}
+                      checked={filters.edition.includes(edition)}
+                      onCheckedChange={(checked) => {
+                        toggleFilterValue("edition", edition, checked)
+                      }}
+                    >
+                      {edition}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Filtro por tipo */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                    {getFilterButtonText("Tipo", filters.type)}
+                    {filters.type.length > 0 && (
+                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                        {filters.type.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                  <DropdownMenuLabel>Tipo</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={filters.type.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        // Si se selecciona "Todos", resetear también la raza
+                        onFiltersChange({
+                          ...filters,
+                          type: [],
+                          race: [],
+                        })
+                      }
+                    }}
+                  >
+                    Todos
+                  </DropdownMenuCheckboxItem>
+                  {availableTypes.map((type) => (
+                    <DropdownMenuCheckboxItem
+                      key={type}
+                      checked={filters.type.includes(type)}
+                      onCheckedChange={(checked) => {
+                        handleTypeFilterChange(type, checked)
+                      }}
+                    >
+                      {type}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Filtro por raza */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={filters.type.length > 0 && !hasAliadoType}
+                    className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3"
+                  >
+                    {getFilterButtonText("Raza", filters.race)}
+                    {filters.race.length > 0 && (
+                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                        {filters.race.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                  <DropdownMenuLabel>Raza</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={filters.race.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        onFiltersChange({
+                          ...filters,
+                          race: [],
+                        })
+                      }
+                    }}
+                  >
+                    Todas
+                  </DropdownMenuCheckboxItem>
+                  {availableRaces.map((race) => (
+                    <DropdownMenuCheckboxItem
+                      key={race}
+                      checked={filters.race.includes(race)}
+                      onCheckedChange={(checked) => {
+                        toggleRaceFilter(race, checked)
+                      }}
+                    >
+                      {race}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Filtro por coste */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3">
+                    {getFilterButtonText("Coste", filters.cost)}
+                    {filters.cost.length > 0 && (
+                      <span className="ml-1.5 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                        {filters.cost.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                  <DropdownMenuLabel>Coste</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={filters.cost.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) clearCostFilter()
+                    }}
+                  >
+                    Todos
+                  </DropdownMenuCheckboxItem>
+                  {availableCosts.map((cost) => (
+                    <DropdownMenuCheckboxItem
+                      key={cost}
+                      checked={filters.cost.includes(String(cost))}
+                      onCheckedChange={(checked) => {
+                        toggleCostFilter(cost, checked)
+                      }}
+                    >
+                      {cost}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
       )}
     </div>

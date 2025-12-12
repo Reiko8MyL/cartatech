@@ -13,7 +13,7 @@ import type { Card } from "@/lib/deck-builder/types";
  * Mantiene la misma API para compatibilidad con componentes existentes
  */
 export function useCards(includeAlternatives: boolean = false) {
-  // Fallback inmediato a archivos JS mientras carga
+    // Fallback inmediato a archivos JS mientras carga
   const fallbackCards = includeAlternatives
     ? [...getAllCards(), ...getAlternativeArtCards()]
     : getAllCards()

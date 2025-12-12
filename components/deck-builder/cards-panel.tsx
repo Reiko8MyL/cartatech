@@ -39,7 +39,7 @@ export function CardsPanel({
 
   // Verificar si hay reemplazos activos (necesitamos alternativas para mostrarlos)
   const hasActiveReplacements = cardReplacements.size > 0
-  
+
   // Cargar cartas alternativas solo cuando:
   // 1. El modal está abierto, O
   // 2. Hay reemplazos activos (para mostrar las cartas alternativas)

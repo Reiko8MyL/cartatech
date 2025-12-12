@@ -547,17 +547,17 @@ function DeckBuilderContent() {
                   </div>
                 ) : (
                   <Suspense fallback={<CardGridSkeleton count={12} columns={6} />}>
-                    <div className="animate-in fade-in duration-300 h-full">
-                      <CardsPanel
-                        cards={filteredCards}
-                        deckCards={deckCards}
-                        onAddCard={addCardToDeck}
-                        onRemoveCard={removeCardFromDeck}
-                        onReplaceCard={replaceCardInDeck}
-                        deckFormat={deckFormat}
-                        cardReplacements={cardReplacements}
-                      />
-                    </div>
+                  <div className="animate-in fade-in duration-300 h-full">
+                    <CardsPanel
+                      cards={filteredCards}
+                      deckCards={deckCards}
+                      onAddCard={addCardToDeck}
+                      onRemoveCard={removeCardFromDeck}
+                      onReplaceCard={replaceCardInDeck}
+                      deckFormat={deckFormat}
+                      cardReplacements={cardReplacements}
+                    />
+                  </div>
                   </Suspense>
                 )}
               </div>
@@ -609,24 +609,24 @@ function DeckBuilderContent() {
                     </div>
                   </div>
                 }>
-                  <div className="animate-in fade-in duration-300 h-full">
-                    <DeckManagementPanel
-                      deckName={deckName}
-                      onDeckNameChange={setDeckName}
-                      deckCards={deckCards}
-                      allCards={allCards}
-                      stats={deckStats}
-                      onClearDeck={clearDeck}
-                      onLoadDeck={loadDeck}
-                      onAddCard={addCardToDeck}
-                      onRemoveCard={removeCardFromDeck}
-                      deckFormat={deckFormat}
-                      onDeckFormatChange={setDeckFormat}
-                      currentDeck={currentDeck}
-                      onCurrentDeckChange={setCurrentDeck}
-                      cardReplacements={cardReplacements}
-                    />
-                  </div>
+                <div className="animate-in fade-in duration-300 h-full">
+                  <DeckManagementPanel
+                  deckName={deckName}
+                  onDeckNameChange={setDeckName}
+                  deckCards={deckCards}
+                  allCards={allCards}
+                  stats={deckStats}
+                  onClearDeck={clearDeck}
+                  onLoadDeck={loadDeck}
+                  onAddCard={addCardToDeck}
+                  onRemoveCard={removeCardFromDeck}
+                  deckFormat={deckFormat}
+                  onDeckFormatChange={setDeckFormat}
+                  currentDeck={currentDeck}
+                  onCurrentDeckChange={setCurrentDeck}
+                  cardReplacements={cardReplacements}
+                />
+                </div>
                 </Suspense>
               )}
             </div>

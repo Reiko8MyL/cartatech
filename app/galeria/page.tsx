@@ -363,7 +363,7 @@ function GaleriaContent() {
         </div>
 
         {/* Panel de filtros */}
-        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pb-4">
+        <div className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pb-4">
           <FiltersPanel
             filters={filters}
             onFiltersChange={setFilters}
@@ -371,6 +371,9 @@ function GaleriaContent() {
             availableTypes={availableTypes}
             availableRaces={availableRaces}
             availableCosts={availableCosts}
+            defaultExpanded={true}
+            searchFieldsInRow={false}
+            showFiltersExpanded={true}
           />
           {isPending && (
             <div className="mt-2 text-xs text-muted-foreground animate-pulse">

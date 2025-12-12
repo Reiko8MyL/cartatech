@@ -247,61 +247,61 @@ export const CardItem = memo(function CardItem({
           </div>
         )}
 
-        {/* Botón de información en la esquina inferior derecha - siempre visible */}
-        {onOpenCardModal && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenCardModal(card)
-            }}
-            className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
-            aria-label={`Ver información de ${card.name}`}
+      {/* Botón de información en la esquina inferior derecha - siempre visible */}
+      {onOpenCardModal && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenCardModal(card)
+          }}
+          className="absolute bottom-1.5 sm:bottom-2 right-1.5 sm:right-2 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
+          aria-label={`Ver información de ${card.name}`}
+        >
+          <Info className="size-3 sm:size-3.5 text-gray-800" />
+        </button>
+      )}
+
+      {/* Indicadores en el centro del lado derecho */}
+      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20 items-end text-[9px]">
+        {/* Única (arriba) */}
+        <div
+          className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-yellow-500 text-white ${
+            card.isUnique ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          Única
+        </div>
+
+        {/* Banlist (centro) - usa maxQuantity que ya viene calculado según el formato */}
+        {showBanListIndicator && (
+          <div
+            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg text-white ${
+              maxQuantity === 0
+                ? "bg-red-600 opacity-100"
+                : maxQuantity === 1 && !card.isUnique
+                ? "bg-red-500 opacity-100"
+                : maxQuantity === 2
+                ? "bg-red-500 opacity-100"
+                : "opacity-0"
+            }`}
           >
-            <Info className="size-3 sm:size-3.5 text-gray-800" />
-          </button>
+            {maxQuantity === 0
+              ? "BAN"
+              : maxQuantity === 1 && !card.isUnique
+              ? "Max 1"
+              : maxQuantity === 2
+              ? "Max 2"
+              : ""}
+          </div>
         )}
 
-        {/* Indicadores en el centro del lado derecho */}
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20 items-end text-[9px]">
-          {/* Única (arriba) */}
-          <div
-            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-yellow-500 text-white ${
-              card.isUnique ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            Única
-          </div>
-
-          {/* Banlist (centro) - usa maxQuantity que ya viene calculado según el formato */}
-          {showBanListIndicator && (
-            <div
-              className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg text-white ${
-                maxQuantity === 0
-                  ? "bg-red-600 opacity-100"
-                  : maxQuantity === 1 && !card.isUnique
-                  ? "bg-red-500 opacity-100"
-                  : maxQuantity === 2
-                  ? "bg-red-500 opacity-100"
-                  : "opacity-0"
-              }`}
-            >
-              {maxQuantity === 0
-                ? "BAN"
-                : maxQuantity === 1 && !card.isUnique
-                ? "Max 1"
-                : maxQuantity === 2
-                ? "Max 2"
-                : ""}
-            </div>
-          )}
-
-          {/* Rework (abajo) */}
-          <div
-            className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-purple-500 text-white ${
-              card.isRework ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            Rework
+        {/* Rework (abajo) */}
+        <div
+          className={`px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shadow-lg bg-purple-500 text-white ${
+            card.isRework ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          Rework
           </div>
         </div>
       </div>

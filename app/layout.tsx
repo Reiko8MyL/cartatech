@@ -192,9 +192,9 @@ export default function RootLayout({
         >
           <QueryProvider>
             <DeviceProvider>
-              <ErrorBoundary>
-                <AuthProviderWrapper>
-                  <Navbar />
+          <ErrorBoundary>
+            <AuthProviderWrapper>
+              <Navbar />
               {/* Banner superior de anuncios - Solo visible en desktop */}
               {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la sección siguiente */}
               {/* {adsenseId && (
@@ -212,7 +212,7 @@ export default function RootLayout({
               />
               {/* WelcomeTour: Carga diferida, no bloquea render inicial */}
               <Suspense fallback={null}>
-                <WelcomeTour />
+              <WelcomeTour />
               </Suspense>
             </AuthProviderWrapper>
           </ErrorBoundary>
@@ -222,8 +222,8 @@ export default function RootLayout({
         <WebsiteJsonLd />
         {/* Analytics y SpeedInsights: Carga diferida, no críticos para render inicial */}
         <Suspense fallback={null}>
-          <Analytics />
-          <SpeedInsights />
+        <Analytics />
+        <SpeedInsights />
         </Suspense>
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>

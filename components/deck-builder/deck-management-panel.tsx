@@ -1677,16 +1677,16 @@ export function DeckManagementPanel({
       {/* SaveDeckModal con lazy loading y Suspense */}
       {showSaveModal && (
         <Suspense fallback={null}>
-          <SaveDeckModal
-            isOpen={showSaveModal}
-            onClose={() => setShowSaveModal(false)}
-            onSave={handleSaveDeckConfirm}
-            initialName={deckName}
-            deckCards={deckCards}
-            deckFormat={deckFormat}
-            existingDeck={currentDeck || undefined}
-            allCards={allCards}
-          />
+      <SaveDeckModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveDeckConfirm}
+        initialName={deckName}
+        deckCards={deckCards}
+        deckFormat={deckFormat}
+        existingDeck={currentDeck || undefined}
+        allCards={allCards}
+      />
         </Suspense>
       )}
 
