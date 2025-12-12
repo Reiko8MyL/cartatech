@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState, memo } from "react"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Filter, X } from "lucide-react"
+import { Filter, X, ChevronDown, ChevronUp } from "lucide-react"
 import type { DeckFilters } from "@/lib/deck-builder/types"
 
 interface FiltersPanelProps {
@@ -39,7 +39,7 @@ const RACE_TO_EDITION: Record<string, string> = {
   "Sacerdote": "Dominios de Ra",
 }
 
-export function FiltersPanel({
+export const FiltersPanel = memo(function FiltersPanel({
   filters,
   onFiltersChange,
   availableEditions,
@@ -266,46 +266,62 @@ export function FiltersPanel({
   }
 
   const hasAliadoType = filters.type.includes("Aliado")
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
 
   return (
-    <div className="flex flex-col gap-2 sm:gap-3 rounded-lg border bg-card p-1.5 sm:p-2 lg:p-4">
-      {/* Primera fila: Label y buscadores */}
-      <div className="flex items-center gap-2 w-full">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <Filter className="size-3.5 sm:size-4 text-muted-foreground" />
-          <span className="text-xs sm:text-sm font-medium">Filtros</span>
-        </div>
-        {/* Buscador por nombre */}
-        <div className="flex-1 min-w-0">
-          <Input
-            type="text"
-            placeholder="Buscar por nombre..."
-            value={filters.search}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            className="w-full h-8 sm:h-9 text-sm"
-          />
-        </div>
-        {/* Buscador por descripción */}
-        <div className="flex-1 min-w-0">
-          <Input
-            type="text"
-            placeholder="Buscar en descripciones..."
-            value={filters.descriptionSearch}
-            onChange={(e) => onFiltersChange({ ...filters, descriptionSearch: e.target.value })}
-            className="w-full h-8 sm:h-9 text-sm"
-          />
+    <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 lg:p-4">
+      {/* Header con título y botón de expandir/colapsar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="size-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Filtros</span>
         </div>
         {/* Botón para limpiar filtros */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0">
-            <X className="size-3.5 sm:size-4" />
-            <span className="hidden sm:inline">Limpiar</span>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs px-2">
+            <X className="size-3.5" />
+            <span className="hidden sm:inline ml-1">Limpiar</span>
           </Button>
         )}
       </div>
 
-      {/* Segunda fila: Filtros */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      {/* Fila de búsquedas - Siempre visible */}
+      <div className="flex flex-col gap-2">
+        <Input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={filters.search}
+          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+          className="w-full h-9 text-sm"
+        />
+        <Input
+          type="text"
+          placeholder="Buscar en descripciones..."
+          value={filters.descriptionSearch}
+          onChange={(e) => onFiltersChange({ ...filters, descriptionSearch: e.target.value })}
+          className="w-full h-9 text-sm"
+        />
+      </div>
+
+      {/* Botón para expandir/colapsar filtros */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+        className="w-full justify-between h-9"
+      >
+        <span className="text-sm">Filtros avanzados</span>
+        {isFiltersExpanded ? (
+          <ChevronUp className="size-4" />
+        ) : (
+          <ChevronDown className="size-4" />
+        )}
+      </Button>
+
+      {/* Filtros avanzados - Desplegables */}
+      {isFiltersExpanded && (
+        <div className="flex flex-col gap-2 pt-2 border-t">
+          <div className="flex flex-wrap items-center gap-2">
       {/* Filtro por edición */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -470,8 +486,20 @@ export function FiltersPanel({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Comparación optimizada para evitar re-renders innecesarios
+  return (
+    JSON.stringify(prevProps.filters) === JSON.stringify(nextProps.filters) &&
+    JSON.stringify(prevProps.availableEditions) === JSON.stringify(nextProps.availableEditions) &&
+    JSON.stringify(prevProps.availableTypes) === JSON.stringify(nextProps.availableTypes) &&
+    JSON.stringify(prevProps.availableRaces) === JSON.stringify(nextProps.availableRaces) &&
+    JSON.stringify(prevProps.availableCosts) === JSON.stringify(nextProps.availableCosts) &&
+    prevProps.onFiltersChange === nextProps.onFiltersChange
+  )
+})
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Toggle } from "@/components/ui/toggle"
@@ -18,7 +18,7 @@ interface CollectionModePanelProps {
   collectedCards: Set<string>
 }
 
-export function CollectionModePanel({
+export const CollectionModePanel = memo(function CollectionModePanel({
   isCollectionMode,
   onToggleCollectionMode,
   allCards,
@@ -60,16 +60,16 @@ export function CollectionModePanel({
 
   if (!user) {
     return (
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-lg border bg-card p-3">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <BookOpen className="size-5 text-muted-foreground" />
+            <BookOpen className="size-4 text-muted-foreground" />
             <span className="text-sm font-medium">Modo Colección</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Inicia sesión para activar el modo coleccionista y llevar un registro de tus cartas.
           </p>
-          <Button asChild size="sm" className="w-full sm:w-auto">
+          <Button asChild size="sm" className="w-full">
             <Link href="/inicio-sesion">Iniciar Sesión</Link>
           </Button>
         </div>
@@ -84,6 +84,7 @@ export function CollectionModePanel({
           pressed={isCollectionMode}
           onPressedChange={onToggleCollectionMode}
           aria-label="Activar modo colección"
+          className="w-full justify-start"
         >
           <BookOpen className="size-4" />
           <span className="text-sm font-medium">Modo Colección</span>
@@ -93,22 +94,24 @@ export function CollectionModePanel({
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3 sm:p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center justify-between gap-3 mb-3">
         <Toggle
           pressed={isCollectionMode}
           onPressedChange={onToggleCollectionMode}
           aria-label="Desactivar modo colección"
+          className="flex-1 justify-start"
         >
           <BookOpen className="size-4" />
           <span className="text-sm font-medium">Modo Colección</span>
         </Toggle>
-        <div className="text-sm font-semibold">
-          {totalCollected} / {totalCards} cartas
+        <div className="text-sm font-semibold whitespace-nowrap">
+          {totalCollected} / {totalCards}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      {/* Grid vertical más compacto para el sidebar */}
+      <div className="space-y-2">
         {EDITION_ORDER.map((edition) => {
           const stat = collectionStats[edition]
           if (!stat) return null
@@ -120,28 +123,30 @@ export function CollectionModePanel({
           return (
             <div
               key={edition}
-              className="rounded-lg border bg-muted/50 p-2 sm:p-3 flex items-center gap-2 sm:gap-3"
+              className="rounded-lg border bg-muted/50 p-2 flex items-center gap-2"
             >
               {EDITION_LOGOS[edition] && (
-                <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
+                <div className="relative w-12 h-12 flex-shrink-0">
                   <Image
                     src={EDITION_LOGOS[edition]}
                     alt={edition}
                     fill
                     className="object-contain"
-                    sizes="(max-width: 640px) 64px, 80px"
+                    sizes="48px"
                   />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-xs sm:text-sm font-medium mb-1 truncate">
+                <div className="text-xs font-medium mb-0.5 truncate">
                   {edition}
                 </div>
-                <div className="text-lg sm:text-xl font-bold">
-                  {stat.collected} / {stat.total}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {percentage}%
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-sm font-bold">
+                    {stat.collected} / {stat.total}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({percentage}%)
+                  </span>
                 </div>
               </div>
             </div>
@@ -150,5 +155,13 @@ export function CollectionModePanel({
       </div>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Comparación optimizada para evitar re-renders innecesarios
+  return (
+    prevProps.isCollectionMode === nextProps.isCollectionMode &&
+    prevProps.allCards.length === nextProps.allCards.length &&
+    prevProps.collectedCards.size === nextProps.collectedCards.size &&
+    prevProps.onToggleCollectionMode === nextProps.onToggleCollectionMode
+  )
+})
 

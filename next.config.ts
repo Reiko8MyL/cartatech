@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Compresión y optimización
+  compress: true,
+  
+  // Optimización de imágenes
   images: {
     remotePatterns: [
       {
@@ -13,6 +17,14 @@ const nextConfig: NextConfig = {
     // Optimizar carga de imágenes para evitar exceder cuota de Cloudinary
     // Caché agresivo de 1 hora para reducir transformaciones repetidas
     minimumCacheTTL: 3600,
+    // Optimización adicional
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+  
+  // Optimización de bundle
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
   // Permitir dominios de Google AdSense
   async headers() {

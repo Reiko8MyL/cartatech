@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useRef, useEffect } from "react"
+import { useState, useMemo, useRef, useEffect, Suspense } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -62,8 +63,15 @@ import {
   getAllyIconUrl,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
-import { SaveDeckModal } from "./save-deck-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+
+// Lazy load SaveDeckModal - solo se carga cuando se necesita abrir
+const SaveDeckModal = dynamic(
+  () => import("./save-deck-modal").then((mod) => ({ default: mod.SaveDeckModal })),
+  {
+    loading: () => null // No mostrar loading, el modal se abre después
+  }
+)
 import { useAuth } from "@/contexts/auth-context"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -1554,24 +1562,24 @@ export function DeckManagementPanel({
                     <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
                     
                     {/* Logo de edición */}
-                    {(() => {
+                          {(() => {
                       const logoUrl = getDeckEditionLogo(deck.cards, allCards)
                       if (!logoUrl) return null
-                      const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                      const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                      return (
+                            const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                            const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                            return (
                         <div className="absolute top-1.5 right-1.5 z-10">
                           <div className="relative w-12 h-12" title={deck.edition || "Múltiples ediciones"}>
-                            <Image
-                              src={optimizedLogoUrl}
+                              <Image
+                                src={optimizedLogoUrl}
                               alt={deck.edition || "Múltiples ediciones"}
-                              fill
-                              className="object-contain drop-shadow-lg"
-                              sizes="48px"
-                              unoptimized={isOptimized}
-                            />
-                          </div>
+                                fill
+                                className="object-contain drop-shadow-lg"
+                                sizes="48px"
+                                unoptimized={isOptimized}
+                              />
                         </div>
+                      </div>
                       )
                     })()}
 
@@ -1666,16 +1674,21 @@ export function DeckManagementPanel({
       </Dialog>
 
       {/* Modal para guardar mazo */}
-      <SaveDeckModal
-        isOpen={showSaveModal}
-        onClose={() => setShowSaveModal(false)}
-        onSave={handleSaveDeckConfirm}
-        initialName={deckName}
-        deckCards={deckCards}
-        deckFormat={deckFormat}
-        existingDeck={currentDeck || undefined}
-        allCards={allCards}
-      />
+      {/* SaveDeckModal con lazy loading y Suspense */}
+      {showSaveModal && (
+        <Suspense fallback={null}>
+          <SaveDeckModal
+            isOpen={showSaveModal}
+            onClose={() => setShowSaveModal(false)}
+            onSave={handleSaveDeckConfirm}
+            initialName={deckName}
+            deckCards={deckCards}
+            deckFormat={deckFormat}
+            existingDeck={currentDeck || undefined}
+            allCards={allCards}
+          />
+        </Suspense>
+      )}
 
       {/* Modal de confirmación de eliminación */}
       <ConfirmDialog

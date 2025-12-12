@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense, Fragment } from "react"
+import { useState, useEffect, useMemo, Suspense, Fragment, memo, useCallback } from "react"
 import { useSearchParams } from "next/navigation"
+import dynamic from "next/dynamic"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +26,7 @@ import {
   getDeckFormatName,
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
+import { usePublicDecksQuery } from "@/hooks/use-decks-query"
 import type { SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import { Globe, Eye, Grid3x3, List, Search, X, ArrowUp, ArrowDown, Calendar, Heart, Copy, Star } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -39,12 +41,21 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { toastSuccess, toastError } from "@/lib/toast"
-import { AdInline } from "@/components/ads/ad-inline"
-import { AdSidebar } from "@/components/ads/ad-sidebar"
 import { Pagination } from "@/components/ui/pagination"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType, useBannerSettingsMap } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
+
+// Lazy load componentes de anuncios - no críticos para render inicial
+const AdInline = dynamic(
+  () => import("@/components/ads/ad-inline").then((mod) => ({ default: mod.AdInline })),
+  { loading: () => null }
+)
+
+const AdSidebar = dynamic(
+  () => import("@/components/ads/ad-sidebar").then((mod) => ({ default: mod.AdSidebar })),
+  { loading: () => null }
+)
 
 type ViewMode = "grid" | "list"
 type SortBy = "name" | "edition" | "date" | "race" | "likes"
@@ -66,12 +77,17 @@ function MazosComunidadPage() {
   // Leer el parámetro de búsqueda de la URL
   const searchFromUrl = searchParams.get("search") || ""
   
-  const [publicDecks, setPublicDecks] = useState<SavedDeck[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const deviceType = useDeviceType()
   
   // Obtener todas las cartas
   const { cards: allCards } = useCards(false);
+  
+  // Obtener mazos públicos usando React Query (optimizado con cache)
+  // Cargar todos los mazos (límite alto) para aplicar filtros en cliente
+  const { data: decksData, isLoading: isLoadingDecks } = usePublicDecksQuery(1, 1000)
+  const publicDecks = decksData?.decks || []
+  const pagination = decksData?.pagination || null
   
   // Obtener todos los IDs de imágenes únicos de los decks
   const deckImageIds = useMemo(() => {
@@ -106,12 +122,9 @@ function MazosComunidadPage() {
     liked: "",
   })
   const [currentPage, setCurrentPage] = useState(1)
-  const [pagination, setPagination] = useState<{
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  } | null>(null)
+  
+  // Estado de carga combinado
+  const isLoading = isLoadingDecks
   
   // Actualizar filtros cuando cambie el parámetro de búsqueda en la URL
   useEffect(() => {
@@ -125,9 +138,9 @@ function MazosComunidadPage() {
       return prev
     })
   }, [searchFromUrl])
+  
   const [likes, setLikes] = useState<Record<string, string[]>>({})
   const [favorites, setFavorites] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [loadingLikes, setLoadingLikes] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
 
@@ -162,32 +175,6 @@ function MazosComunidadPage() {
     
     loadData();
   }, [user])
-
-  useEffect(() => {
-    setIsLoading(true)
-    const loadDecks = async () => {
-      try {
-        // Intentar cargar desde la API primero (cargar todos para aplicar filtros en cliente)
-        const { getPublicDecksFromStorage } = await import("@/lib/deck-builder/utils");
-        // Cargar todos los mazos (página 1 con límite alto) para aplicar filtros en cliente
-        const result = await getPublicDecksFromStorage(1, 1000);
-        setPublicDecks(result.decks);
-        if (result.pagination) {
-          setPagination(result.pagination);
-        }
-      } catch (error) {
-        console.error("Error al cargar mazos públicos desde API:", error);
-        // Fallback a localStorage si la API falla
-        const decks = getPublicDecksFromLocalStorage();
-        setPublicDecks(decks);
-        setPagination(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadDecks();
-  }, [])
 
   // Calcular raza, edición, likes y favoritos para cada mazo
   const decksWithMetadata = useMemo(() => {
@@ -278,6 +265,37 @@ function MazosComunidadPage() {
     const end = start + ITEMS_PER_PAGE
     return filteredDecks.slice(start, end)
   }, [filteredDecks, currentPage])
+
+  // Pre-calcular valores para cada deck - optimización de rendimiento
+  const decksWithComputedValues = useMemo(() => {
+    return paginatedDecks.map((deck) => {
+      const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
+      const publishedDate = deck.publishedAt
+        ? new Date(deck.publishedAt)
+        : new Date(deck.createdAt)
+      const formattedDate = publishedDate.toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+      const race = getDeckRace(deck.cards, allCards)
+      const backgroundImage = getDeckBackgroundImage(race)
+      const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null
+      const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting
+      const logoUrl = getDeckEditionLogo(deck.cards, allCards)
+      
+      return {
+        ...deck,
+        cardCount,
+        formattedDate,
+        race,
+        backgroundImage,
+        deckImageId,
+        deckBannerSetting,
+        logoUrl,
+      }
+    })
+  }, [paginatedDecks, allCards, settingsMap, bannerSetting])
 
   // Resetear página cuando cambian los filtros
   useEffect(() => {
@@ -626,19 +644,10 @@ function MazosComunidadPage() {
           </Card>
         ) : viewMode === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300">
-            {paginatedDecks.map((deck, index) => {
+            {decksWithComputedValues.map((deck, index) => {
               // Insertar anuncio inline cada 6 mazos
               // DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la línea siguiente y el bloque de anuncio
               // const shouldShowAd = index > 0 && index % 6 === 0 && process.env.NEXT_PUBLIC_ADSENSE_ID
-              const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
-              const publishedDate = deck.publishedAt
-                ? new Date(deck.publishedAt)
-                : new Date(deck.createdAt)
-              const formattedDate = publishedDate.toLocaleDateString("es-ES", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
 
               return (
                 <Fragment key={`deck-wrapper-${deck.id}`}>
@@ -649,18 +658,11 @@ function MazosComunidadPage() {
                     </div>
                   )} */}
                   <Card className="flex flex-col overflow-hidden group">
-                  {(() => {
-                    // Obtener raza e imagen de fondo del deck
-                    const race = getDeckRace(deck.cards, allCards);
-                    const backgroundImage = getDeckBackgroundImage(race);
-                    const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
-                    const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
-                    return (
                   <div
                         className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                        style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType)}
+                        style={getBannerStyle(deck.backgroundImage, deck.deckBannerSetting, deviceType)}
                   >
-                        <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
+                        <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -670,8 +672,6 @@ function MazosComunidadPage() {
                       </div>
                     </div>
                   </div>
-                    );
-                  })()}
                   <CardContent className="flex-1 flex flex-col p-4">
                     <div className="flex-1 space-y-2 mb-4">
                       <div className="flex flex-wrap gap-2 text-xs items-center">
@@ -690,7 +690,7 @@ function MazosComunidadPage() {
                         ))}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {cardCount} {cardCount === 1 ? "carta" : "cartas"}
+                        {deck.cardCount} {deck.cardCount === 1 ? "carta" : "cartas"}
                       </p>
                       {deck.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2">
@@ -711,7 +711,7 @@ function MazosComunidadPage() {
                           ) : (
                             "Anónimo"
                           )}{" "}
-                          · {formattedDate}
+                          · {deck.formattedDate}
                         </span>
                         <span className="flex items-center gap-1">
                           <Eye className="h-3 w-3" />
@@ -721,26 +721,24 @@ function MazosComunidadPage() {
                     </div>
                     <div className="relative">
                       {/* Logo de edición sobre el botón */}
-                      {(() => {
-                        const logoUrl = getDeckEditionLogo(deck.cards, allCards)
-                        if (!logoUrl) return null
-                        const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                        const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                        return (
+                      {deck.logoUrl && (() => {
+                              const optimizedLogoUrl = optimizeCloudinaryUrl(deck.logoUrl, deviceType)
+                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                              return (
                           <div className="absolute -top-32 right-0 z-10">
                             <div className="relative w-24 h-24" title={deck.edition || "Múltiples ediciones"}>
-                              <Image
-                                src={optimizedLogoUrl}
+                                <Image
+                                  src={optimizedLogoUrl}
                                 alt={deck.edition || "Múltiples ediciones"}
-                                fill
-                                className="object-contain"
-                                sizes="96px"
-                                loading="lazy"
-                                decoding="async"
-                                unoptimized={isOptimized}
-                              />
-                            </div>
+                                  fill
+                                  className="object-contain"
+                                  sizes="96px"
+                                  loading="lazy"
+                                  decoding="async"
+                                  unoptimized={isOptimized}
+                                />
                           </div>
+                        </div>
                         )
                       })()}
                       <div className="flex gap-2">
@@ -792,31 +790,16 @@ function MazosComunidadPage() {
           </div>
         ) : (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {paginatedDecks.map((deck) => {
-              const cardCount = deck.cards.reduce((sum, dc) => sum + dc.quantity, 0)
-              const publishedDate = deck.publishedAt
-                ? new Date(deck.publishedAt)
-                : new Date(deck.createdAt)
-              const formattedDate = publishedDate.toLocaleDateString("es-ES", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-
-              // Obtener raza e imagen de fondo del deck
-              const race = getDeckRace(deck.cards, allCards);
-              const backgroundImage = getDeckBackgroundImage(race);
-              const deckImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null;
-              const deckBannerSetting = settingsMap.get(deckImageId) || bannerSetting;
+            {decksWithComputedValues.map((deck) => {
 
               return (
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
                       className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
-                      style={getBannerStyle(backgroundImage, deckBannerSetting)}
+                      style={getBannerStyle(deck.backgroundImage, deck.deckBannerSetting)}
                     >
-                      <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
+                      <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">
                         <CardTitle className="text-white text-lg line-clamp-1 drop-shadow-lg">{deck.name}</CardTitle>
                       </div>
@@ -857,7 +840,7 @@ function MazosComunidadPage() {
                           <p className="flex items-center gap-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {cardCount} {cardCount === 1 ? "carta" : "cartas"} · Por{" "}
+                              {deck.cardCount} {deck.cardCount === 1 ? "carta" : "cartas"} · Por{" "}
                               {deck.author ? (
                                 <Link
                                   href={`/perfil/${deck.author}`}
@@ -868,7 +851,7 @@ function MazosComunidadPage() {
                               ) : (
                                 "Anónimo"
                               )}{" "}
-                              · {formattedDate}
+                              · {deck.formattedDate}
                             </span>
                             <span className="flex items-center gap-1">
                               <Eye className="h-3 w-3" />
@@ -912,24 +895,22 @@ function MazosComunidadPage() {
                           )}
                           <div className="relative flex gap-2">
                             {/* Logo de edición sobre los botones */}
-                            {(() => {
-                              const logoUrl = getDeckEditionLogo(deck.cards, allCards)
-                              if (!logoUrl) return null
-                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                              return (
+                            {deck.logoUrl && (() => {
+                                    const optimizedLogoUrl = optimizeCloudinaryUrl(deck.logoUrl, deviceType)
+                                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                                    return (
                                 <div className="absolute -top-32 right-0 z-10">
                                   <div className="relative w-12 h-12" title={deck.edition || "Múltiples ediciones"}>
-                                    <Image
-                                      src={optimizedLogoUrl}
+                                      <Image
+                                        src={optimizedLogoUrl}
                                       alt={deck.edition || "Múltiples ediciones"}
-                                      fill
-                                      className="object-contain"
-                                      sizes="48px"
-                                      unoptimized={isOptimized}
-                                    />
-                                  </div>
+                                        fill
+                                        className="object-contain"
+                                        sizes="48px"
+                                        unoptimized={isOptimized}
+                                      />
                                 </div>
+                              </div>
                               )
                             })()}
                             <Button variant="outline" size="sm" asChild>

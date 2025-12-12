@@ -2,9 +2,43 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
+import dynamic from "next/dynamic"
 import { FiltersPanel } from "@/components/deck-builder/filters-panel"
-import { CardsPanel } from "@/components/deck-builder/cards-panel"
-import { DeckManagementPanel } from "@/components/deck-builder/deck-management-panel"
+
+// Lazy load componentes pesados - DeckManagementPanel es muy grande (1810 líneas)
+const CardsPanel = dynamic(
+  () => import("@/components/deck-builder/cards-panel").then((mod) => ({ default: mod.CardsPanel })),
+  {
+    loading: () => <CardGridSkeleton count={12} columns={6} />
+  }
+)
+
+const DeckManagementPanel = dynamic(
+  () => import("@/components/deck-builder/deck-management-panel").then((mod) => ({ default: mod.DeckManagementPanel })),
+  {
+    loading: () => (
+      <div className="flex flex-col h-full p-4 space-y-4">
+        <Skeleton className="h-8 w-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full" />
+          ))}
+        </div>
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-5 w-20" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+)
 import {
   getBaseCardId,
   sortCardsByEditionAndId,
@@ -503,7 +537,7 @@ function DeckBuilderContent() {
               />
             </div>
             
-            {/* Panel de cartas */}
+            {/* Panel de cartas - Con Suspense para mejor manejo de carga */}
             <ErrorBoundary>
               <div className="flex-1 border rounded-lg bg-card overflow-hidden min-h-0">
                 {isLoadingCards ? (
@@ -511,23 +545,25 @@ function DeckBuilderContent() {
                     <CardGridSkeleton count={12} columns={6} />
                   </div>
                 ) : (
-                  <div className="animate-in fade-in duration-300 h-full">
-                    <CardsPanel
-                      cards={filteredCards}
-                      deckCards={deckCards}
-                      onAddCard={addCardToDeck}
-                      onRemoveCard={removeCardFromDeck}
-                      onReplaceCard={replaceCardInDeck}
-                      deckFormat={deckFormat}
-                      cardReplacements={cardReplacements}
-                    />
-                  </div>
+                  <Suspense fallback={<CardGridSkeleton count={12} columns={6} />}>
+                    <div className="animate-in fade-in duration-300 h-full">
+                      <CardsPanel
+                        cards={filteredCards}
+                        deckCards={deckCards}
+                        onAddCard={addCardToDeck}
+                        onRemoveCard={removeCardFromDeck}
+                        onReplaceCard={replaceCardInDeck}
+                        deckFormat={deckFormat}
+                        cardReplacements={cardReplacements}
+                      />
+                    </div>
+                  </Suspense>
                 )}
               </div>
             </ErrorBoundary>
           </div>
 
-          {/* Panel derecho: Gestión del mazo - Se extiende desde arriba en desktop */}
+          {/* Panel derecho: Gestión del mazo - Con Suspense y lazy loading */}
           <ErrorBoundary>
             <div className="border rounded-lg bg-card overflow-hidden lg:h-full">
               {isLoadingCards ? (
@@ -551,24 +587,46 @@ function DeckBuilderContent() {
                   </div>
                 </div>
               ) : (
-                <div className="animate-in fade-in duration-300 h-full">
-                  <DeckManagementPanel
-                  deckName={deckName}
-                  onDeckNameChange={setDeckName}
-                  deckCards={deckCards}
-                  allCards={allCards}
-                  stats={deckStats}
-                  onClearDeck={clearDeck}
-                  onLoadDeck={loadDeck}
-                  onAddCard={addCardToDeck}
-                  onRemoveCard={removeCardFromDeck}
-                  deckFormat={deckFormat}
-                  onDeckFormatChange={setDeckFormat}
-                  currentDeck={currentDeck}
-                  onCurrentDeckChange={setCurrentDeck}
-                  cardReplacements={cardReplacements}
-                />
-                </div>
+                <Suspense fallback={
+                  <div className="flex flex-col h-full p-4 space-y-4">
+                    <Skeleton className="h-8 w-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <Skeleton key={i} className="h-9 w-full" />
+                      ))}
+                    </div>
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-20" />
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  </div>
+                }>
+                  <div className="animate-in fade-in duration-300 h-full">
+                    <DeckManagementPanel
+                      deckName={deckName}
+                      onDeckNameChange={setDeckName}
+                      deckCards={deckCards}
+                      allCards={allCards}
+                      stats={deckStats}
+                      onClearDeck={clearDeck}
+                      onLoadDeck={loadDeck}
+                      onAddCard={addCardToDeck}
+                      onRemoveCard={removeCardFromDeck}
+                      deckFormat={deckFormat}
+                      onDeckFormatChange={setDeckFormat}
+                      currentDeck={currentDeck}
+                      onCurrentDeckChange={setCurrentDeck}
+                      cardReplacements={cardReplacements}
+                    />
+                  </div>
+                </Suspense>
               )}
             </div>
           </ErrorBoundary>

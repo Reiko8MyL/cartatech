@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { CARD_TYPES, RACES, EDITION_ORDER } from "@/lib/deck-builder/types";
-import { useCards } from "@/hooks/use-cards";
+import { useCards, useClearCardsCache } from "@/hooks/use-cards";
 import { getBaseCardId } from "@/lib/deck-builder/utils";
 import Image from "next/image";
 import {

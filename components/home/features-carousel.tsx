@@ -21,7 +21,7 @@ const slides: CarouselSlide[] = [
       "Construye tus mazos con nuestra herramienta completa que cuenta con una base de datos actualizada de todas las cartas del formato Primer Bloque.",
     cta: "Comenzar a Construir",
     href: "/deck-builder",
-    videoUrl: "https://res.cloudinary.com/dpbmbrekj/video/upload/v1765346706/banner_1.1_carusel_otmgxc.mp4",
+    videoUrl: "https://res.cloudinary.com/dpbmbrekj/video/upload/v1765496629/banner_carrousel_1_video_zpdlu7.mp4",
   },
   {
     title: "Galería de Cartas",
@@ -58,8 +58,8 @@ export function FeaturesCarousel() {
       });
     }
 
-    // El primer slide dura 8 segundos, los demás 5 segundos
-    const duration = currentSlide === 0 ? 8000 : 5000;
+    // El primer slide dura 9 segundos, los demás 5 segundos
+    const duration = currentSlide === 0 ? 10000 : 5000;
     
     timeoutRef.current = setTimeout(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);

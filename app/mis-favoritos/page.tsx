@@ -566,22 +566,22 @@ export default function MisFavoritosPage() {
                     </div>
                     <div className="relative">
                       {/* Logo de edición sobre el botón */}
-                      {(() => {
+                            {(() => {
                         const logoUrl = getDeckEditionLogo(deck.cards, allCards)
                         if (!logoUrl) return null
-                        const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                        const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                        return (
+                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                              return (
                           <div className="absolute -top-32 right-0 z-10">
                             <div className="relative w-24 h-24" title={deck.edition || "Múltiples ediciones"}>
-                              <Image
-                                src={optimizedLogoUrl}
+                                <Image
+                                  src={optimizedLogoUrl}
                                 alt={deck.edition || "Múltiples ediciones"}
-                                fill
-                                className="object-contain"
-                                sizes="96px"
-                                unoptimized={isOptimized}
-                              />
+                                  fill
+                                  className="object-contain"
+                                  sizes="96px"
+                                  unoptimized={isOptimized}
+                                />
                             </div>
                           </div>
                         )
@@ -721,22 +721,22 @@ export default function MisFavoritosPage() {
                           </Button>
                           <div className="relative flex gap-2">
                             {/* Logo de edición sobre los botones */}
-                            {(() => {
+                                  {(() => {
                               const logoUrl = getDeckEditionLogo(deck.cards, allCards)
                               if (!logoUrl) return null
-                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                              return (
+                                    const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                                    return (
                                 <div className="absolute -top-32 right-0 z-10">
                                   <div className="relative w-12 h-12" title={deck.edition || "Múltiples ediciones"}>
-                                    <Image
-                                      src={optimizedLogoUrl}
+                                      <Image
+                                        src={optimizedLogoUrl}
                                       alt={deck.edition || "Múltiples ediciones"}
-                                      fill
-                                      className="object-contain"
-                                      sizes="48px"
-                                      unoptimized={isOptimized}
-                                    />
+                                        fill
+                                        className="object-contain"
+                                        sizes="48px"
+                                        unoptimized={isOptimized}
+                                      />
                                   </div>
                                 </div>
                               )

@@ -1486,26 +1486,26 @@ export default function ViewDeckPage() {
                     </p>
                   </div>
               </div>
-              {(() => {
+                  {(() => {
                 const logoUrl = deck ? getDeckEditionLogo(deck.cards, allCards) : null
                 if (!logoUrl) return null
-                const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                return (
+                    const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                    const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                    return (
                   <div className="relative w-24 h-24 flex-shrink-0">
-                    <Image
-                      src={optimizedLogoUrl}
+                      <Image
+                        src={optimizedLogoUrl}
                       alt={deckMetadata.edition || "Múltiples ediciones"}
-                      fill
-                      className="object-contain"
-                      sizes="96px"
-                      loading="lazy"
-                      decoding="async"
-                      unoptimized={isOptimized}
-                    />
+                        fill
+                        className="object-contain"
+                        sizes="96px"
+                        loading="lazy"
+                        decoding="async"
+                        unoptimized={isOptimized}
+                      />
                   </div>
-                )
-              })()}
+                    )
+                  })()}
             </div>
           </div>
         </div>

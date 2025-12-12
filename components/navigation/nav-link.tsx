@@ -17,6 +17,7 @@ export function NavLink({ href, children, className }: NavLinkProps) {
   return (
     <Link
       href={href}
+      prefetch={true} // Prefetch automático para navegación rápida
       className={cn(
         "relative px-4 py-2 text-sm font-medium transition-colors duration-200",
         "text-muted-foreground hover:text-foreground",
@@ -30,6 +31,12 @@ export function NavLink({ href, children, className }: NavLinkProps) {
     </Link>
   );
 }
+
+
+
+
+
+
 
 
 

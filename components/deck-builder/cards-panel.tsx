@@ -160,15 +160,18 @@ export function CardsPanel({
     }
   }, [])
 
+  // Calcular total de cartas una sola vez - optimización de rendimiento
+  const totalCards = useMemo(
+    () => deckCards.reduce((sum, dc) => sum + dc.quantity, 0),
+    [deckCards]
+  )
+
   const handleCardClick = useCallback((card: Card, displayedCard?: Card) => {
     // Si se pasa displayedCard, usar esa (puede ser alternativa)
     // Si no, usar la carta original
     const cardToCheck = displayedCard || card
     
-    // Calcular total de cartas en el mazo
-    const totalCards = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
-    
-    // Verificar límite total de 50 cartas
+    // Verificar límite total de 50 cartas (usando totalCards memoizado)
     if (totalCards >= 50) {
       return // No permitir agregar más cartas si ya hay 50
     }
@@ -185,7 +188,7 @@ export function CardsPanel({
     if (totalQuantity < maxQuantity) {
       onAddCard(cardIdToAdd)
     }
-  }, [baseCardQuantityMap, onAddCard, deckFormat, getCardIdToAdd, altCardsMap, deckCards])
+  }, [baseCardQuantityMap, onAddCard, deckFormat, getCardIdToAdd, altCardsMap, totalCards])
 
   const getCardQuantity = useCallback((cardId: string): number => {
     // Retornar la cantidad total considerando todas las variantes (original + alternativas)
@@ -237,6 +240,51 @@ export function CardsPanel({
     "Drácula",
   ]
 
+  // Funciones wrapper memoizadas para evitar crear funciones inline en cada render
+  // Esto mejora significativamente el rendimiento al evitar re-renders innecesarios de CardItem
+  const createCardClickHandler = useCallback((card: Card, cardToDisplay: Card) => {
+    return () => handleCardClick(card, cardToDisplay)
+  }, [handleCardClick])
+
+  const createCardRightClickHandler = useCallback((card: Card) => {
+    return (e: React.MouseEvent) => handleCardRightClick(e, card)
+  }, [handleCardRightClick])
+
+  const createCardLongPressHandler = useCallback((card: Card) => {
+    return () => handleCardLongPress(card)
+  }, [handleCardLongPress])
+
+  const createCardTouchEndHandler = useCallback((card: Card) => {
+    return () => handleCardTouchEnd(card)
+  }, [handleCardTouchEnd])
+
+  const createAddCardHandler = useCallback((card: Card) => {
+    return () => {
+      const cardIdToAdd = getCardIdToAdd(card)
+      onAddCard(cardIdToAdd)
+    }
+  }, [getCardIdToAdd, onAddCard])
+
+  const createRemoveCardHandler = useCallback((card: Card) => {
+    return () => {
+      const cardIdToRemove = getCardIdToAdd(card)
+      onRemoveCard(cardIdToRemove)
+    }
+  }, [getCardIdToAdd, onRemoveCard])
+
+  const createRemoveAllCardsHandler = useCallback((card: Card) => {
+    return () => handleRemoveAllCards(card)
+  }, [handleRemoveAllCards])
+
+  const createOpenCardModalHandler = useCallback((card: Card) => {
+    return () => {
+      const baseId = getBaseCardId(card.id)
+      const originalCard = originalCards.find((c) => getBaseCardId(c.id) === baseId) || card
+      setSelectedCard(originalCard)
+      setIsModalOpen(true)
+    }
+  }, [originalCards])
+
   return (
     <>
       <div className="h-full overflow-y-auto">
@@ -257,9 +305,6 @@ export function CardsPanel({
                     const quantity = getCardQuantity(card.id)
                     const maxQuantity = getMaxQuantity(cardToDisplay)
                     
-                    // Calcular total de cartas en el mazo
-                    const totalCards = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
-                    
                     // Verificar si se puede agregar más: debe cumplir límite individual Y límite total de 50
                     const canAddMore = quantity < maxQuantity && totalCards < 50
 
@@ -274,35 +319,17 @@ export function CardsPanel({
                         quantity={quantity}
                         maxQuantity={maxQuantity}
                         canAddMore={canAddMore}
-                        onCardClick={() => handleCardClick(card, cardToDisplay)}
-                        onCardRightClick={(e) => handleCardRightClick(e, card)}
+                        onCardClick={createCardClickHandler(card, cardToDisplay)}
+                        onCardRightClick={createCardRightClickHandler(card)}
                         onCardHover={!isMobile ? handleCardHover : undefined}
                         onCardHoverEnd={!isMobile ? handleCardHoverEnd : undefined}
-                        onCardLongPress={isMobile ? () => handleCardLongPress(card) : undefined}
-                        onCardTouchEnd={isMobile ? () => handleCardTouchEnd(card) : undefined}
+                        onCardLongPress={isMobile ? createCardLongPressHandler(card) : undefined}
+                        onCardTouchEnd={isMobile ? createCardTouchEndHandler(card) : undefined}
                         priority={shouldPrioritize}
-                        onAddCard={(displayedCard) => {
-                          // Obtener el ID correcto de la carta a agregar
-                          const cardIdToAdd = getCardIdToAdd(card)
-                          onAddCard(cardIdToAdd)
-                        }}
-                        onRemoveCard={(displayedCard) => {
-                          // Obtener el ID correcto de la carta a remover
-                          const cardIdToRemove = getCardIdToAdd(card)
-                          onRemoveCard(cardIdToRemove)
-                        }}
-                        onRemoveAllCards={(displayedCard) => {
-                          // Eliminar todas las copias de la carta (considerando todas las variantes)
-                          handleRemoveAllCards(card)
-                        }}
-                        onOpenCardModal={(displayedCard) => {
-                          // Abrir el modal de información de la carta
-                          // Buscar la carta original para el modal (similar a handleCardRightClick)
-                          const baseId = getBaseCardId(card.id)
-                          const originalCard = originalCards.find((c) => getBaseCardId(c.id) === baseId) || card
-                          setSelectedCard(originalCard)
-                          setIsModalOpen(true)
-                        }}
+                        onAddCard={createAddCardHandler(card)}
+                        onRemoveCard={createRemoveCardHandler(card)}
+                        onRemoveAllCards={createRemoveAllCardsHandler(card)}
+                        onOpenCardModal={createOpenCardModalHandler(card)}
                       />
                     )
                   })}
