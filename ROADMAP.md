@@ -28,7 +28,6 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ⏳ Code splitting de componentes grandes
 
 ### 📋 Pendiente Media/Baja Prioridad
-- ⏳ PWA completo
 - ⏳ Sistema de seguimiento (Follow)
 - ⏳ Testing completo
 - ⏳ Mejoras de accesibilidad avanzadas
@@ -155,35 +154,6 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 
 ## 🔧 FASE 2: Mejoras de UX/UI (Media Prioridad)
 
-### 2.1 Mejoras en Deck Builder 🟡
-
-**Estado Actual:** ⚠️ Panel funcional pero con mejoras pendientes
-
-**Mejoras Necesarias:**
-
-- [ ] **Badge de total de cartas**
-  - Mostrar contador visual en la parte superior del panel
-  - Actualizar en tiempo real al agregar/eliminar cartas
-  
-- [ ] **Icono de coste en lista de cartas**
-  - Mostrar coste de cada carta en la lista
-  - Usar colores para diferenciar costes (verde=bajo, rojo=alto)
-  
-- [ ] **Búsqueda mejorada**
-  - Búsqueda por nombre, tipo, raza, coste
-  - Filtros avanzados con chips visuales
-  - Historial de búsquedas recientes
-  
-- [ ] **Drag & Drop para ordenar cartas**
-  - Permitir reordenar cartas en el mazo
-  - Guardar orden personalizado
-
-**Archivos a modificar:**
-- `components/deck-builder/deck-management-panel.tsx`
-- `components/deck-builder/cards-panel.tsx`
-- `components/deck-builder/filters-panel.tsx`
-
----
 
 ### 2.2 Sistema de Compartir Mejorado 🟡
 
@@ -226,31 +196,6 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 
 ## 🎨 FASE 3: Funcionalidades Avanzadas (Baja Prioridad)
 
-### 3.1 PWA (Progressive Web App) 🟢
-
-**Estado Actual:** ❌ No implementado
-
-**Mejoras Necesarias:**
-
-- [ ] **Manifest.json**
-  - Crear `app/manifest.ts` (Next.js 13+)
-  - Configurar iconos para diferentes tamaños
-  - Colores de tema
-  
-- [ ] **Service Worker**
-  - Implementar caché offline
-  - Estrategia de caché para cartas
-  - Notificaciones push (opcional)
-  
-- [ ] **Instalación**
-  - Botón "Instalar app" en navbar
-  - Prompt de instalación mejorado
-
-**Archivos a crear:**
-- `app/manifest.ts`
-- `public/sw.js` o usar `next-pwa`
-
----
 
 ### 3.2 Sistema de Seguimiento (Follow) 🟢
 
@@ -280,18 +225,14 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 
 **Mejoras Necesarias:**
 
-- [ ] **Búsqueda unificada**
-  - Buscar en mazos, cartas, usuarios
-  - Resultados agrupados por tipo
-  - Autocompletado inteligente
-  
-- [ ] **Búsqueda por voz** (opcional)
-  - Usar Web Speech API
-  - Búsqueda por nombre de carta hablado
+- [ ] **Autocompletado inteligente**
+  - Sugerencias mientras el usuario escribe
+  - Búsqueda en tiempo real de cartas y mazos
+  - Historial de búsquedas recientes
 
 **Archivos a crear:**
-- `components/search/global-search.tsx`
-- `app/api/search/route.ts`
+- `components/search/autocomplete.tsx`
+- `app/api/search/autocomplete/route.ts`
 
 ---
 
@@ -493,10 +434,9 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 8. ⏳ Mejorar sistema de compartir
 
 ### Sprint 3 (2 semanas) - Media Prioridad
-9. ⏳ Implementar PWA básico
-10. ⏳ Sistema de búsqueda global
-11. ⏳ Mejoras de accesibilidad
-12. ⏳ Filtros avanzados
+9. ⏳ Autocompletado inteligente en búsqueda
+10. ⏳ Mejoras de accesibilidad
+11. ⏳ Filtros avanzados
 
 ### Sprint 4+ (Ongoing) - Baja Prioridad
 13. ⏳ Sistema de seguimiento
@@ -521,7 +461,6 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - [Next.js Performance](https://nextjs.org/docs/app/building-your-application/optimizing)
 - [Web Vitals](https://web.dev/vitals/)
 - [WCAG Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
-- [PWA Checklist](https://web.dev/pwa-checklist/)
 - [React Query Documentation](https://tanstack.com/query/latest)
 - [React Virtual Documentation](https://tanstack.com/virtual/latest)
 
