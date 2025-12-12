@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 export interface BannerSetting {
   context: string;
@@ -305,161 +305,127 @@ export function useBannerSettingsMap(
   device: string = "desktop",
   imageIds: (string | null)[]
 ) {
-  // Inicializar con valores por defecto inmediatamente para evitar layout shift
-  const defaultSetting = getDefaultSetting(context, viewMode, device);
-  const [settingsMap, setSettingsMap] = useState<Map<string | null, BannerSetting | null>>(() => {
-    const initialMap = new Map<string | null, BannerSetting | null>();
-    // Inicializar todos los imageIds con valores por defecto
+  // Almacenar ajustes para ambos viewModes: { imageId: { grid: setting, list: setting } }
+  type SettingsByViewMode = Map<string | null, { grid: BannerSetting | null; list: BannerSetting | null }>;
+  
+  const defaultGridSetting = getDefaultSetting(context, "grid", device);
+  const defaultListSetting = getDefaultSetting(context, "list", device);
+  
+  const [settingsByViewMode, setSettingsByViewMode] = useState<SettingsByViewMode>(() => {
+    const initialMap = new Map<string | null, { grid: BannerSetting | null; list: BannerSetting | null }>();
+    // Inicializar todos los imageIds con valores por defecto para ambos modos
     imageIds.forEach(imageId => {
-      initialMap.set(imageId, defaultSetting);
+      initialMap.set(imageId, {
+        grid: defaultGridSetting,
+        list: defaultListSetting,
+      });
     });
     return initialMap;
   });
   const [isLoading, setIsLoading] = useState(true);
-  // Usar useRef para mantener los ajustes anteriores durante la transición
-  const previousSettingsRef = useRef<Map<string | null, BannerSetting | null>>(new Map());
-  const previousViewModeRef = useRef<string>(viewMode);
+  const loadedViewModesRef = useRef<Set<string>>(new Set());
 
-  // Actualizar inmediatamente cuando cambia viewMode para evitar cambio visual
+  // Precargar ajustes para ambos viewModes al inicio
   useEffect(() => {
-    if (previousViewModeRef.current !== viewMode) {
-      previousViewModeRef.current = viewMode;
-      const newDefaultSetting = getDefaultSetting(context, viewMode, device);
-      
-      // Actualizar inmediatamente con valores por defecto para el nuevo viewMode
-      setSettingsMap(prevMap => {
-        const updatedMap = new Map<string | null, BannerSetting | null>();
-        
-        // Si hay ajustes previos, actualizarlos con el nuevo viewMode
-        if (prevMap.size > 0) {
-          prevMap.forEach((setting, imageId) => {
-            if (setting) {
-              // Mantener los ajustes personalizados pero actualizar viewMode
-              updatedMap.set(imageId, {
-                ...setting,
-                viewMode,
-              });
-            } else {
-              updatedMap.set(imageId, newDefaultSetting);
-            }
-          });
-        } else {
-          // Si no hay ajustes previos, inicializar con los nuevos defaults
-          imageIds.forEach(imageId => {
-            updatedMap.set(imageId, newDefaultSetting);
-          });
-        }
-        
-        previousSettingsRef.current = updatedMap;
-        return updatedMap;
-      });
-    }
-  }, [viewMode, context, device, imageIds]);
+    async function loadAllViewModes() {
+      if (imageIds.length === 0) {
+        setIsLoading(false);
+        return;
+      }
 
-  useEffect(() => {
-    async function loadSettings() {
-      // Usar una función de actualización para obtener el estado más reciente
-      setSettingsMap(currentMap => {
-        // Guardar los ajustes actuales antes de cargar nuevos para mantenerlos durante la carga
-        previousSettingsRef.current = new Map(currentMap);
-        return currentMap; // No cambiar el estado todavía
-      });
-      
+      const viewModesToLoad: ("grid" | "list")[] = [];
+      if (!loadedViewModesRef.current.has("grid")) viewModesToLoad.push("grid");
+      if (!loadedViewModesRef.current.has("list")) viewModesToLoad.push("list");
+
+      if (viewModesToLoad.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const params = new URLSearchParams({
-          context,
-          viewMode,
-          device,
-        });
-
         const url = API_BASE_URL
           ? `${API_BASE_URL}/api/banner-settings`
           : `/api/banner-settings`;
 
-        // Agregar timestamp para evitar cache del navegador
-        params.append("_t", Date.now().toString());
-
-        // Obtener ajustes para todas las imágenes
-        const settingsPromises = imageIds.map(async (imageId) => {
-          const imageParams = new URLSearchParams(params);
-          if (imageId !== undefined && imageId !== null) {
-            imageParams.append("backgroundImageId", imageId);
-          }
-
-          const response = await fetch(`${url}?${imageParams.toString()}`, {
-            cache: "no-store",
-          });
-          if (!response.ok) {
-            return { imageId, setting: getDefaultSetting(context, viewMode, device) };
-          }
-
-          const data = await response.json();
-          return { imageId, setting: data.setting || getDefaultSetting(context, viewMode, device) };
-        });
-
-        const results = await Promise.all(settingsPromises);
-        
-        // Usar función de actualización para asegurar que usamos el estado más reciente
-        setSettingsMap(currentMap => {
-          const newMap = new Map<string | null, BannerSetting | null>();
-          
-          results.forEach(({ imageId, setting }) => {
-            // Si el setting del servidor tiene viewMode diferente al actual, actualizarlo
-            if (setting && setting.viewMode !== viewMode) {
-              setting = { ...setting, viewMode };
+        // Cargar ajustes para todos los viewModes necesarios
+        const allPromises = viewModesToLoad.flatMap(mode => 
+          imageIds.map(async (imageId) => {
+            const params = new URLSearchParams({
+              context,
+              viewMode: mode,
+              device,
+            });
+            if (imageId !== undefined && imageId !== null) {
+              params.append("backgroundImageId", imageId);
             }
-            newMap.set(imageId, setting);
-          });
-          
-          // Si hay imageIds que no están en los resultados pero sí en el mapa actual, mantenerlos
-          currentMap.forEach((setting, imageId) => {
-            if (!newMap.has(imageId)) {
-              // Mantener el ajuste actual pero actualizar viewMode si es necesario
-              if (setting && setting.viewMode !== viewMode) {
-                newMap.set(imageId, { ...setting, viewMode });
-              } else {
-                newMap.set(imageId, setting);
+            params.append("_t", Date.now().toString());
+
+            try {
+              const response = await fetch(`${url}?${params.toString()}`, {
+                cache: "no-store",
+              });
+              if (!response.ok) {
+                return { imageId, viewMode: mode, setting: getDefaultSetting(context, mode, device) };
               }
+              const data = await response.json();
+              return { imageId, viewMode: mode, setting: data.setting || getDefaultSetting(context, mode, device) };
+            } catch (error) {
+              return { imageId, viewMode: mode, setting: getDefaultSetting(context, mode, device) };
+            }
+          })
+        );
+
+        const results = await Promise.all(allPromises);
+
+        setSettingsByViewMode(prevMap => {
+          const newMap = new Map(prevMap);
+          
+          results.forEach(({ imageId, viewMode: mode, setting }) => {
+            const current = newMap.get(imageId) || { grid: defaultGridSetting, list: defaultListSetting };
+            if (mode === "grid") {
+              newMap.set(imageId, { ...current, grid: setting });
+            } else {
+              newMap.set(imageId, { ...current, list: setting });
             }
           });
-          
-          previousSettingsRef.current = newMap;
+
+          // Asegurar que todos los imageIds tengan ajustes para ambos modos
+          imageIds.forEach(imageId => {
+            if (!newMap.has(imageId)) {
+              newMap.set(imageId, {
+                grid: defaultGridSetting,
+                list: defaultListSetting,
+              });
+            } else {
+              const current = newMap.get(imageId)!;
+              if (!current.grid) current.grid = defaultGridSetting;
+              if (!current.list) current.list = defaultListSetting;
+            }
+          });
+
           return newMap;
         });
+
+        viewModesToLoad.forEach(mode => loadedViewModesRef.current.add(mode));
       } catch (error) {
         console.error("Error al cargar ajustes de banners:", error);
-        // En caso de error, mantener los ajustes actuales (ya actualizados por el primer efecto)
-        setSettingsMap(currentMap => {
-          // Solo actualizar viewMode si es necesario
-          const updatedMap = new Map<string | null, BannerSetting | null>();
-          currentMap.forEach((setting, imageId) => {
-            if (setting && setting.viewMode !== viewMode) {
-              updatedMap.set(imageId, { ...setting, viewMode });
-            } else {
-              updatedMap.set(imageId, setting);
-            }
-          });
-          // Si el mapa está vacío, usar defaults
-          if (updatedMap.size === 0 && imageIds.length > 0) {
-            const newDefaultSetting = getDefaultSetting(context, viewMode, device);
-            imageIds.forEach(imageId => {
-              updatedMap.set(imageId, newDefaultSetting);
-            });
-          }
-          previousSettingsRef.current = updatedMap;
-          return updatedMap;
-        });
       } finally {
         setIsLoading(false);
       }
     }
 
-    if (imageIds.length > 0) {
-      loadSettings();
-    } else {
-      setIsLoading(false);
-    }
-  }, [context, viewMode, device, JSON.stringify(imageIds)]);
+    loadAllViewModes();
+  }, [context, device, JSON.stringify(imageIds)]);
+
+  // Obtener el mapa de ajustes para el viewMode actual
+  const settingsMap = useMemo(() => {
+    const map = new Map<string | null, BannerSetting | null>();
+    settingsByViewMode.forEach((settings, imageId) => {
+      const setting = viewMode === "grid" ? settings.grid : settings.list;
+      map.set(imageId, setting);
+    });
+    return map;
+  }, [settingsByViewMode, viewMode]);
 
   return { settingsMap, isLoading };
 }
