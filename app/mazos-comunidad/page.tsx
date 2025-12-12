@@ -669,6 +669,9 @@ function MazosComunidadPage() {
               // DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la línea siguiente y el bloque de anuncio
               // const shouldShowAd = index > 0 && index % 6 === 0 && process.env.NEXT_PUBLIC_ADSENSE_ID
 
+              const backgroundImage = deck.backgroundImage ?? ""
+              const deckBannerSetting = deck.deckBannerSetting ?? null
+
               return (
                 <Fragment key={`deck-wrapper-${deck.id}`}>
                   {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar el bloque siguiente */}
@@ -680,9 +683,9 @@ function MazosComunidadPage() {
                   <Card className="flex flex-col overflow-hidden group">
                   <div
                         className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                        style={getBannerStyle(deck.backgroundImage ?? "", deck.deckBannerSetting ?? null, deviceType as 'mobile' | 'tablet' | 'desktop', viewMode as 'grid' | 'list')}
+                        style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                   >
-                        <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
+                        <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -812,14 +815,17 @@ function MazosComunidadPage() {
           <div className="space-y-4 animate-in fade-in duration-300">
             {decksWithComputedValues.map((deck) => {
 
+              const backgroundImage = deck.backgroundImage ?? ""
+              const deckBannerSetting = deck.deckBannerSetting ?? null
+
               return (
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
                       className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20 min-h-[128px] sm:min-h-0"
-                      style={getBannerStyle(deck.backgroundImage ?? "", deck.deckBannerSetting ?? null, deviceType as 'mobile' | 'tablet' | 'desktop', viewMode as 'grid' | 'list')}
+                      style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                     >
-                      <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
+                      <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">
                         <CardTitle className="text-white text-lg line-clamp-1 drop-shadow-lg">{deck.name}</CardTitle>
                       </div>
