@@ -101,6 +101,27 @@ export default function MisMazosPage() {
   
   // Ajuste por defecto (para compatibilidad)
   const { setting: bannerSetting } = useBannerSettings("mis-mazos", viewMode, deviceType)
+  
+  // Pre-cargar todas las imágenes de fondo cuando se carguen los mazos
+  useEffect(() => {
+    if (decks.length > 0 && allCards.length > 0 && typeof window !== 'undefined') {
+      const imagesToPreload = new Set<string>();
+      decks.forEach(deck => {
+        const race = getDeckRace(deck.cards, allCards);
+        const backgroundImage = getDeckBackgroundImage(race);
+        if (backgroundImage) {
+          const optimizedImage = optimizeCloudinaryUrl(backgroundImage, deviceType, true);
+          imagesToPreload.add(optimizedImage);
+        }
+      });
+      
+      // Pre-cargar todas las imágenes
+      imagesToPreload.forEach(imageUrl => {
+        const img = new window.Image();
+        img.src = imageUrl;
+      });
+    }
+  }, [decks, allCards, deviceType]);
 
   useEffect(() => {
     if (user) {
@@ -610,7 +631,7 @@ export default function MisMazosPage() {
                 <Card key={deck.id} className="flex flex-col overflow-hidden group">
                   <div
                     className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                    style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType)}
+                    style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                   >
                     <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                     <div className="absolute bottom-2 left-2 right-2">
@@ -753,8 +774,8 @@ export default function MisMazosPage() {
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
-                      className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
-                      style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType)}
+                      className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20 min-h-[128px] sm:min-h-0"
+                      style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                     >
                       <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
                       <div className="absolute bottom-2 left-2 right-2 z-10">
