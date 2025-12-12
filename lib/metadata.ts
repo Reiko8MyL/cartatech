@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://cartatech.cl"
-const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxd_poxmjq.webp"
+const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp"
 
 interface MetadataOptions {
   title: string

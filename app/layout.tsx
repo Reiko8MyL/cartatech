@@ -106,7 +106,7 @@ export const metadata: Metadata = {
     description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque. Construye, comparte y explora mazos de la comunidad.",
     images: [
       {
-        url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxd_poxmjq.webp",
+        url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp",
         width: 1200,
         height: 630,
         alt: "CartaTech",
@@ -117,7 +117,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "CartaTech",
     description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque.",
-    images: ["https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxd_poxmjq.webp"],
+    images: ["https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp"],
     creator: "@cartatech",
   },
   robots: {
@@ -157,7 +157,7 @@ export default function RootLayout({
         {/* Preload de recursos críticos para mejorar LCP */}
         <link
           rel="preload"
-          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxd_poxmjq.webp"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp"
           as="image"
           type="image/webp"
         />

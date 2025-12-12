@@ -68,7 +68,7 @@ export function WebsiteJsonLd() {
     alternateName: "Carta Tech - MyL Deck Builder",
     description: "Deck Builder para el TCG chileno Mitos y Leyendas en formato Primer Bloque. Construye, comparte y explora mazos de la comunidad.",
     url: siteUrl,
-    logo: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxd_poxmjq.webp",
+    logo: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp",
     potentialAction: {
       "@type": "SearchAction",
       target: {
