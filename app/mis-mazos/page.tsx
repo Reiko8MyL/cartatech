@@ -774,7 +774,7 @@ export default function MisMazosPage() {
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
-                      className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20 min-h-[128px] sm:min-h-0"
+                      className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
                       style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                     >
                       <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />

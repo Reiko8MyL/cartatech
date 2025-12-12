@@ -18,13 +18,87 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 /**
  * Hook para obtener ajustes de banners
  */
+// Función helper para obtener valores por defecto
+function getDefaultSetting(
+  context: string,
+  viewMode: string,
+  device: string
+): BannerSetting {
+  const defaults: Record<string, BannerSetting> = {
+    "mis-mazos": {
+      context: "mis-mazos",
+      viewMode,
+      device,
+      backgroundImageId: null,
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundSize: "cover",
+      height: viewMode === "grid" ? 128 : 128,
+      overlayOpacity: 0.6,
+      overlayGradient: "to-t",
+    },
+    "mazos-comunidad": {
+      context: "mazos-comunidad",
+      viewMode,
+      device,
+      backgroundImageId: null,
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundSize: "cover",
+      height: viewMode === "grid" ? 128 : 128,
+      overlayOpacity: 0.6,
+      overlayGradient: "to-t",
+    },
+    favoritos: {
+      context: "favoritos",
+      viewMode,
+      device,
+      backgroundImageId: null,
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundSize: "cover",
+      height: viewMode === "grid" ? 128 : 128,
+      overlayOpacity: 0.6,
+      overlayGradient: "to-t",
+    },
+    "deck-builder": {
+      context: "deck-builder",
+      viewMode: "grid",
+      device,
+      backgroundImageId: null,
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundSize: "cover",
+      height: 80,
+      overlayOpacity: 0.7,
+      overlayGradient: "to-t",
+    },
+    "mazo-individual": {
+      context: "mazo-individual",
+      viewMode: "grid",
+      device,
+      backgroundImageId: null,
+      backgroundPositionX: 50,
+      backgroundPositionY: 50,
+      backgroundSize: "cover",
+      height: 256,
+      overlayOpacity: 0.8,
+      overlayGradient: "to-t",
+    },
+  };
+  return defaults[context] || defaults["mis-mazos"];
+}
+
 export function useBannerSettings(
   context: string,
   viewMode: string = "grid",
   device: string = "desktop",
   backgroundImageId?: string | null
 ) {
-  const [setting, setSetting] = useState<BannerSetting | null>(null);
+  // Inicializar con valores por defecto inmediatamente para evitar layout shift
+  const [setting, setSetting] = useState<BannerSetting | null>(() => 
+    getDefaultSetting(context, viewMode, device)
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -58,137 +132,13 @@ export function useBannerSettings(
         if (data.setting) {
           setSetting(data.setting);
         } else {
-          // Valores por defecto si no se encuentra
-          const defaults: Record<string, BannerSetting> = {
-            "mis-mazos": {
-              context: "mis-mazos",
-              viewMode,
-              device,
-              backgroundImageId: null,
-              backgroundPositionX: 50,
-              backgroundPositionY: 50,
-              backgroundSize: "cover",
-              height: viewMode === "grid" ? 128 : 128,
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            "mazos-comunidad": {
-              context: "mazos-comunidad",
-              viewMode,
-              device,
-              backgroundImageId: null,
-              backgroundPositionX: 50,
-              backgroundPositionY: 50,
-              backgroundSize: "cover",
-              height: viewMode === "grid" ? 128 : 128,
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            favoritos: {
-              context: "favoritos",
-              viewMode,
-              device,
-              backgroundImageId: null,
-              backgroundPositionX: 50,
-              backgroundPositionY: 50,
-              backgroundSize: "cover",
-              height: viewMode === "grid" ? 128 : 128,
-              overlayOpacity: 0.6,
-              overlayGradient: "to-t",
-            },
-            "deck-builder": {
-              context: "deck-builder",
-              viewMode: "grid",
-              device,
-              backgroundImageId: null,
-              backgroundPositionX: 50,
-              backgroundPositionY: 50,
-              backgroundSize: "cover",
-              height: 80,
-              overlayOpacity: 0.7,
-              overlayGradient: "to-t",
-            },
-            "mazo-individual": {
-              context: "mazo-individual",
-              viewMode: "grid",
-              device,
-              backgroundImageId: null,
-              backgroundPositionX: 50,
-              backgroundPositionY: 50,
-              backgroundSize: "cover",
-              height: 256,
-              overlayOpacity: 0.8,
-              overlayGradient: "to-t",
-            },
-          };
-          setSetting(defaults[context] || defaults["mis-mazos"]);
+          // Usar valores por defecto si no se encuentra
+          setSetting(getDefaultSetting(context, viewMode, device));
         }
       } catch (error) {
         console.error("Error al cargar ajustes de banners:", error);
         // Usar valores por defecto en caso de error
-        const defaults: Record<string, BannerSetting> = {
-          "mis-mazos": {
-            context: "mis-mazos",
-            viewMode,
-            device,
-            backgroundImageId: null,
-            backgroundPositionX: 50,
-            backgroundPositionY: 50,
-            backgroundSize: "cover",
-            height: viewMode === "grid" ? 128 : 128,
-            overlayOpacity: 0.6,
-            overlayGradient: "to-t",
-          },
-          "mazos-comunidad": {
-            context: "mazos-comunidad",
-            viewMode,
-            device,
-            backgroundImageId: null,
-            backgroundPositionX: 50,
-            backgroundPositionY: 50,
-            backgroundSize: "cover",
-            height: viewMode === "grid" ? 128 : 128,
-            overlayOpacity: 0.6,
-            overlayGradient: "to-t",
-          },
-          favoritos: {
-            context: "favoritos",
-            viewMode,
-            device,
-            backgroundImageId: null,
-            backgroundPositionX: 50,
-            backgroundPositionY: 50,
-            backgroundSize: "cover",
-            height: viewMode === "grid" ? 128 : 128,
-            overlayOpacity: 0.6,
-            overlayGradient: "to-t",
-          },
-          "deck-builder": {
-            context: "deck-builder",
-            viewMode: "grid",
-            device,
-            backgroundImageId: null,
-            backgroundPositionX: 50,
-            backgroundPositionY: 50,
-            backgroundSize: "cover",
-            height: 80,
-            overlayOpacity: 0.7,
-            overlayGradient: "to-t",
-          },
-          "mazo-individual": {
-            context: "mazo-individual",
-            viewMode: "grid",
-            device,
-            backgroundImageId: null,
-            backgroundPositionX: 50,
-            backgroundPositionY: 50,
-            backgroundSize: "cover",
-            height: 256,
-            overlayOpacity: 0.8,
-            overlayGradient: "to-t",
-          },
-        };
-        setSetting(defaults[context] || defaults["mis-mazos"]);
+        setSetting(getDefaultSetting(context, viewMode, device));
       } finally {
         setIsLoading(false);
       }
@@ -202,18 +152,20 @@ export function useBannerSettings(
 
 /**
  * Función helper para obtener el estilo del banner
+ * Siempre retorna dimensiones fijas para evitar layout shift
  */
 export function getBannerStyle(
   backgroundImage: string,
   setting: BannerSetting | null,
-  deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop'
+  deviceType: 'mobile' | 'tablet' | 'desktop' = 'desktop',
+  viewMode: 'grid' | 'list' = 'grid'
 ): React.CSSProperties {
   const defaultSetting: BannerSetting = {
     context: "default",
     backgroundPositionX: 50,
     backgroundPositionY: 50,
     backgroundSize: "cover",
-    height: 128,
+    height: viewMode === "grid" ? 128 : 128,
     overlayOpacity: 0.6,
     overlayGradient: "to-t",
   };
@@ -228,11 +180,60 @@ export function getBannerStyle(
     optimizedImage = optimizeCloudinaryUrl(backgroundImage, deviceType, true); // isBanner=true
   }
 
+  // Pre-cargar la imagen de forma más eficiente para evitar layout shift
+  if (typeof window !== 'undefined' && optimizedImage) {
+    // Usar un Set global para trackear imágenes ya pre-cargadas
+    if (!(window as any).__preloadedImages) {
+      (window as any).__preloadedImages = new Set<string>();
+    }
+    
+    if (!(window as any).__preloadedImages.has(optimizedImage)) {
+      (window as any).__preloadedImages.add(optimizedImage);
+      
+      // Pre-cargar usando HTMLImageElement con callback para asegurar carga
+      const img = new window.Image();
+      img.onload = () => {
+        // Imagen cargada, disparar evento personalizado para actualizar componentes si es necesario
+        window.dispatchEvent(new CustomEvent('bannerImageLoaded', { detail: { url: optimizedImage } }));
+      };
+      img.src = optimizedImage;
+      
+      // También agregar link preload para navegadores que lo soporten (solo una vez)
+      if (!document.querySelector(`link[rel="preload"][href="${optimizedImage}"]`)) {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = optimizedImage;
+        link.crossOrigin = 'anonymous';
+        document.head.appendChild(link);
+      }
+    }
+  }
+
+  // Calcular altura final - siempre usar valores fijos para evitar layout shift
+  const defaultHeight = viewMode === "grid" ? 128 : 128;
+  const finalHeight = s.height || defaultHeight;
+  
+  // Asegurar que backgroundPosition esté definido desde el inicio
+  const backgroundPosition = `${s.backgroundPositionX}% ${s.backgroundPositionY}%`;
+  
   return {
-    backgroundImage: `url(${optimizedImage})`,
-    backgroundPosition: `${s.backgroundPositionX}% ${s.backgroundPositionY}%`,
+    // Dimensiones fijas desde el inicio para evitar layout shift
+    height: `${finalHeight}px`,
+    minHeight: `${finalHeight}px`,
+    maxHeight: `${finalHeight}px`,
+    // No establecer width aquí - dejar que Tailwind lo maneje (w-full sm:w-48)
+    // Estilos de fondo - aplicar desde el inicio incluso si la imagen aún no carga
+    backgroundImage: optimizedImage ? `url(${optimizedImage})` : undefined,
+    backgroundPosition: backgroundPosition,
     backgroundSize: s.backgroundSize,
-    height: `${s.height}px`,
+    backgroundRepeat: 'no-repeat',
+    // Asegurar que el contenedor mantenga sus dimensiones
+    boxSizing: 'border-box',
+    // Optimizaciones de renderizado
+    willChange: 'background-position',
+    // Asegurar que el contenido no cause overflow
+    overflow: 'hidden',
   };
 }
 
@@ -304,7 +305,16 @@ export function useBannerSettingsMap(
   device: string = "desktop",
   imageIds: (string | null)[]
 ) {
-  const [settingsMap, setSettingsMap] = useState<Map<string | null, BannerSetting | null>>(new Map());
+  // Inicializar con valores por defecto inmediatamente para evitar layout shift
+  const defaultSetting = getDefaultSetting(context, viewMode, device);
+  const [settingsMap, setSettingsMap] = useState<Map<string | null, BannerSetting | null>>(() => {
+    const initialMap = new Map<string | null, BannerSetting | null>();
+    // Inicializar todos los imageIds con valores por defecto
+    imageIds.forEach(imageId => {
+      initialMap.set(imageId, defaultSetting);
+    });
+    return initialMap;
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -334,11 +344,11 @@ export function useBannerSettingsMap(
             cache: "no-store",
           });
           if (!response.ok) {
-            return { imageId, setting: null };
+            return { imageId, setting: getDefaultSetting(context, viewMode, device) };
           }
 
           const data = await response.json();
-          return { imageId, setting: data.setting || null };
+          return { imageId, setting: data.setting || getDefaultSetting(context, viewMode, device) };
         });
 
         const results = await Promise.all(settingsPromises);
@@ -351,6 +361,7 @@ export function useBannerSettingsMap(
         setSettingsMap(newMap);
       } catch (error) {
         console.error("Error al cargar ajustes de banners:", error);
+        // En caso de error, mantener los valores por defecto que ya están inicializados
       } finally {
         setIsLoading(false);
       }
