@@ -318,6 +318,43 @@ export function useBannerSettingsMap(
   const [isLoading, setIsLoading] = useState(true);
   // Usar useRef para mantener los ajustes anteriores durante la transición
   const previousSettingsRef = useRef<Map<string | null, BannerSetting | null>>(new Map());
+  const previousViewModeRef = useRef<string>(viewMode);
+
+  // Actualizar inmediatamente cuando cambia viewMode para evitar cambio visual
+  useEffect(() => {
+    if (previousViewModeRef.current !== viewMode) {
+      previousViewModeRef.current = viewMode;
+      const newDefaultSetting = getDefaultSetting(context, viewMode, device);
+      
+      // Actualizar inmediatamente con valores por defecto para el nuevo viewMode
+      setSettingsMap(prevMap => {
+        const updatedMap = new Map<string | null, BannerSetting | null>();
+        
+        // Si hay ajustes previos, actualizarlos con el nuevo viewMode
+        if (prevMap.size > 0) {
+          prevMap.forEach((setting, imageId) => {
+            if (setting) {
+              // Mantener los ajustes personalizados pero actualizar viewMode
+              updatedMap.set(imageId, {
+                ...setting,
+                viewMode,
+              });
+            } else {
+              updatedMap.set(imageId, newDefaultSetting);
+            }
+          });
+        } else {
+          // Si no hay ajustes previos, inicializar con los nuevos defaults
+          imageIds.forEach(imageId => {
+            updatedMap.set(imageId, newDefaultSetting);
+          });
+        }
+        
+        previousSettingsRef.current = updatedMap;
+        return updatedMap;
+      });
+    }
+  }, [viewMode, context, device, imageIds]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -373,6 +410,7 @@ export function useBannerSettingsMap(
         if (previousSettingsRef.current.size > 0) {
           // Actualizar viewMode en los ajustes anteriores para mantener consistencia
           const updatedMap = new Map<string | null, BannerSetting | null>();
+          const newDefaultSetting = getDefaultSetting(context, viewMode, device);
           previousSettingsRef.current.forEach((setting, imageId) => {
             if (setting) {
               updatedMap.set(imageId, {
@@ -380,7 +418,7 @@ export function useBannerSettingsMap(
                 viewMode,
               });
             } else {
-              updatedMap.set(imageId, defaultSetting);
+              updatedMap.set(imageId, newDefaultSetting);
             }
           });
           setSettingsMap(updatedMap);
