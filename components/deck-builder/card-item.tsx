@@ -170,15 +170,20 @@ export const CardItem = memo(function CardItem({
         />
 
         {/* Sombreado y cantidad centrada según copias en el mazo */}
-        {quantity > 0 && (
+        {/* En deck builder: solo mostrar cuando quantity > 0 */}
+        {/* En modo colección (maxQuantity === 100): mostrar siempre que haya callbacks */}
+        {((maxQuantity === 100 && (onAddCard || onRemoveCard)) || quantity > 0) && (
           <>
-            <div
-              className="absolute inset-0 bg-black"
-              style={{ opacity: overlayOpacity }}
-            />
+            {/* Sombreado: siempre mostrar cuando quantity > 0 (tanto en deck builder como en modo colección) */}
+            {quantity > 0 && (
+              <div
+                className="absolute inset-0 bg-black"
+                style={{ opacity: overlayOpacity }}
+              />
+            )}
             
             {/* Botón de quitar todas las copias en el centro de la parte superior */}
-            {onRemoveAllCards && (
+            {onRemoveAllCards && quantity > 0 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -194,48 +199,54 @@ export const CardItem = memo(function CardItem({
             
             {/* Contenedor central con fracción y controles */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 gap-2">
-              {/* Indicador de cantidad: "cantidad / maxQuantity" */}
-              <div className="text-white font-bold text-lg sm:text-xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                {quantity} / {maxQuantity}
-              </div>
+              {/* Indicador de cantidad: "cantidad / maxQuantity" o solo "cantidad" en modo colección */}
+              {/* En deck builder: solo mostrar cuando quantity > 0 */}
+              {/* En modo colección: mostrar siempre */}
+              {((maxQuantity === 100 && (onAddCard || onRemoveCard)) || quantity > 0) && (
+                <div className="text-white font-bold text-lg sm:text-xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                  {maxQuantity === 100 ? quantity : maxQuantity === 1 ? quantity : `${quantity} / ${maxQuantity}`}
+                </div>
+              )}
               
               {/* Controles de cantidad en rectángulo redondeado */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center gap-0 overflow-hidden shadow-lg">
-                {/* Botón de decremento */}
-                {onRemoveCard && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onRemoveCard(card)
-                    }}
-                    disabled={quantity === 0}
-                    className="flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-200 active:bg-gray-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label={`Quitar una copia de ${card.name}`}
-                  >
-                    <Minus className="size-3.5 sm:size-4 text-gray-800" />
-                  </button>
-                )}
-                
-                {/* Separador vertical */}
-                {onAddCard && onRemoveCard && (
-                  <div className="w-px h-6 bg-gray-300" />
-                )}
-                
-                {/* Botón de incremento */}
-                {onAddCard && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onAddCard(card)
-                    }}
-                    disabled={quantity >= maxQuantity || !canAddMore}
-                    className="flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-200 active:bg-gray-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label={`Agregar una copia de ${card.name}`}
-                  >
-                    <Plus className="size-3.5 sm:size-4 text-gray-800" />
-                  </button>
-                )}
-              </div>
+              {(onAddCard || onRemoveCard) && (
+                <div className="bg-white/90 backdrop-blur-sm rounded-lg flex items-center justify-center gap-0 overflow-hidden shadow-lg">
+                  {/* Botón de decremento */}
+                  {onRemoveCard && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onRemoveCard(card)
+                      }}
+                      disabled={quantity === 0}
+                      className="flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-200 active:bg-gray-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label={`Quitar una copia de ${card.name}`}
+                    >
+                      <Minus className="size-3.5 sm:size-4 text-gray-800" />
+                    </button>
+                  )}
+                  
+                  {/* Separador vertical */}
+                  {onAddCard && onRemoveCard && (
+                    <div className="w-px h-6 bg-gray-300" />
+                  )}
+                  
+                  {/* Botón de incremento */}
+                  {onAddCard && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAddCard(card)
+                      }}
+                      disabled={quantity >= maxQuantity || !canAddMore}
+                      className="flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-200 active:bg-gray-300 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label={`Agregar una copia de ${card.name}`}
+                    >
+                      <Plus className="size-3.5 sm:size-4 text-gray-800" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}

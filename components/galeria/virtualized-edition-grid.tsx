@@ -23,6 +23,8 @@ interface VirtualizedEditionGridProps {
   onCardClick: (card: Card) => void
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
   onToggleCollection: (cardId: string) => void
+  onIncrementQuantity?: (cardId: string) => void
+  onDecrementQuantity?: (cardId: string) => void
   columns?: number
   cardHeight?: number
   gap?: number
@@ -42,6 +44,8 @@ export function VirtualizedEditionGrid({
   onCardClick,
   onCardRightClick,
   onToggleCollection,
+  onIncrementQuantity,
+  onDecrementQuantity,
   columns = 8,
   cardHeight = 200,
   gap = 12,
@@ -215,6 +219,7 @@ export function VirtualizedEditionGrid({
                       key={card.id}
                       card={card}
                       isCollected={isCollected}
+                      quantity={quantity}
                       maxQuantity={maxQuantity}
                       hasPriority={hasPriority}
                       isCollectionMode={isCollectionMode}
@@ -222,6 +227,8 @@ export function VirtualizedEditionGrid({
                       onCardClick={onCardClick}
                       onCardRightClick={onCardRightClick}
                       onToggleCollection={onToggleCollection}
+                      onIncrementQuantity={onIncrementQuantity}
+                      onDecrementQuantity={onDecrementQuantity}
                     />
                   )
                 })}

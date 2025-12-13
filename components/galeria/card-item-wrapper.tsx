@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useCallback } from "react"
 import { CardItem } from "@/components/deck-builder/card-item"
 import type { Card } from "@/lib/deck-builder/types"
 
@@ -8,6 +8,7 @@ import type { Card } from "@/lib/deck-builder/types"
 export const CardItemWrapper = memo(function CardItemWrapper({
   card,
   isCollected,
+  quantity,
   maxQuantity,
   hasPriority,
   isCollectionMode,
@@ -15,9 +16,12 @@ export const CardItemWrapper = memo(function CardItemWrapper({
   onCardClick,
   onCardRightClick,
   onToggleCollection,
+  onIncrementQuantity,
+  onDecrementQuantity,
 }: {
   card: Card
   isCollected: boolean
+  quantity: number
   maxQuantity: number
   hasPriority: boolean
   isCollectionMode: boolean
@@ -25,19 +29,40 @@ export const CardItemWrapper = memo(function CardItemWrapper({
   onCardClick: (card: Card) => void
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
   onToggleCollection: (cardId: string) => void
+  onIncrementQuantity?: (cardId: string) => void
+  onDecrementQuantity?: (cardId: string) => void
 }) {
+  // Memoizar callbacks para evitar re-renders innecesarios
+  const handleAddCard = useCallback(() => {
+    if (onIncrementQuantity) {
+      onIncrementQuantity(card.id)
+    } else {
+      onToggleCollection(card.id)
+    }
+  }, [card.id, onIncrementQuantity, onToggleCollection])
+
+  const handleRemoveCard = useCallback(() => {
+    if (onDecrementQuantity) {
+      onDecrementQuantity(card.id)
+    } else {
+      onToggleCollection(card.id)
+    }
+  }, [card.id, onDecrementQuantity, onToggleCollection])
+
   return (
     <div className="relative group/card">
-      <div className="w-full">
+      <div className={`w-full ${isCollectionMode && quantity > 0 ? "opacity-50" : ""}`}>
         <CardItem
           card={card}
-          quantity={0}
-          maxQuantity={maxQuantity}
-          canAddMore={true}
+          quantity={isCollectionMode ? quantity : 0}
+          maxQuantity={isCollectionMode ? 100 : maxQuantity}
+          canAddMore={isCollectionMode ? quantity < 100 : true}
           onCardClick={onCardClick}
           onCardRightClick={onCardRightClick}
           priority={hasPriority}
           showBanListIndicator={false}
+          onAddCard={isCollectionMode ? handleAddCard : undefined}
+          onRemoveCard={isCollectionMode ? handleRemoveCard : undefined}
         />
       </div>
       {/* Toggle de colección - visible cuando está en modo colección */}
@@ -48,10 +73,10 @@ export const CardItemWrapper = memo(function CardItemWrapper({
             onToggleCollection(card.id)
           }}
           disabled={loadingCards.has(card.id)}
-          className={`absolute top-1 left-1/2 -translate-x-1/2 z-30 size-6 rounded-full border-2 transition-all duration-200 flex items-center justify-center shadow-lg ${
+          className={`absolute top-1 left-1/2 -translate-x-1/2 z-30 size-6 rounded-full transition-all duration-200 flex items-center justify-center shadow-lg ${
             isCollected
-              ? "bg-green-500 border-background hover:bg-green-600"
-              : "bg-background/80 border-border hover:bg-background"
+              ? "bg-green-500 hover:bg-green-600"
+              : "bg-background/80 hover:bg-background"
           } ${loadingCards.has(card.id) ? "opacity-50 cursor-not-allowed animate-pulse" : ""}`}
           aria-label={
             isCollected
@@ -106,9 +131,12 @@ export const CardItemWrapper = memo(function CardItemWrapper({
   return (
     prevProps.card.id === nextProps.card.id &&
     prevProps.isCollected === nextProps.isCollected &&
+    prevProps.quantity === nextProps.quantity &&
     prevProps.maxQuantity === nextProps.maxQuantity &&
     prevProps.hasPriority === nextProps.hasPriority &&
     prevProps.isCollectionMode === nextProps.isCollectionMode &&
+    prevProps.onIncrementQuantity === nextProps.onIncrementQuantity &&
+    prevProps.onDecrementQuantity === nextProps.onDecrementQuantity &&
     prevLoading === nextLoading
   )
 })

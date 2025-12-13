@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect, Suspense, useTransition, memo, useDeferredValue } from "react"
+import { useState, useMemo, useCallback, useEffect, Suspense, useTransition, memo, useDeferredValue, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { FiltersPanel } from "@/components/deck-builder/filters-panel"
@@ -223,6 +223,13 @@ function GaleriaContent() {
   )
   const [isLoadingCollection, setIsLoadingCollection] = useState(false)
   const [loadingCards, setLoadingCards] = useState<Set<string>>(new Set())
+  // Ref para mantener referencia actual de loadingCards sin causar re-renders
+  const loadingCardsRef = useRef<Set<string>>(new Set())
+  
+  // Sincronizar ref con estado
+  useEffect(() => {
+    loadingCardsRef.current = loadingCards
+  }, [loadingCards])
 
   // Cargar colección desde la API cuando el usuario se autentica
   useEffect(() => {
@@ -282,8 +289,8 @@ function GaleriaContent() {
   const toggleCardCollection = useCallback(async (cardId: string) => {
     if (!user) return
     
-    // Prevenir múltiples clicks
-    if (loadingCards.has(cardId)) return;
+    // Prevenir múltiples clicks usando ref para evitar dependencia
+    if (loadingCardsRef.current.has(cardId)) return;
     setLoadingCards((prev) => new Set(prev).add(cardId));
     
     // Guardar el estado anterior para poder revertir si falla
@@ -326,14 +333,14 @@ function GaleriaContent() {
         return next;
       });
     }
-  }, [user, loadingCards])
+  }, [user])
 
   // Función para incrementar cantidad (sin restricciones en modo colección)
   const incrementCardQuantity = useCallback(async (cardId: string) => {
     if (!user) return
     
-    // Prevenir múltiples clicks
-    if (loadingCards.has(cardId)) return;
+    // Prevenir múltiples clicks usando ref para evitar dependencia
+    if (loadingCardsRef.current.has(cardId)) return;
     setLoadingCards((prev) => new Set(prev).add(cardId));
     
     // Guardar el estado anterior para poder revertir si falla
@@ -372,14 +379,14 @@ function GaleriaContent() {
         return next;
       });
     }
-  }, [user, loadingCards])
+  }, [user])
 
   // Función para decrementar cantidad
   const decrementCardQuantity = useCallback(async (cardId: string) => {
     if (!user) return
     
-    // Prevenir múltiples clicks
-    if (loadingCards.has(cardId)) return;
+    // Prevenir múltiples clicks usando ref para evitar dependencia
+    if (loadingCardsRef.current.has(cardId)) return;
     setLoadingCards((prev) => new Set(prev).add(cardId));
     
     // Guardar el estado anterior para poder revertir si falla
@@ -422,7 +429,7 @@ function GaleriaContent() {
         return next;
       });
     }
-  }, [user, loadingCards])
+  }, [user])
 
   // Manejar click derecho en carta (abrir modal) - memoizado
   const handleCardRightClick = useCallback((e: React.MouseEvent, card: Card) => {
@@ -448,6 +455,22 @@ function GaleriaContent() {
       toggleCardCollection(cardId)
     },
     [toggleCardCollection]
+  )
+
+  // Memoizar incrementCardQuantity para evitar re-renders
+  const memoizedIncrementCardQuantity = useCallback(
+    (cardId: string) => {
+      incrementCardQuantity(cardId)
+    },
+    [incrementCardQuantity]
+  )
+
+  // Memoizar decrementCardQuantity para evitar re-renders
+  const memoizedDecrementCardQuantity = useCallback(
+    (cardId: string) => {
+      decrementCardQuantity(cardId)
+    },
+    [decrementCardQuantity]
   )
 
   // Agrupar cartas por edición - optimizado
@@ -645,6 +668,7 @@ function GaleriaContent() {
                                 key={card.id}
                                 card={card}
                                 isCollected={isCollected}
+                                quantity={quantity}
                                 maxQuantity={maxQuantity}
                                 hasPriority={hasPriority}
                                 isCollectionMode={isCollectionMode}
@@ -652,6 +676,8 @@ function GaleriaContent() {
                                 onCardClick={handleCardClick}
                                 onCardRightClick={handleCardRightClick}
                                 onToggleCollection={memoizedToggleCardCollection}
+                                onIncrementQuantity={memoizedIncrementCardQuantity}
+                                onDecrementQuantity={memoizedDecrementCardQuantity}
                               />
                             )
                           })}
