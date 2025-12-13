@@ -82,7 +82,7 @@ export async function getAlliesByRace(race: string): Promise<Card[]> {
       .filter(
         (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
       )
-      .sort((a, b) => a.id.localeCompare(b.id))
+      .sort((a: Card, b: Card) => a.id.localeCompare(b.id))
   } catch (error) {
     console.error("Error al obtener aliados desde API, usando fallback:", error);
     // Fallback a archivos JS
@@ -92,7 +92,7 @@ export async function getAlliesByRace(race: string): Promise<Card[]> {
       .filter(
         (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
       )
-      .sort((a, b) => a.id.localeCompare(b.id))
+      .sort((a: Card, b: Card) => a.id.localeCompare(b.id))
   }
 }
 
@@ -107,7 +107,7 @@ export function getAlliesByRaceSync(race: string): Card[] {
     .filter(
       (card: Card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
     )
-    .sort((a, b) => a.id.localeCompare(b.id))
+    .sort((a: Card, b: Card) => a.id.localeCompare(b.id))
 }
 
 /**
