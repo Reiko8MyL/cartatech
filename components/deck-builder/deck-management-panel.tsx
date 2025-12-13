@@ -313,7 +313,7 @@ export function DeckManagementPanel({
             setSavedDecks(getUserDecksFromLocalStorage(user.id))
           }
         } else {
-          setSavedDecks(getUserDecksFromLocalStorage())
+          setSavedDecks(getSavedDecksFromLocalStorage())
         }
       } else {
         toastError("Error al guardar el mazo. Por favor intenta de nuevo.")
