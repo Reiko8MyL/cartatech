@@ -683,6 +683,27 @@ function MazosComunidadPage() {
                         style={getBannerStyle(deck.backgroundImage, deck.deckBannerSetting, deviceType, viewMode)}
                   >
                         <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
+                    {/* Logo de edición en esquina superior izquierda */}
+                    {deck.logoUrl && (() => {
+                      const optimizedLogoUrl = optimizeCloudinaryUrl(deck.logoUrl, deviceType)
+                      const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                      return (
+                        <div className="absolute top-2 left-2 z-20">
+                          <div className="relative w-[72px] h-[72px]" title={deck.edition || "Múltiples ediciones"}>
+                            <Image
+                              src={optimizedLogoUrl}
+                              alt={deck.edition || "Múltiples ediciones"}
+                              fill
+                              className="object-contain drop-shadow-lg"
+                              sizes="72px"
+                              loading="lazy"
+                              decoding="async"
+                              unoptimized={isOptimized}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })()}
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -709,14 +730,6 @@ function MazosComunidadPage() {
                           </span>
                         ))}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {deck.cardCount} {deck.cardCount === 1 ? "carta" : "cartas"}
-                      </p>
-                      {deck.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {deck.description}
-                        </p>
-                      )}
                       <p className="text-xs text-muted-foreground flex items-center gap-2">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -739,29 +752,7 @@ function MazosComunidadPage() {
                         </span>
                       </p>
                     </div>
-                    <div className="relative">
-                      {/* Logo de edición sobre el botón */}
-                      {deck.logoUrl && (() => {
-                              const optimizedLogoUrl = optimizeCloudinaryUrl(deck.logoUrl, deviceType)
-                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                              return (
-                          <div className="absolute -top-32 right-0 z-10">
-                            <div className="relative w-24 h-24" title={deck.edition || "Múltiples ediciones"}>
-                                <Image
-                                  src={optimizedLogoUrl}
-                                alt={deck.edition || "Múltiples ediciones"}
-                                  fill
-                                  className="object-contain"
-                                  sizes="96px"
-                                  loading="lazy"
-                                  decoding="async"
-                                  unoptimized={isOptimized}
-                                />
-                          </div>
-                        </div>
-                        )
-                      })()}
-                      <div className="flex gap-2">
+                    <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1" asChild>
                           <Link href={`/mazo/${deck.id}`}>
                             <Eye className="h-4 w-4 mr-2" />
@@ -800,7 +791,6 @@ function MazosComunidadPage() {
                             </Button>
                           </>
                         )}
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -816,7 +806,7 @@ function MazosComunidadPage() {
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
-                      className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
+                      className="relative w-full sm:w-64 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
                       style={getBannerStyle(deck.backgroundImage, deck.deckBannerSetting, deviceType, viewMode)}
                     >
                       <div className="absolute inset-0" style={getOverlayStyle(deck.deckBannerSetting)} />
@@ -850,7 +840,7 @@ function MazosComunidadPage() {
                           </div>
                         </div>
                       </div>
-                      {deck.description && (
+                      {deck.description && viewMode === "grid" && (
                         <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                           {deck.description}
                         </p>
@@ -860,7 +850,12 @@ function MazosComunidadPage() {
                           <p className="flex items-center gap-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {deck.cardCount} {deck.cardCount === 1 ? "carta" : "cartas"} · Por{" "}
+                              {viewMode === "grid" && (
+                                <>
+                                  {deck.cardCount} {deck.cardCount === 1 ? "carta" : "cartas"} ·{" "}
+                                </>
+                              )}
+                              Por{" "}
                               {deck.author ? (
                                 <Link
                                   href={`/perfil/${deck.author}`}

@@ -634,6 +634,29 @@ export default function MisMazosPage() {
                     style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                   >
                     <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
+                    {/* Logo de edición en esquina superior izquierda */}
+                    {(() => {
+                      const logoUrl = getDeckEditionLogo(deck.cards, allCards)
+                      if (!logoUrl) return null
+                      const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
+                      const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
+                      return (
+                        <div className="absolute top-2 left-2 z-20">
+                          <div className="relative w-[72px] h-[72px]" title={deck.edition || "Múltiples ediciones"}>
+                            <Image
+                              src={optimizedLogoUrl}
+                              alt={deck.edition || "Múltiples ediciones"}
+                              fill
+                              className="object-contain drop-shadow-lg"
+                              sizes="72px"
+                              loading="lazy"
+                              decoding="async"
+                              unoptimized={isOptimized}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })()}
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-white text-lg line-clamp-1">{deck.name}</CardTitle>
@@ -666,14 +689,6 @@ export default function MisMazosPage() {
                           </span>
                         ))}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {cardCount} {cardCount === 1 ? "carta" : "cartas"}
-                      </p>
-                      {deck.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {deck.description}
-                        </p>
-                      )}
                       <p className="text-xs text-muted-foreground flex items-center gap-2">
                         <span>Por {deck.author || user.username} · {formattedDate}</span>
                         <span className="flex items-center gap-1">
@@ -682,30 +697,7 @@ export default function MisMazosPage() {
                         </span>
                       </p>
                     </div>
-                    <div className="relative flex gap-2">
-                      {/* Logo de edición sobre los botones de editar y borrar */}
-                            {(() => {
-                        const logoUrl = getDeckEditionLogo(deck.cards, allCards)
-                        if (!logoUrl) return null
-                              const optimizedLogoUrl = optimizeCloudinaryUrl(logoUrl, deviceType)
-                              const isOptimized = isCloudinaryOptimized(optimizedLogoUrl)
-                              return (
-                          <div className="absolute -top-32 right-0 z-10">
-                            <div className="relative w-24 h-24" title={deck.edition || "Múltiples ediciones"}>
-                                <Image
-                                  src={optimizedLogoUrl}
-                                alt={deck.edition || "Múltiples ediciones"}
-                                  fill
-                                  className="object-contain"
-                                  sizes="96px"
-                                  loading="lazy"
-                                  decoding="async"
-                                  unoptimized={isOptimized}
-                                />
-                          </div>
-                        </div>
-                        )
-                      })()}
+                    <div className="flex gap-2">
                       <Button variant="outline" size="sm" className="flex-1" asChild>
                         <Link href={deck.id ? `/mazo/${deck.id}` : "#"} aria-label={`Ver mazo ${deck.name}`}>
                           <Eye className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -774,7 +766,7 @@ export default function MisMazosPage() {
                 <Card key={deck.id} className="overflow-hidden">
                   <div className="flex flex-col sm:flex-row">
                     <div
-                      className="relative w-full sm:w-48 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
+                      className="relative w-full sm:w-64 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
                       style={getBannerStyle(backgroundImage, deckBannerSetting, deviceType, viewMode)}
                     >
                       <div className="absolute inset-0" style={getOverlayStyle(deckBannerSetting)} />
@@ -814,7 +806,7 @@ export default function MisMazosPage() {
                           </div>
                         </div>
                       </div>
-                      {deck.description && (
+                      {deck.description && viewMode === "grid" && (
                         <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                           {deck.description}
                         </p>
@@ -823,7 +815,12 @@ export default function MisMazosPage() {
                         <div className="text-sm text-muted-foreground">
                           <p className="flex items-center gap-2">
                             <span>
-                              {cardCount} {cardCount === 1 ? "carta" : "cartas"} · Por{" "}
+                              {viewMode === "grid" && (
+                                <>
+                                  {cardCount} {cardCount === 1 ? "carta" : "cartas"} ·{" "}
+                                </>
+                              )}
+                              Por{" "}
                               {deck.author || user.username} · {formattedDate}
                             </span>
                             <span className="flex items-center gap-1">

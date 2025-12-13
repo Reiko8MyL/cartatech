@@ -33,7 +33,7 @@ function getDefaultSetting(
       backgroundPositionX: 50,
       backgroundPositionY: 50,
       backgroundSize: "cover",
-      height: viewMode === "grid" ? 128 : 128,
+      height: viewMode === "grid" ? 128 : 192,
       overlayOpacity: 0.6,
       overlayGradient: "to-t",
     },
@@ -45,7 +45,7 @@ function getDefaultSetting(
       backgroundPositionX: 50,
       backgroundPositionY: 50,
       backgroundSize: "cover",
-      height: viewMode === "grid" ? 128 : 128,
+      height: viewMode === "grid" ? 128 : 192,
       overlayOpacity: 0.6,
       overlayGradient: "to-t",
     },
@@ -57,7 +57,7 @@ function getDefaultSetting(
       backgroundPositionX: 50,
       backgroundPositionY: 50,
       backgroundSize: "cover",
-      height: viewMode === "grid" ? 128 : 128,
+      height: viewMode === "grid" ? 128 : 192,
       overlayOpacity: 0.6,
       overlayGradient: "to-t",
     },
@@ -165,7 +165,7 @@ export function getBannerStyle(
     backgroundPositionX: 50,
     backgroundPositionY: 50,
     backgroundSize: "cover",
-    height: viewMode === "grid" ? 128 : 128,
+    height: viewMode === "grid" ? 128 : 192,
     overlayOpacity: 0.6,
     overlayGradient: "to-t",
   };
@@ -211,7 +211,7 @@ export function getBannerStyle(
   }
 
   // Calcular altura final - siempre usar valores fijos para evitar layout shift
-  const defaultHeight = viewMode === "grid" ? 128 : 128;
+  const defaultHeight = viewMode === "grid" ? 128 : 192;
   const finalHeight = s.height || defaultHeight;
   
   // Asegurar que backgroundPosition esté definido desde el inicio
