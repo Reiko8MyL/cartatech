@@ -278,7 +278,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                       <div className="text-xs text-muted-foreground px-1">
                         {filteredAllies.length} aliado{filteredAllies.length !== 1 ? "s" : ""} disponible{filteredAllies.length !== 1 ? "s" : ""}
                       </div>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 sm:gap-3">
+                      <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-2 sm:gap-3">
                         {filteredAllies.map((ally) => {
                           const isSelected = selectedCardId === ally.id
                           return (
