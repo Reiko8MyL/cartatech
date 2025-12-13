@@ -845,11 +845,6 @@ function MazosComunidadPage() {
                           <p className="flex items-center gap-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {viewMode === "grid" && (
-                                <>
-                                  {deck.cardCount} {deck.cardCount === 1 ? "carta" : "cartas"} ·{" "}
-                                </>
-                              )}
                               Por{" "}
                               {deck.author ? (
                                 <Link
