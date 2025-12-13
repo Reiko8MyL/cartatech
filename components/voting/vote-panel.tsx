@@ -114,8 +114,9 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {!hasVoted ? (
+      {isExpanded && (
+        <CardContent className="space-y-4">
+          {!hasVoted ? (
           <>
             {/* Buscador y controles */}
             <div className="space-y-3">
@@ -423,7 +424,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
               </Button>
             </div>
           </div>
-        )}
+          )}
         </CardContent>
       )}
     </Card>
