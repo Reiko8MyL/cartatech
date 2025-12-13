@@ -75,7 +75,7 @@ export function LoadDeckDialog({
                 {/* Imagen de fondo */}
                 <div
                   className="relative overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20"
-                  style={getBannerStyle(deck.backgroundImage, bannerSetting, deviceType, "grid")}
+                  style={getBannerStyle(deck.backgroundImage || "", bannerSetting, deviceType, "grid")}
                 >
                   <div className="absolute inset-0" style={getOverlayStyle(bannerSetting)} />
                   
