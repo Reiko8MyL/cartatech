@@ -898,7 +898,7 @@ export default function AjustarBannersPage() {
 
             {/* Panel de vista previa */}
             <div className="lg:col-span-2 space-y-4">
-              <Card>
+              <Card className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
                 <CardHeader>
                   <CardTitle>Vista Previa</CardTitle>
                   <CardDescription>
