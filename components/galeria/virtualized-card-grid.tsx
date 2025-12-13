@@ -12,8 +12,6 @@ interface VirtualizedCardGridProps {
   onCardClick: (card: Card) => void
   onCardRightClick: (e: React.MouseEvent, card: Card) => void
   onToggleCollection: (cardId: string) => void
-  onIncrementQuantity: (cardId: string) => void
-  onDecrementQuantity: (cardId: string) => void
   columns?: number
   cardHeight?: number
   gap?: number
@@ -31,8 +29,6 @@ export function VirtualizedCardGrid({
   onCardClick,
   onCardRightClick,
   onToggleCollection,
-  onIncrementQuantity,
-  onDecrementQuantity,
   columns = 8,
   cardHeight = 200,
   gap = 12,

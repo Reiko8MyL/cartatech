@@ -636,6 +636,7 @@ function GaleriaContent() {
                         >
                           {editionCards.map((card, cardIndex) => {
                             const quantity = collectedCards.get(card.id) || 0
+                            const isCollected = quantity > 0
                             const maxQuantity = card.banListRE
                             const hasPriority = isFirstEdition && cardIndex < priorityCount
 
@@ -643,7 +644,7 @@ function GaleriaContent() {
                               <CardItemWrapper
                                 key={card.id}
                                 card={card}
-                                quantity={quantity}
+                                isCollected={isCollected}
                                 maxQuantity={maxQuantity}
                                 hasPriority={hasPriority}
                                 isCollectionMode={isCollectionMode}
@@ -651,8 +652,6 @@ function GaleriaContent() {
                                 onCardClick={handleCardClick}
                                 onCardRightClick={handleCardRightClick}
                                 onToggleCollection={memoizedToggleCardCollection}
-                                onIncrementQuantity={incrementCardQuantity}
-                                onDecrementQuantity={decrementCardQuantity}
                               />
                             )
                           })}
