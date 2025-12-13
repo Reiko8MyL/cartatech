@@ -12,6 +12,11 @@ export function getBackgroundImageId(imageUrl: string): string {
 export function getAllBackgroundImages(): Array<{ id: string; url: string; race: string }> {
   return [
     {
+      id: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765312691/banner_generico_qsmscv.webp",
+      url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765312691/banner_generico_qsmscv.webp",
+      race: "Banner Genérico (Por defecto sin raza)",
+    },
+    {
       id: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435845/Caballero_Lancelot_yktyqi.webp",
       url: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1761435845/Caballero_Lancelot_yktyqi.webp",
       race: "Lancelot (Por defecto Caballero)",
