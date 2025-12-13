@@ -956,7 +956,7 @@ export default function AjustarBannersPage() {
                       <Card className="overflow-hidden">
                         <div className="flex flex-col sm:flex-row">
                           <div
-                            className="relative w-full sm:w-48 sm:h-auto flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
+                            className="relative w-full sm:w-64 flex-shrink-0 bg-gradient-to-br from-primary/20 to-secondary/20"
                             style={previewBannerStyle}
                           >
                             <div className="absolute inset-0" style={overlayStyle} />
