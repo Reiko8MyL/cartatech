@@ -30,6 +30,16 @@ export async function GET(
       },
     })
 
+    // Obtener estadísticas adicionales (likes y favoritos)
+    const [likeCount, favoriteCount] = await Promise.all([
+      prisma.deckLike.count({
+        where: { deckId: id },
+      }).catch(() => 0),
+      prisma.favoriteDeck.count({
+        where: { deckId: id },
+      }).catch(() => 0),
+    ])
+
     if (!deck || !deck.isPublic || !deck.publishedAt) {
       // Retornar imagen por defecto si el mazo no existe o no es público
       return new NextResponse(null, {
@@ -89,12 +99,18 @@ export async function GET(
           <text x="300" y="0" font-family="Arial, sans-serif" font-size="24" fill="#888888">
             Por: ${author}
           </text>
-          ${deck.viewCount > 0 ? `<text x="550" y="0" font-family="Arial, sans-serif" font-size="24" fill="#888888">${deck.viewCount} vistas</text>` : ""}
+        </g>
+        
+        <!-- Estadísticas de interacción -->
+        <g transform="translate(60, 380)">
+          <text x="0" y="0" font-family="Arial, sans-serif" font-size="22" fill="#888888">
+            ${deck.viewCount > 0 ? `${deck.viewCount} vistas` : ""}${deck.viewCount > 0 && (likeCount > 0 || favoriteCount > 0) ? " • " : ""}${likeCount > 0 ? `${likeCount} ${likeCount === 1 ? 'like' : 'likes'}` : ""}${likeCount > 0 && favoriteCount > 0 ? " • " : ""}${favoriteCount > 0 ? `${favoriteCount} ${favoriteCount === 1 ? 'favorito' : 'favoritos'}` : ""}
+          </text>
         </g>
         
         <!-- Tipos de cartas -->
-        <g transform="translate(60, 420)">
-          <text x="0" y="0" font-family="Arial, sans-serif" font-size="22" fill="#666666">
+        <g transform="translate(60, 450)">
+          <text x="0" y="0" font-family="Arial, sans-serif" font-size="20" fill="#666666">
             Aliados: ${stats.cardsByType["Aliado"] || 0} | 
             Armas: ${stats.cardsByType["Arma"] || 0} | 
             Talismanes: ${stats.cardsByType["Talismán"] || 0} | 

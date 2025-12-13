@@ -235,3 +235,15 @@ export const trackCardAddedToDeck = (cardId: string, cardName: string) => {
   });
 };
 
+/**
+ * Trackea cuando se comparte un mazo o contenido
+ */
+export const trackShare = (platform: string, deckId?: string, url?: string) => {
+  event("content_shared", {
+    platform,
+    deck_id: deckId,
+    share_url: url,
+    event_category: "Social",
+  });
+};
+

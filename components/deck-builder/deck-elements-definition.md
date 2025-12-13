@@ -13,10 +13,13 @@ El panel derecho muestra las cartas del mazo agrupadas por tipo. Consta de los s
 - Texto: "Total X cartas" (donde X es el número total)
 - Estilo: Fondo con color primario/acento, texto en color primario
 
-**Estado actual**: ❌ No implementado
-**Nota**: Las estadísticas del mazo (incluyendo total de cartas) se muestran en la sección de "Estadísticas" ubicada arriba del panel de cartas, pero no hay un badge específico en el panel de visualización de cartas.
+**Estado actual**: ✅ Implementado
+**Nota**: El badge se muestra en la parte superior del panel de visualización de cartas (`DeckCardsList`), centrado horizontalmente. Cambia de color según el estado:
+- Verde cuando el mazo tiene exactamente 50 cartas
+- Rojo cuando tiene menos de 50 cartas
+- Color primario cuando tiene más de 50 cartas
 
-**Clase CSS sugerida**: `bg-primary/10 text-primary px-4 py-1.5 rounded-full`
+**Clase CSS**: `bg-primary/10 text-primary px-4 py-1.5 rounded-full` (con variantes según estado)
 
 ---
 

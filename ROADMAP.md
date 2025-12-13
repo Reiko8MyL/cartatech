@@ -1,7 +1,8 @@
 # 🚀 Roadmap y Plan de Mejoras - CartaTech
 
 **Última actualización**: Diciembre 2024  
-**Estado del proyecto**: ✅ En producción (https://www.cartatech.cl/)
+**Estado del proyecto**: ✅ En producción (https://www.cartatech.cl/)  
+**Code Splitting completado**: Diciembre 2024 (deck-management-panel refactorizado)
 
 Este documento consolida el plan completo de mejoras, optimizaciones y funcionalidades futuras para CartaTech, organizado por prioridad y estado de implementación.
 
@@ -20,12 +21,13 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ✅ Open Graph Images dinámicas
 - ✅ Sistema de banners personalizados
 - ✅ Optimizaciones de Next.js (compresión, imágenes, bundle analyzer)
+- ✅ Code splitting de componentes grandes (deck-management-panel reducido de 1826 a 691 líneas, ~62% de reducción)
+- ✅ Code splitting de componentes grandes (deck-management-panel reducido de 1826 a 691 líneas)
 
 ### 🔄 En Progreso / Pendiente Alta Prioridad
 - ⏳ Metadatos dinámicos por página (SEO)
 - ⏳ Paginación en listas grandes
 - ⏳ Eventos de Analytics faltantes
-- ⏳ Code splitting de componentes grandes
 
 ### 📋 Pendiente Media/Baja Prioridad
 - ⏳ Sistema de seguimiento (Follow)
@@ -128,50 +130,65 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 
 ---
 
-### 1.4 Code Splitting y Optimización de Componentes 🔴
+### 1.4 Code Splitting y Optimización de Componentes ✅
 
-**Estado Actual:** ⚠️ `deck-management-panel.tsx` es muy grande (2000+ líneas)
+**Estado Actual:** ✅ `deck-management-panel.tsx` refactorizado (reducido de ~1826 a 691 líneas, ~62% de reducción)
 
-**Mejoras Necesarias:**
+**Mejoras Implementadas:**
 
-- [ ] **Dividir `deck-management-panel.tsx`**
-  - Extraer subcomponentes más pequeños
-  - Lazy load componentes no críticos
-  - Mejorar mantenibilidad
+- [x] **Dividir `deck-management-panel.tsx`**
+  - ✅ Extraídas funciones de exportación de imágenes a `lib/deck-builder/export-image-utils.ts`
+  - ✅ Creado componente `ExportImageModal` (lazy loaded)
+  - ✅ Creado componente `LoadDeckDialog` (lazy loaded)
+  - ✅ Creado componente `DeckCardsList` para lista de cartas
+  - ✅ Creado hook `useMobilePanelDrag` para lógica de arrastre móvil
+  - ✅ Movida función `getCardBackgroundPositionY` a `utils.ts`
+  - ✅ Mejorada mantenibilidad significativamente
   
-- [ ] **Optimizar bundle size**
-  - Analizar con `ANALYZE=true npm run build`
-  - Identificar bundles grandes
-  - Dividir en chunks más pequeños
+- [x] **Optimizar bundle size**
+  - ✅ Componentes pesados con lazy loading implementado
+  - ✅ Funciones de exportación separadas en módulo independiente
+  - ⏳ Analizar con `ANALYZE=true npm run build` (opcional para verificar mejoras)
 
-**Archivos a modificar:**
-- `components/deck-builder/deck-management-panel.tsx` (refactorizar)
-- Crear subcomponentes en `components/deck-builder/`
+**Archivos creados/modificados:**
+- ✅ `lib/deck-builder/export-image-utils.ts` (nuevo)
+- ✅ `components/deck-builder/export-image-modal.tsx` (nuevo)
+- ✅ `components/deck-builder/load-deck-dialog.tsx` (nuevo)
+- ✅ `components/deck-builder/deck-cards-list.tsx` (nuevo)
+- ✅ `hooks/use-mobile-panel-drag.ts` (nuevo)
+- ✅ `components/deck-builder/deck-management-panel.tsx` (refactorizado)
+- ✅ `lib/deck-builder/utils.ts` (actualizado con `getCardBackgroundPositionY`)
 
-**Impacto esperado:** Mejor rendimiento inicial y mantenibilidad
+**Impacto esperado:** ✅ Mejor rendimiento inicial y mantenibilidad - COMPLETADO
 
 ---
 
 ## 🔧 FASE 2: Mejoras de UX/UI (Media Prioridad)
 
 
-### 2.2 Sistema de Compartir Mejorado 🟡
+### 2.2 Sistema de Compartir Mejorado ✅
 
-**Estado Actual:** ✅ Sistema básico implementado (códigos cortos, OG images)
+**Estado Actual:** ✅ Sistema mejorado con más opciones y mejor UX
 
-**Mejoras Necesarias:**
+**Mejoras Implementadas:**
 
-- [ ] **Preview de compartir mejorado**
-  - Mejorar imágenes OG dinámicas (ya implementado, pero puede mejorarse)
-  - Incluir más estadísticas del mazo en preview
+- [x] **Preview de compartir mejorado**
+  - ✅ Imágenes OG dinámicas mejoradas con más estadísticas
+  - ✅ Incluye likes, favoritos, vistas y tipos de cartas en preview
+  - ✅ Diseño más informativo y atractivo
   
-- [ ] **Botones de compartir en redes sociales**
-  - Agregar botones nativos para compartir
-  - Compartir en Twitter, Facebook, WhatsApp, etc.
+- [x] **Botones de compartir en redes sociales**
+  - ✅ Soporte para Web Share API nativo (cuando está disponible)
+  - ✅ Compartir en Facebook, Twitter, WhatsApp, LinkedIn, Telegram, Reddit
+  - ✅ Mejor UX con feedback visual y tracking de analytics
+  - ✅ Generación automática de códigos cortos para compartir
 
-**Archivos a modificar:**
-- `components/sharing/social-share.tsx` (mejorar)
-- `app/api/og/deck/[id]/route.ts` (mejorar imagen OG)
+**Archivos modificados:**
+- ✅ `components/sharing/social-share.tsx` (mejorado con más opciones y Web Share API)
+- ✅ `app/api/og/deck/[id]/route.ts` (mejorado con likes, favoritos y más estadísticas)
+- ✅ `lib/analytics/events.ts` (agregada función `trackShare`)
+
+**Impacto esperado:** ✅ Mejor experiencia de compartir y más opciones para usuarios - COMPLETADO
 
 ---
 
@@ -428,8 +445,8 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 4. ⏳ Optimizar imágenes críticas
 
 ### Sprint 2 (2 semanas) - Alta Prioridad
-5. ⏳ Implementar paginación en listas principales
-6. ⏳ Dividir deck-management-panel en componentes más pequeños
+5. ✅ Implementar paginación en listas principales
+6. ✅ Dividir deck-management-panel en componentes más pequeños
 7. ⏳ Agregar badge de total de cartas
 8. ⏳ Mejorar sistema de compartir
 
@@ -511,7 +528,17 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ✅ Validaciones en cliente y servidor
 - ✅ Headers de seguridad (X-Content-Type-Options, X-Frame-Options)
 
+### Code Splitting y Optimización de Componentes ✅
+- ✅ `deck-management-panel.tsx` refactorizado (reducido de ~1826 a 691 líneas, ~62% de reducción)
+- ✅ Funciones de exportación de imágenes extraídas a `lib/deck-builder/export-image-utils.ts`
+- ✅ Componente `ExportImageModal` creado con lazy loading
+- ✅ Componente `LoadDeckDialog` creado con lazy loading
+- ✅ Componente `DeckCardsList` creado para lista de cartas
+- ✅ Hook `useMobilePanelDrag` creado para lógica de arrastre móvil
+- ✅ Función `getCardBackgroundPositionY` movida a `utils.ts`
+- ✅ Mejora significativa en mantenibilidad y organización del código
+
 ---
 
 **Última actualización**: Diciembre 2024  
-**Versión del documento**: 2.0 (Consolidado)
+**Versión del documento**: 2.1 (Code Splitting completado)

@@ -1326,3 +1326,53 @@ export function getFavoriteDecks(userId: string): SavedDeck[] {
   return allDecks.filter((deck) => deck.id && favoriteIds.includes(deck.id) && deck.isPublic === true);
 }
 
+/**
+ * Determina la posición Y óptima para mostrar la imagen de fondo de una carta
+ * basándose en su tipo, características y metadatos personalizados de la base de datos.
+ * 
+ * @param card - La carta para la cual calcular la posición
+ * @param cardMetadataMap - Mapa de metadatos personalizados por cardId (opcional)
+ * @returns Porcentaje de posición Y (0% = arriba, 100% = abajo)
+ */
+export function getCardBackgroundPositionY(
+  card: Card,
+  cardMetadataMap?: Record<string, number>
+): string {
+  // Primero verificar si hay un ajuste personalizado en la base de datos
+  if (cardMetadataMap && cardMetadataMap[card.id] !== undefined) {
+    const customPosition = cardMetadataMap[card.id]
+    return `${customPosition}%`
+  }
+
+  // Si no hay ajuste personalizado, usar valores por defecto basados en el tipo
+  const typePositions: Record<string, number> = {
+    "Aliado": 20,    // Arte generalmente en la parte superior
+    "Arma": 25,      // Arte en la parte superior-media
+    "Talismán": 30,   // Arte más hacia el centro
+    "Tótem": 28,     // Similar a Talismán
+    "Oro": 35,       // Arte más hacia el centro-inferior (más espacio para texto)
+  }
+
+  // Posición base según el tipo
+  let positionY = typePositions[card.type] || 25
+
+  // Ajuste basado en la longitud del nombre
+  // Nombres largos pueden necesitar mostrar más arriba para evitar que el texto tape el arte
+  const nameLength = card.name.length
+  if (nameLength > 20) {
+    positionY -= 3 // Mover un poco hacia arriba para nombres muy largos
+  } else if (nameLength < 10) {
+    positionY += 2 // Mover un poco hacia abajo para nombres cortos
+  }
+
+  // Ajuste basado en si tiene descripción (cartas con descripción suelen tener más contenido visual abajo)
+  if (card.description && card.description.length > 50) {
+    positionY += 2 // Mover un poco hacia abajo si tiene descripción larga
+  }
+
+  // Asegurar que la posición esté en un rango válido (entre 0% y 70%)
+  positionY = Math.max(0, Math.min(70, positionY))
+
+  return `${positionY}%`
+}
+
