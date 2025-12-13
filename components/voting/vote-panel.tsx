@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { RaceVotingData } from "@/lib/voting/utils"
 import { saveVoteToStorage, getRaceVotingData, getRaceVotingDataFromStorage } from "@/lib/voting/utils"
 import Image from "next/image"
-import { CheckCircle2, Search, X, Grid3x3, List } from "lucide-react"
+import { CheckCircle2, Search, X, Grid3x3, List, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 
@@ -26,6 +26,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
   useEffect(() => {
@@ -423,7 +424,8 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
             </div>
           </div>
         )}
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   )
 }
