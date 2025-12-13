@@ -58,6 +58,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
     void refreshData()
   }, [refreshData])
 
+
   const handleVote = async () => {
     if (!selectedCardId) return
 
@@ -69,6 +70,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
         timestamp: Date.now(),
       })
       
+      setIsExpanded(true) // Mantener el panel abierto después de votar
       await refreshData()
       onVoteUpdate()
     } catch (error) {
@@ -81,6 +83,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
         userId,
         timestamp: Date.now(),
       })
+      setIsExpanded(true) // Mantener el panel abierto después de votar
       await refreshData()
       onVoteUpdate()
     }
@@ -98,15 +101,49 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
 
   const selectedAlly = data.allies.find((a) => a.id === selectedCardId)
 
+  const bannerUrls: Record<string, string> = {
+    "Caballero": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765589335/banner_caballerosss_lnfe6d.webp",
+    "Defensor": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_defesss_fkqn0y.webp",
+    "Desafiante": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_desfisss_llhdbq.webp",
+    "Dragón": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_drags_mqfui2.webp",
+    "Eterno": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_etersss_hnszgu.webp",
+    "Faerie": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_faeriesss_qppfr3.webp",
+    "Faraón": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596335/banner_farasss_mny04h.webp",
+    "Héroe": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_herosss_ozpzri.webp",
+    "Olímpico": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_olimpicsss_venvjm.webp",
+    "Sacerdote": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596334/banner_sacersss_jmqbxc.webp",
+    "Sombra": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596335/banner_sombrasss_intx2e.webp",
+    "Titán": "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765596339/banner_titanss_klfaas.webp",
+  }
+
+  const hasBanner = race in bannerUrls
+  const bannerUrl = bannerUrls[race]
+
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
+    <Card className="w-full relative overflow-hidden">
+      {hasBanner && (
+        <div 
+          className={cn(
+            "absolute left-0 right-0 bg-center bg-no-repeat pointer-events-none",
+            !isExpanded 
+              ? "inset-0 bg-cover" 
+              : "-top-4 min-h-[200px] bg-contain"
+          )}
+          style={{
+            backgroundImage: `url(${bannerUrl})`,
+            opacity: 0.25,
+            zIndex: 0,
+          }}
+        />
+      )}
+      <div className={cn("relative", hasBanner && "z-10")}>
+        <CardHeader className={cn("pb-3", hasBanner && isExpanded && "relative overflow-hidden min-h-[200px]")}>
+        <div className={cn("flex gap-2", hasBanner && isExpanded && "relative z-10", !isExpanded ? "items-center" : "items-start justify-between")}>
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg sm:text-xl">
+            <CardTitle className={cn("text-lg sm:text-xl", !isExpanded && "text-left")}>
               ¿Cuál es tu Aliado de {race} favorito?
             </CardTitle>
-            <CardDescription className="mt-1">
+            <CardDescription className={cn("mt-1", !isExpanded && "text-left")}>
               {hasVoted
                 ? `Total de votos: ${data.totalVotes}`
                 : "Selecciona tu aliado favorito de esta raza"}
@@ -312,7 +349,21 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                                 )
                               })()}
                               {isSelected && (
-                                <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
+                                <>
+                                  <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg" />
+                                  <div className="absolute inset-0 flex items-center justify-center z-20">
+                                    <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleVote()
+                                      }}
+                                      size="sm"
+                                      className="shadow-lg"
+                                    >
+                                      Votar
+                                    </Button>
+                                  </div>
+                                </>
                               )}
                               <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-[10px] p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity duration-200 truncate text-center">
                                 {ally.name}
@@ -326,16 +377,18 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                 </div>
               )}
             </div>
-            <div className="flex justify-center pt-1">
-              <Button
-                onClick={handleVote}
-                disabled={!selectedCardId}
-                className="min-w-[100px]"
-                size="sm"
-              >
-                Votar
-              </Button>
-            </div>
+            {viewMode === "list" && (
+              <div className="flex justify-center pt-1">
+                <Button
+                  onClick={handleVote}
+                  disabled={!selectedCardId}
+                  className="min-w-[100px]"
+                  size="sm"
+                >
+                  Votar
+                </Button>
+              </div>
+            )}
           </>
         ) : (
           <div className="space-y-3">
@@ -343,88 +396,99 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
               <span className="text-sm font-medium">Ya has votado en esta encuesta</span>
             </div>
-            {data.userVote && (
-              <div className="p-3 bg-primary/10 rounded-lg border border-primary">
-                <div className="text-xs text-muted-foreground mb-2 font-medium">Tu voto:</div>
-                <div className="flex items-center gap-3">
-                  <div className="relative aspect-[63/88] w-16 flex-shrink-0 rounded overflow-hidden border border-primary">
-                    {(() => {
-                      const userVoteAlly = data.allies.find((a) => a.id === data.userVote)
-                      if (!userVoteAlly) return null
-                      const optimizedImageUrl = optimizeCloudinaryUrl(userVoteAlly.image, deviceType)
-                      const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
-                      return (
-                        <Image
-                          src={optimizedImageUrl}
-                          alt={userVoteAlly.name}
-                          fill
-                          className="object-contain"
-                          sizes="64px"
-                          unoptimized={isOptimized}
-                        />
-                      )
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm sm:text-base truncate">
-                      {data.allies.find((a) => a.id === data.userVote)?.name}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Resultados:</h4>
-              {data.results
-                .filter((r) => r.votes > 0)
-                .map((result) => {
-                  const ally = data.allies.find((a) => a.id === result.cardId)
-                  return (
-                    <div
-                      key={result.cardId}
-                      className="p-2 rounded-lg border bg-card"
-                    >
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="relative aspect-[63/88] w-12 h-16 flex-shrink-0 rounded overflow-hidden border border-border">
-                          {ally && (() => {
-                            const optimizedImageUrl = optimizeCloudinaryUrl(ally.image, deviceType)
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_3fr] gap-4">
+              {/* Voto del usuario - Izquierda */}
+              {data.userVote && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm">Tu voto:</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="relative aspect-[63/88] w-36 h-48 rounded overflow-hidden border border-primary">
+                          {(() => {
+                            const userVoteAlly = data.allies.find((a) => a.id === data.userVote)
+                            if (!userVoteAlly) return null
+                            const optimizedImageUrl = optimizeCloudinaryUrl(userVoteAlly.image, deviceType)
                             const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
                             return (
                               <Image
                                 src={optimizedImageUrl}
-                                alt={ally.name}
+                                alt={userVoteAlly.name}
                                 fill
                                 className="object-contain"
-                                sizes="48px"
+                                sizes="144px"
                                 unoptimized={isOptimized}
                               />
                             )
                           })()}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-xs sm:text-sm truncate">
-                            {result.cardName}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {result.votes} voto{result.votes !== 1 ? "s" : ""} (
-                            {result.percentage.toFixed(1)}%)
+                        <div className="text-center">
+                          <div className="font-semibold text-sm sm:text-base">
+                            {data.allies.find((a) => a.id === data.userVote)?.name}
                           </div>
                         </div>
                       </div>
-                      <div className="w-full bg-secondary rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${result.percentage}%` }}
-                        />
-                      </div>
                     </div>
-                  )
-                })}
-              {data.results.filter((r) => r.votes > 0).length === 0 && (
-                <p className="text-muted-foreground text-center py-3 text-xs">
-                  Aún no hay votos para esta raza
-                </p>
+                  </div>
+                </div>
               )}
+              {/* Resultados - Derecha */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Resultados:</h4>
+                {data.results.filter((r) => r.votes > 0).length === 0 ? (
+                  <p className="text-muted-foreground text-center py-3 text-xs">
+                    Aún no hay votos para esta raza
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    {data.results
+                      .filter((r) => r.votes > 0)
+                      .map((result) => {
+                        const ally = data.allies.find((a) => a.id === result.cardId)
+                        return (
+                          <div
+                            key={result.cardId}
+                            className="p-2 rounded-lg border bg-card"
+                          >
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <div className="relative aspect-[63/88] w-12 h-16 flex-shrink-0 rounded overflow-hidden border border-border">
+                                {ally && (() => {
+                                  const optimizedImageUrl = optimizeCloudinaryUrl(ally.image, deviceType)
+                                  const isOptimized = isCloudinaryOptimized(optimizedImageUrl)
+                                  return (
+                                    <Image
+                                      src={optimizedImageUrl}
+                                      alt={ally.name}
+                                      fill
+                                      className="object-contain"
+                                      sizes="48px"
+                                      unoptimized={isOptimized}
+                                    />
+                                  )
+                                })()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-xs sm:text-sm truncate">
+                                  {result.cardName}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {result.votes} voto{result.votes !== 1 ? "s" : ""} (
+                                  {result.percentage.toFixed(1)}%)
+                                </div>
+                              </div>
+                            </div>
+                            <div className="w-full bg-secondary rounded-full h-2">
+                              <div
+                                className="bg-primary h-2 rounded-full transition-all"
+                                style={{ width: `${result.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex justify-center pt-1">
               <Button
@@ -440,6 +504,7 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
           )}
         </CardContent>
       )}
+      </div>
     </Card>
   )
 }

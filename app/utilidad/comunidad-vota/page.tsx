@@ -11,7 +11,6 @@ import { getAllRaces, getRaceVotingData, getRaceVotingDataFromStorage } from "@/
 export default function ComunidadVotaPage() {
   const { user } = useAuth()
   const [races, setRaces] = useState<string[]>([])
-  const [updateKey, setUpdateKey] = useState(0)
 
   useEffect(() => {
     const loadRaces = async () => {
@@ -31,7 +30,8 @@ export default function ComunidadVotaPage() {
   }, [])
 
   const handleVoteUpdate = () => {
-    setUpdateKey((prev) => prev + 1)
+    // Los paneles se actualizan internamente, no necesitamos re-montarlos
+    // Esto permite mantener el estado de isExpanded
   }
 
   if (!user) {
@@ -71,7 +71,7 @@ export default function ComunidadVotaPage() {
           La Comunidad Vota
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Participa en las votaciones de la comunidad. Vota por tu aliado favorito de cada raza.
+          Participa en las votaciones de la comunidad.
         </p>
         <div className="mt-8 space-y-6">
           {races.map((race) => {
@@ -79,7 +79,7 @@ export default function ComunidadVotaPage() {
             const initialData = getRaceVotingData(race, user.id)
             return (
               <VotePanel
-                key={`${race}-${updateKey}`}
+                key={race}
                 race={race}
                 userId={user.id}
                 initialData={initialData}

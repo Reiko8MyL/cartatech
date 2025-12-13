@@ -78,17 +78,21 @@ export async function getAlliesByRace(race: string): Promise<Card[]> {
     const { getAllCardsFromAPI } = await import("@/lib/api/cards");
     const cards = await getAllCardsFromAPI(false); // Solo principales
     
-    return cards.filter(
-      (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
-    )
+    return cards
+      .filter(
+        (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
+      )
+      .sort((a, b) => a.id.localeCompare(b.id))
   } catch (error) {
     console.error("Error al obtener aliados desde API, usando fallback:", error);
     // Fallback a archivos JS
     const { getAllCards } = await import("@/lib/deck-builder/utils");
     const cards = getAllCards();
-    return cards.filter(
-      (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
-    )
+    return cards
+      .filter(
+        (card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
+      )
+      .sort((a, b) => a.id.localeCompare(b.id))
   }
 }
 
@@ -99,9 +103,11 @@ export async function getAlliesByRace(race: string): Promise<Card[]> {
 export function getAlliesByRaceSync(race: string): Card[] {
   const { getAllCards } = require("@/lib/deck-builder/utils");
   const cards = getAllCards();
-  return cards.filter(
-    (card: Card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
-  )
+  return cards
+    .filter(
+      (card: Card) => card.type === "Aliado" && card.race === race && !card.isCosmetic
+    )
+    .sort((a, b) => a.id.localeCompare(b.id))
 }
 
 /**
