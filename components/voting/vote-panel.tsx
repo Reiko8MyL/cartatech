@@ -112,6 +112,19 @@ export function VotePanel({ race, userId, initialData, onVoteUpdate }: VotePanel
                 : "Selecciona tu aliado favorito de esta raza"}
             </CardDescription>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex-shrink-0"
+            aria-label={isExpanded ? "Colapsar" : "Expandir"}
+          >
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       </CardHeader>
       {isExpanded && (
