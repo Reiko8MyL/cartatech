@@ -458,9 +458,9 @@ export function DeckManagementPanel({
       
       return {
         ...deck,
-        race,
-        edition,
-        backgroundImage,
+        race: race ?? undefined,
+        edition: edition ?? undefined,
+        backgroundImage: backgroundImage ?? undefined,
         stats,
         cardCount,
         formattedDate,
