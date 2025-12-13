@@ -633,7 +633,6 @@ export default function MisFavoritosPage() {
                             className={`h-3 w-3 ${deck.isFavorite ? "fill-current" : ""}`}
                           />
                         </Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
