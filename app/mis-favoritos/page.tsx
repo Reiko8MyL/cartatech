@@ -688,21 +688,11 @@ export default function MisFavoritosPage() {
                           </div>
                         </div>
                       </div>
-                      {deck.description && viewMode === "grid" && (
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                          {deck.description}
-                        </p>
-                      )}
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-muted-foreground">
                           <p className="flex items-center gap-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {viewMode === "grid" && (
-                                <>
-                                  {cardCount} {cardCount === 1 ? "carta" : "cartas"} ·{" "}
-                                </>
-                              )}
                               Por{" "}
                               {deck.author || "Anónimo"} · {formattedDate}
                             </span>
