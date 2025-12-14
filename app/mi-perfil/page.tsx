@@ -242,7 +242,7 @@ export default function MiPerfilPage() {
 
   // Obtener la carta del avatar si existe
   const avatarCard = profile?.user.avatarCardId
-    ? allCards.find((card) => card.id === profile.user.avatarCardId)
+    ? allCards.find((card) => card.id === profile.user.avatarCardId) ?? null
     : null
 
   if (!currentUser) {
