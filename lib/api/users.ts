@@ -4,6 +4,11 @@ export interface UserProfile {
   user: {
     id: string
     username: string
+    avatarCardId: string | null
+    avatarZoom: number | null
+    avatarPositionX: number | null
+    avatarPositionY: number | null
+    bio: string | null
     createdAt: number
   }
   stats: {
@@ -25,19 +30,105 @@ export interface UserProfile {
   }>
 }
 
+export interface MyProfile {
+  user: {
+    id: string
+    username: string
+    email: string
+    role: string
+    avatarCardId: string | null
+    avatarZoom: number | null
+    avatarPositionX: number | null
+    avatarPositionY: number | null
+    bio: string | null
+    createdAt: number
+    updatedAt: number
+  }
+  stats: {
+    totalDecks: number
+    publicDecks: number
+    privateDecks: number
+    totalLikes: number
+    totalViews: number
+    favoriteCount: number
+    commentCount: number
+  }
+  recentDecks: Array<{
+    id: string
+    name: string
+    description: string | null
+    isPublic: boolean
+    format: string
+    tags: string[]
+    backgroundImage: string | null
+    viewCount: number
+    updatedAt: number
+    createdAt: number
+    cards: any
+  }>
+  recentFavorites: Array<{
+    id: string
+    createdAt: number
+    deck: {
+      id: string
+      name: string
+      description: string | null
+      isPublic: boolean
+      format: string
+      tags: string[]
+      backgroundImage: string | null
+      viewCount: number
+      createdAt: number
+      cards: any
+      user: {
+        username: string
+      }
+    }
+  }>
+}
+
 // Obtener perfil de usuario por username
 export async function getUserProfile(username: string): Promise<UserProfile | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${username}`, {
+    const url = API_BASE_URL 
+      ? `${API_BASE_URL}/api/users/${username}`
+      : `/api/users/${username}`;
+
+    const response = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     })
 
     if (!response.ok) {
+      let errorData: any = {}
+      let errorText = ""
+      
+      try {
+        const contentType = response.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+          errorData = await response.json()
+        } else {
+          errorText = await response.text()
+        }
+      } catch (e) {
+        console.error("Error al parsear respuesta de error:", e)
+      }
+      
+      console.error("Error al obtener perfil de usuario:", {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData.error || errorText || "Error desconocido",
+        errorData,
+        username,
+        url,
+      })
+      
       if (response.status === 404) {
         return null
       }
-      throw new Error("Error al obtener perfil de usuario")
+      
+      // Retornar null en lugar de lanzar error para que el componente pueda manejar el estado
+      return null
     }
 
     const data = await response.json()
@@ -47,6 +138,110 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
     return null
   }
 }
+
+// Obtener perfil completo del usuario actual
+export async function getMyProfile(userId: string): Promise<MyProfile | null> {
+  try {
+    if (!userId) {
+      console.error("getMyProfile: userId no proporcionado")
+      return null
+    }
+
+    const url = API_BASE_URL 
+      ? `${API_BASE_URL}/api/users/me?userId=${userId}`
+      : `/api/users/me?userId=${userId}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+
+    if (!response.ok) {
+      let errorData: any = {}
+      let errorText = ""
+      
+      try {
+        const contentType = response.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+          errorData = await response.json()
+        } else {
+          errorText = await response.text()
+        }
+      } catch (e) {
+        console.error("Error al parsear respuesta de error:", e)
+      }
+      
+      console.error("Error al obtener perfil:", {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData.error || errorText || "Error desconocido",
+        errorData,
+        userId,
+        url,
+      })
+      
+      if (response.status === 404) {
+        return null
+      }
+      
+      // Retornar null en lugar de lanzar error para que el componente pueda manejar el estado
+      return null
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error("Error al obtener perfil:", error)
+    return null
+  }
+}
+
+// Actualizar perfil del usuario actual
+export async function updateMyProfile(
+  userId: string,
+  updates: { 
+    avatarCardId?: string | null
+    avatarZoom?: number | null
+    avatarPositionX?: number | null
+    avatarPositionY?: number | null
+    bio?: string | null
+  }
+): Promise<{ success: boolean; user?: MyProfile['user']; error?: string }> {
+  try {
+    const url = API_BASE_URL 
+      ? `${API_BASE_URL}/api/users/me?userId=${userId}`
+      : `/api/users/me?userId=${userId}`;
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      return {
+        success: false,
+        error: errorData.error || "Error al actualizar el perfil",
+      }
+    }
+
+    const data = await response.json()
+    return {
+      success: true,
+      user: data.user,
+    }
+  } catch (error) {
+    console.error("Error al actualizar perfil:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error al actualizar el perfil",
+    }
+  }
+}
+
+
+
 
 
 

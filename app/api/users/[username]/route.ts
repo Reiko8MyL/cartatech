@@ -24,6 +24,11 @@ export async function GET(
       select: {
         id: true,
         username: true,
+        avatarCardId: true,
+        avatarZoom: true,
+        avatarPositionX: true,
+        avatarPositionY: true,
+        bio: true,
         createdAt: true,
       },
     })
@@ -99,7 +104,6 @@ export async function GET(
         ...deck,
         createdAt: deck.createdAt.getTime(),
         publishedAt: deck.publishedAt?.getTime(),
-        updatedAt: deck.updatedAt.getTime(),
       })),
     })
   } catch (error) {

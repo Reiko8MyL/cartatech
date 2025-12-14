@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { hashPassword, validateAge } from "@/lib/auth/utils";
+import { hashPassword } from "@/lib/auth/utils";
 import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
 import { log } from "@/lib/logging/logger";
 
@@ -30,37 +30,58 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   try {
     const body = await request.json();
-    const { username, email, password, dateOfBirth } = body;
+    const { username, email, password } = body;
 
     // Validaciones básicas
-    if (!username || !email || !password || !dateOfBirth) {
+    if (!username || !email || !password) {
       return NextResponse.json(
         { error: "Todos los campos son requeridos" },
         { status: 400 }
       );
     }
 
-    // Validar edad
-    if (!validateAge(dateOfBirth)) {
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
       return NextResponse.json(
-        { error: "Debes ser mayor de 13 años para registrarte" },
+        { error: "Formato de email inválido" },
         { status: 400 }
       );
     }
 
-    // Verificar si el usuario ya existe
-    const existingUser = await prisma.user.findFirst({
+    // Validar contraseña: al menos 8 caracteres, una mayúscula y un número
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json(
+        { error: "La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número" },
+        { status: 400 }
+      );
+    }
+
+    // Verificar si el username ya existe
+    const existingUsername = await prisma.user.findFirst({
       where: {
-        OR: [
-          { username: { equals: username, mode: "insensitive" } },
-          { email: { equals: email, mode: "insensitive" } },
-        ],
+        username: { equals: username.trim(), mode: "insensitive" },
       },
     });
 
-    if (existingUser) {
+    if (existingUsername) {
       return NextResponse.json(
-        { error: "El usuario o email ya existe" },
+        { error: "El nombre de usuario ya está en uso" },
+        { status: 409 }
+      );
+    }
+
+    // Verificar si el email ya existe
+    const existingEmail = await prisma.user.findFirst({
+      where: {
+        email: { equals: email.trim().toLowerCase(), mode: "insensitive" },
+      },
+    });
+
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: "El email ya está en uso" },
         { status: 409 }
       );
     }

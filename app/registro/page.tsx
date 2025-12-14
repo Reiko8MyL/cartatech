@@ -7,12 +7,13 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/auth-context"
-import { Eye, EyeOff, Info } from "lucide-react"
+import { Eye, EyeOff, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { getTemporaryDeck } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import { Spinner } from "@/components/ui/spinner"
 import { optimizeCloudinaryUrl, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
 import { Logo } from "@/components/ui/logo"
+import { checkUsername, checkEmail } from "@/lib/api/auth"
 
 export default function RegistroPage() {
   const router = useRouter()
@@ -23,15 +24,15 @@ export default function RegistroPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    month: "",
-    day: "",
-    year: "",
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle")
+  const [emailStatus, setEmailStatus] = useState<"idle" | "available" | "taken">("idle")
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
 
   // Detectar tipo de dispositivo para optimizar URLs de Cloudinary
   useEffect(() => {
@@ -56,13 +57,66 @@ export default function RegistroPage() {
     }
   }, [allCards])
 
+  // Validar contraseña en tiempo real
+  useEffect(() => {
+    const errors: string[] = []
+    if (formData.password.length > 0) {
+      if (formData.password.length < 8) {
+        errors.push("Al menos 8 caracteres")
+      }
+      if (!/[A-Z]/.test(formData.password)) {
+        errors.push("Una letra mayúscula")
+      }
+      if (!/\d/.test(formData.password)) {
+        errors.push("Un número")
+      }
+    }
+    setPasswordErrors(errors)
+  }, [formData.password])
+
+  // Verificar username
+  const handleCheckUsername = async () => {
+    if (!formData.username.trim()) {
+      setError("Por favor ingresa un nombre de usuario")
+      return
+    }
+
+    setUsernameStatus("checking")
+    setError("")
+
+    const result = await checkUsername(formData.username.trim())
+    
+    if (result.error) {
+      setError(result.error)
+      setUsernameStatus("idle")
+    } else if (result.available) {
+      setUsernameStatus("available")
+    } else {
+      setUsernameStatus("taken")
+      setError("Este nombre de usuario ya está en uso")
+    }
+  }
+
+  // Verificar email después de intentar registrarse
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    // Validaciones
+    // Validaciones básicas
     if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("Por favor completa todos los campos")
+      return
+    }
+
+    // Validar que el username haya sido verificado
+    if (usernameStatus !== "available") {
+      setError("Por favor verifica que el nombre de usuario esté disponible")
+      return
+    }
+
+    // Validar contraseña
+    if (passwordErrors.length > 0) {
+      setError(`La contraseña debe tener: ${passwordErrors.join(", ")}`)
       return
     }
 
@@ -71,32 +125,27 @@ export default function RegistroPage() {
       return
     }
 
-    if (formData.password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres")
-      return
-    }
-
-    if (!formData.month || !formData.day || !formData.year) {
-      setError("Por favor completa tu fecha de nacimiento")
-      return
-    }
-
     if (!agreedToTerms) {
       setError("Debes aceptar los términos de servicio")
       return
     }
 
+    // Verificar email antes de registrar
+    setEmailStatus("idle")
+    const emailCheck = await checkEmail(formData.email.trim())
+    if (!emailCheck.available) {
+      setEmailStatus("taken")
+      setError(emailCheck.error || "Este email ya está en uso")
+      return
+    }
+    setEmailStatus("available")
+
     setIsLoading(true)
 
     const result = await register(
-      formData.username,
-      formData.email,
-      formData.password,
-      {
-        month: formData.month,
-        day: formData.day,
-        year: formData.year,
-      }
+      formData.username.trim(),
+      formData.email.trim(),
+      formData.password
     )
 
     setIsLoading(false)
@@ -110,9 +159,24 @@ export default function RegistroPage() {
         router.push("/")
       }
     } else {
-      setError(result.error || "El usuario o email ya existe, o no cumples con la edad mínima (13 años)")
+      // Si el error es de email, actualizar estado
+      if (result.error?.includes("email")) {
+        setEmailStatus("taken")
+      }
+      // Si el error es de username, actualizar estado
+      if (result.error?.includes("nombre de usuario") || result.error?.includes("username")) {
+        setUsernameStatus("taken")
+      }
+      setError(result.error || "Error al registrar usuario")
     }
   }
+
+  // Resetear estado de username cuando cambia
+  useEffect(() => {
+    if (formData.username.trim().length > 0 && usernameStatus !== "idle") {
+      setUsernameStatus("idle")
+    }
+  }, [formData.username])
 
   return (
     <div className="min-h-screen flex">
@@ -177,7 +241,7 @@ export default function RegistroPage() {
           </ul>
         </div>
         <div className="relative z-10 text-sm text-white/70">
-          <p>© 2025 Carta Tech. Términos de Servicio · Política de Privacidad</p>
+          <p>© 2025 CartaTech. <Link href="/terminos-de-servicio" className="hover:underline">Términos de Servicio</Link> · <Link href="/politica-de-privacidad" className="hover:underline">Política de Privacidad</Link></p>
         </div>
       </div>
 
@@ -193,41 +257,95 @@ export default function RegistroPage() {
             </Link>
           </div>
 
-          <h1 className="text-3xl font-bold mb-8">Registro en Carta Tech</h1>
+          <h1 className="text-3xl font-bold mb-8">Registro en CartaTech</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium mb-2">
                 Nombre de Usuario
               </label>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
               <Input
                 id="username"
                 type="text"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full"
+                    className={`w-full pr-10 ${
+                      usernameStatus === "available" ? "border-green-500" : 
+                      usernameStatus === "taken" ? "border-red-500" : ""
+                    }`}
                 placeholder="Ingresa tu nombre de usuario"
                 required
                 aria-required="true"
                 autoComplete="username"
               />
+                  {usernameStatus === "available" && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                  )}
+                  {usernameStatus === "taken" && (
+                    <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCheckUsername}
+                  disabled={usernameStatus === "checking" || !formData.username.trim()}
+                >
+                  {usernameStatus === "checking" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Verificar"
+                  )}
+                </Button>
+              </div>
+              {usernameStatus === "available" && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  ✓ Nombre de usuario disponible
+                </p>
+              )}
+              {usernameStatus === "taken" && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  ✗ Este nombre de usuario ya está en uso
+                </p>
+              )}
             </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2">
                 Email
               </label>
+              <div className="relative">
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full"
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value })
+                    setEmailStatus("idle")
+                  }}
+                  className={`w-full pr-10 ${
+                    emailStatus === "available" ? "border-green-500" : 
+                    emailStatus === "taken" ? "border-red-500" : ""
+                  }`}
                 placeholder="tu@email.com"
                 required
                 aria-required="true"
                 autoComplete="email"
               />
+                {emailStatus === "available" && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+                {emailStatus === "taken" && (
+                  <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                )}
+              </div>
+              {emailStatus === "taken" && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  ✗ Este email ya está en uso
+                </p>
+              )}
             </div>
 
             <div>
@@ -247,9 +365,20 @@ export default function RegistroPage() {
                 autoComplete="new-password"
                 aria-describedby="password-help"
               />
-              <p id="password-help" className="text-xs text-muted-foreground mt-1">
-                La contraseña debe tener al menos 8 caracteres
-              </p>
+              <div id="password-help" className="text-xs text-muted-foreground mt-1">
+                <p className="mb-1">La contraseña debe tener:</p>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  <li className={formData.password.length >= 8 ? "text-green-600 dark:text-green-400" : ""}>
+                    {formData.password.length >= 8 ? "✓" : "○"} Al menos 8 caracteres
+                  </li>
+                  <li className={/[A-Z]/.test(formData.password) ? "text-green-600 dark:text-green-400" : ""}>
+                    {/[A-Z]/.test(formData.password) ? "✓" : "○"} Una letra mayúscula
+                  </li>
+                  <li className={/\d/.test(formData.password) ? "text-green-600 dark:text-green-400" : ""}>
+                    {/\d/.test(formData.password) ? "✓" : "○"} Un número
+                  </li>
+                </ul>
+              </div>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -290,65 +419,6 @@ export default function RegistroPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                Fecha de Nacimiento
-                <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              </label>
-              <div className="flex gap-2" role="group" aria-label="Fecha de nacimiento">
-                <label htmlFor="birth-month" className="sr-only">Mes</label>
-                <Input
-                  id="birth-month"
-                  type="text"
-                  placeholder="MM"
-                  maxLength={2}
-                  value={formData.month}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 2)
-                    setFormData({ ...formData, month: value })
-                  }}
-                  className="w-20"
-                  required
-                  aria-label="Mes de nacimiento"
-                  aria-required="true"
-                />
-                <label htmlFor="birth-day" className="sr-only">Día</label>
-                <Input
-                  id="birth-day"
-                  type="text"
-                  placeholder="DD"
-                  maxLength={2}
-                  value={formData.day}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 2)
-                    setFormData({ ...formData, day: value })
-                  }}
-                  className="w-20"
-                  required
-                  aria-label="Día de nacimiento"
-                  aria-required="true"
-                />
-                <label htmlFor="birth-year" className="sr-only">Año</label>
-                <Input
-                  id="birth-year"
-                  type="text"
-                  placeholder="YYYY"
-                  maxLength={4}
-                  value={formData.year}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 4)
-                    setFormData({ ...formData, year: value })
-                  }}
-                  className="flex-1"
-                  required
-                  aria-label="Año de nacimiento"
-                  aria-required="true"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1" id="birth-date-help">
-                Debes tener al menos 13 años para registrarte
-              </p>
-            </div>
 
             <div className="flex items-start gap-2">
               <input
@@ -360,7 +430,14 @@ export default function RegistroPage() {
                 required
               />
               <label htmlFor="terms" className="text-sm text-muted-foreground">
-                Acepto los Términos de Servicio de Carta Tech
+                Acepto los{" "}
+                <Link 
+                  href="/terminos-de-servicio" 
+                  className="text-primary hover:underline"
+                  target="_blank"
+                >
+                  Términos de Servicio de CartaTech
+                </Link>
               </label>
             </div>
 

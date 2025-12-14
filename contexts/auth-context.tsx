@@ -15,7 +15,7 @@ export interface User {
 interface AuthContextType {
   user: User | null
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
-  register: (username: string, email: string, password: string, dateOfBirth: { month: string; day: string; year: string }) => Promise<{ success: boolean; error?: string }>
+  register: (username: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   isLoading: boolean
 }
@@ -64,12 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (
     username: string,
     email: string,
-    password: string,
-    dateOfBirth: { month: string; day: string; year: string }
+    password: string
   ): Promise<{ success: boolean; error?: string }> => {
     if (typeof window === "undefined") return { success: false, error: "No disponible en servidor" }
 
-    const result = await apiRegister(username, email, password, dateOfBirth)
+    const result = await apiRegister(username, email, password)
 
     if (result.success && result.user) {
       setUser(result.user)

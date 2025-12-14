@@ -56,13 +56,74 @@ export async function login(
 }
 
 /**
+ * Verifica si un username está disponible
+ */
+export async function checkUsername(username: string): Promise<{ available: boolean; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/check-username?username=${encodeURIComponent(username)}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      return {
+        available: false,
+        error: data.error || "Error al verificar nombre de usuario",
+      };
+    }
+
+    const data = await response.json();
+    return { available: data.available };
+  } catch (error) {
+    console.error("Error al verificar username:", error);
+    return {
+      available: false,
+      error: "Error de conexión al verificar nombre de usuario",
+    };
+  }
+}
+
+/**
+ * Verifica si un email está disponible
+ */
+export async function checkEmail(email: string): Promise<{ available: boolean; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/check-email?email=${encodeURIComponent(email)}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      return {
+        available: false,
+        error: data.error || "Error al verificar email",
+      };
+    }
+
+    const data = await response.json();
+    return { available: data.available };
+  } catch (error) {
+    console.error("Error al verificar email:", error);
+    return {
+      available: false,
+      error: "Error de conexión al verificar email",
+    };
+  }
+}
+
+/**
  * Registra un nuevo usuario
  */
 export async function register(
   username: string,
   email: string,
-  password: string,
-  dateOfBirth: { month: string; day: string; year: string }
+  password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
@@ -74,7 +135,6 @@ export async function register(
         username,
         email,
         password,
-        dateOfBirth,
       }),
     });
 

@@ -15,6 +15,11 @@ model User {
   email     String   @unique
   password  String // Hasheada con bcrypt
   role      String   @default("USER") // "USER", "MODERATOR", "ADMIN"
+  avatarCardId String?  // ID de la carta usada como avatar (ej: "MYL-0001")
+  avatarZoom Float?  // Zoom del avatar (1.0 = sin zoom, 2.0 = 2x zoom, etc.)
+  avatarPositionX Float?  // Posición X del extracto (0-100, porcentaje)
+  avatarPositionY Float?  // Posición Y del extracto (0-100, porcentaje)
+  bio       String?  // Biografía o descripción del usuario
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

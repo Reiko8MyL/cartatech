@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Menu, User, LogOut, LogIn, UserPlus, Sun, Moon, Monitor, Shield } from "lucide-react";
+import { Menu, User, LogOut, LogIn, UserPlus, Sun, Moon, Monitor, Shield, Globe } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { UtilidadDropdown } from "./utilidad-dropdown";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -98,6 +98,18 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href="/mi-perfil">
+                    <User className="mr-2 h-4 w-4" />
+                    Mi Perfil
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/perfil/${user.username}`}>
+                    <Globe className="mr-2 h-4 w-4" />
+                    Ver Perfil Público
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/mis-mazos" className="cursor-pointer">

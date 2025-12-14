@@ -1478,7 +1478,18 @@ export default function ViewDeckPage() {
                   <div className="flex items-center gap-3 text-sm text-white/90">
                     <p className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      Por {deck.author || "Anónimo"} · {formattedDate}
+                      Por{" "}
+                      {deck.author ? (
+                        <Link
+                          href={`/perfil/${deck.author}`}
+                          className="hover:underline font-semibold"
+                        >
+                          {deck.author}
+                        </Link>
+                      ) : (
+                        "Anónimo"
+                      )}{" "}
+                      · {formattedDate}
                     </p>
                     <p className="flex items-center gap-1">
                       <Eye className="h-4 w-4" />
