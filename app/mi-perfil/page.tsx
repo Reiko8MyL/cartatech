@@ -607,9 +607,13 @@ export default function MiPerfilPage() {
                             {deck.name}
                           </CardTitle>
                           {deck.isPublic ? (
-                            <Globe className="h-4 w-4 text-white" title="Público" />
+                            <span title="Público">
+                              <Globe className="h-4 w-4 text-white" />
+                            </span>
                           ) : (
-                            <Lock className="h-4 w-4 text-white/80" title="Privado" />
+                            <span title="Privado">
+                              <Lock className="h-4 w-4 text-white/80" />
+                            </span>
                           )}
                         </div>
                       </div>
@@ -749,9 +753,13 @@ export default function MiPerfilPage() {
                             {favorite.deck.name}
                           </CardTitle>
                           {favorite.deck.isPublic ? (
-                            <Globe className="h-4 w-4 text-white" title="Público" />
+                            <span title="Público">
+                              <Globe className="h-4 w-4 text-white" />
+                            </span>
                           ) : (
-                            <Lock className="h-4 w-4 text-white/80" title="Privado" />
+                            <span title="Privado">
+                              <Lock className="h-4 w-4 text-white/80" />
+                            </span>
                           )}
                         </div>
                       </div>
