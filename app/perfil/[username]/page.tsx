@@ -251,7 +251,7 @@ export default function UserProfilePage() {
                 const edition = getDeckEdition(deck.cards, allCards)
                 const backgroundImage = getDeckBackgroundImage(race)
                 const backgroundImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null
-                const deckBannerSetting = backgroundImageId ? settingsMap[backgroundImageId] || null : null
+                const deckBannerSetting = backgroundImageId ? settingsMap.get(backgroundImageId) ?? null : null
                 const cardCount = Array.isArray(deck.cards)
                   ? deck.cards.reduce((sum: number, dc: any) => sum + (dc.quantity || 0), 0)
                   : 0
