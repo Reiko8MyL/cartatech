@@ -563,7 +563,7 @@ export default function MiPerfilPage() {
                 const edition = getDeckEdition(deck.cards, allCards)
                 const backgroundImage = deck.backgroundImage || getDeckBackgroundImage(race)
                 const backgroundImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null
-                const deckBannerSetting = backgroundImageId ? recentDeckSettingsMap[backgroundImageId] || null : null
+                const deckBannerSetting = backgroundImageId ? recentDeckSettingsMap.get(backgroundImageId) ?? null : null
                 const updatedDate = new Date(deck.updatedAt)
                 const formattedDate = updatedDate.toLocaleDateString("es-ES", {
                   year: "numeric",
@@ -705,7 +705,7 @@ export default function MiPerfilPage() {
                 const edition = getDeckEdition(favorite.deck.cards, allCards)
                 const backgroundImage = favorite.deck.backgroundImage || getDeckBackgroundImage(race)
                 const backgroundImageId = backgroundImage ? getBackgroundImageId(backgroundImage) : null
-                const deckBannerSetting = backgroundImageId ? recentDeckSettingsMap[backgroundImageId] || null : null
+                const deckBannerSetting = backgroundImageId ? recentDeckSettingsMap.get(backgroundImageId) ?? null : null
                 const favoriteDate = new Date(favorite.createdAt)
                 const formattedDate = favoriteDate.toLocaleDateString("es-ES", {
                   year: "numeric",
