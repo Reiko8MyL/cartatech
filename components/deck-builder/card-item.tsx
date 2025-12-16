@@ -68,6 +68,10 @@ export const CardItem = memo(function CardItem({
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.6 : 1,
     transition: isDragging ? 'none' : undefined, // Sin transición durante el drag para mejor rendimiento
+    userSelect: 'none' as const,
+    WebkitUserSelect: 'none' as const,
+    WebkitTouchCallout: 'none' as const,
+    touchAction: 'manipulation' as const,
   }
   
   // Obtener tipo de dispositivo desde contexto (compartido, sin overhead)
@@ -145,12 +149,6 @@ export const CardItem = memo(function CardItem({
       onMouseLeave={onCardHoverEnd}
       onTouchStart={onCardLongPress ? handleTouchStart : undefined}
       onTouchEnd={onCardTouchEnd ? handleTouchEnd : undefined}
-      style={{
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        WebkitTouchCallout: 'none',
-        touchAction: 'manipulation',
-      }}
     >
       {/* Contenedor que se anima en hover (imagen + nombre + todos los elementos superiores) */}
       <div
