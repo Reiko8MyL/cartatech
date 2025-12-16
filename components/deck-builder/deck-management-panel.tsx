@@ -134,26 +134,6 @@ export function DeckManagementPanel({
   }, [])
   
   const { user } = useAuth()
-  
-  // Atajos de teclado
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + S para guardar mazo
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault()
-        if (!user) {
-          // Guardar el mazo temporalmente antes de mostrar el diálogo
-          saveTemporaryDeck(deckName, deckCards, deckFormat)
-          setShowLoginDialog(true)
-          return
-        }
-        setShowSaveModal(true)
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [user, deckName, deckCards, deckFormat])
   const router = useRouter()
   const [showLoadDialog, setShowLoadDialog] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)

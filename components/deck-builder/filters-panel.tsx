@@ -323,14 +323,8 @@ export const FiltersPanel = memo(function FiltersPanel({
       {/* Fila de búsquedas - Siempre visible */}
       <div className={searchFieldsInRow ? "flex flex-col sm:flex-row gap-1.5" : "flex flex-col gap-1.5"}>
         <Input
-          ref={(input) => {
-            // Exponer el input para atajos de teclado
-            if (input && typeof window !== "undefined") {
-              (window as any).__deckBuilderSearchInput = input
-            }
-          }}
           type="text"
-          placeholder="Buscar por nombre... (Ctrl+K)"
+          placeholder="Buscar por nombre..."
           value={filters.search}
           onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
           className={searchFieldsInRow ? "w-full sm:flex-1 h-8 text-xs" : "w-full h-8 text-xs"}
