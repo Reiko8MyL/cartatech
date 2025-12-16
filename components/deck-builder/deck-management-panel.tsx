@@ -593,9 +593,6 @@ export function DeckManagementPanel({
         }}
         className={`flex flex-col h-full lg:h-full bg-card overflow-hidden ${isOver ? "ring-2 ring-primary ring-offset-2" : ""}`}
         style={{
-          ...(isOver ? { transition: 'none' } : {}), // Sin transición cuando está sobre el drop target
-        }}
-        style={{
           ...(isMobile ? {
             position: 'fixed',
             bottom: 0,
@@ -608,7 +605,8 @@ export function DeckManagementPanel({
             borderTopLeftRadius: '1rem',
             borderTopRightRadius: '1rem',
             boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1)',
-          } : {})
+          } : {}),
+          ...(isOver ? { transition: 'none' } : {}), // Sin transición cuando está sobre el drop target
         }}
       >
         {/* Handle para arrastrar (solo visible en pantallas < 1024px) */}
