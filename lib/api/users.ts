@@ -16,6 +16,8 @@ export interface UserProfile {
     publicDecks: number
     totalLikes: number
     totalViews: number
+    followerCount: number
+    followingCount: number
   }
   publicDecks: Array<{
     id: string
@@ -237,6 +239,175 @@ export async function updateMyProfile(
       success: false,
       error: error instanceof Error ? error.message : "Error al actualizar el perfil",
     }
+  }
+}
+
+// Interfaces para seguimiento
+export interface FollowStatus {
+  isFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
+  followId: string | null;
+}
+
+export interface FollowUser {
+  id: string;
+  username: string;
+  avatarCardId: string | null;
+  avatarZoom: number | null;
+  avatarPositionX: number | null;
+  avatarPositionY: number | null;
+  bio: string | null;
+  createdAt: number;
+  followedAt: number;
+}
+
+export interface FollowListResponse {
+  followers?: FollowUser[];
+  following?: FollowUser[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Obtener estado de seguimiento
+export async function getFollowStatus(
+  username: string,
+  userId: string
+): Promise<FollowStatus | null> {
+  try {
+    const url = API_BASE_URL
+      ? `${API_BASE_URL}/api/users/${username}/follow-status?userId=${userId}`
+      : `/api/users/${username}/follow-status?userId=${userId}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error("Error al obtener estado de seguimiento");
+    }
+
+    const data: FollowStatus = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error en getFollowStatus:", error);
+    return null;
+  }
+}
+
+// Seguir usuario
+export async function followUser(
+  username: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const url = API_BASE_URL
+      ? `${API_BASE_URL}/api/users/${username}/follow`
+      : `/api/users/${username}/follow`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Error al seguir usuario");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error en followUser:", error);
+    throw error;
+  }
+}
+
+// Dejar de seguir usuario
+export async function unfollowUser(
+  username: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const url = API_BASE_URL
+      ? `${API_BASE_URL}/api/users/${username}/follow?userId=${userId}`
+      : `/api/users/${username}/follow?userId=${userId}`;
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Error al dejar de seguir usuario");
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error en unfollowUser:", error);
+    throw error;
+  }
+}
+
+// Obtener seguidores
+export async function getFollowers(
+  username: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<FollowListResponse | null> {
+  try {
+    const url = API_BASE_URL
+      ? `${API_BASE_URL}/api/users/${username}/followers?page=${page}&limit=${limit}`
+      : `/api/users/${username}/followers?page=${page}&limit=${limit}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error("Error al obtener seguidores");
+    }
+
+    const data: FollowListResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error en getFollowers:", error);
+    return null;
+  }
+}
+
+// Obtener usuarios seguidos
+export async function getFollowing(
+  username: string,
+  page: number = 1,
+  limit: number = 20
+): Promise<FollowListResponse | null> {
+  try {
+    const url = API_BASE_URL
+      ? `${API_BASE_URL}/api/users/${username}/following?page=${page}&limit=${limit}`
+      : `/api/users/${username}/following?page=${page}&limit=${limit}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error("Error al obtener usuarios seguidos");
+    }
+
+    const data: FollowListResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error en getFollowing:", error);
+    return null;
   }
 }
 

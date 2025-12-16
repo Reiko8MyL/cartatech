@@ -73,6 +73,7 @@ export interface DeckFilters {
   showOnlyUnique?: boolean;
   showOnlyBanned?: boolean;
   showOnlyRework?: boolean;
+  showOnlyAvailable?: boolean; // Solo cartas disponibles según ban list del formato actual
 }
 
 export interface DeckStats {

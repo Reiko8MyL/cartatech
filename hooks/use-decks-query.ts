@@ -1,19 +1,36 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { getPublicDecks, getUserDecks } from "@/lib/api/decks"
+import { getPublicDecks, getUserDecks, type PublicDecksFilters } from "@/lib/api/decks"
 import { getPublicDecksFromStorage, getUserDecksFromStorage } from "@/lib/deck-builder/utils"
 import type { SavedDeck } from "@/lib/deck-builder/types"
 import type { PaginatedResponse } from "@/lib/api/decks"
 
 /**
  * Hook para obtener mazos públicos usando React Query
- * Usa getPublicDecksFromStorage que incluye fallback a localStorage
+ * Usa getPublicDecks que incluye filtros del servidor y fallback a localStorage
  */
-export function usePublicDecksQuery(page: number = 1, limit: number = 1000) {
+export function usePublicDecksQuery(
+  page: number = 1,
+  limit: number = 12,
+  filters?: PublicDecksFilters
+) {
   return useQuery<{ decks: SavedDeck[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }>({
-    queryKey: ["decks", "public", page, limit],
-    queryFn: () => getPublicDecksFromStorage(page, limit),
+    queryKey: ["decks", "public", page, limit, filters],
+    queryFn: async () => {
+      // Intentar obtener de la API primero
+      try {
+        const result = await getPublicDecks(page, limit, filters);
+        return {
+          decks: result.data,
+          pagination: result.pagination,
+        };
+      } catch (error) {
+        console.warn("Error al obtener mazos de API, usando localStorage:", error);
+        // Fallback a localStorage (sin filtros del servidor)
+        return getPublicDecksFromStorage(page, limit);
+      }
+    },
     staleTime: 2 * 60 * 1000, // 2 minutos (los mazos públicos pueden cambiar)
     gcTime: 5 * 60 * 1000, // 5 minutos en cache
     retry: 1,

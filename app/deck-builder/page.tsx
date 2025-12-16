@@ -4,6 +4,16 @@ import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "rea
 import { useSearchParams } from "next/navigation"
 import dynamic from "next/dynamic"
 import { FiltersPanel } from "@/components/deck-builder/filters-panel"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+} from "@dnd-kit/core"
 
 // Lazy load componentes pesados - DeckManagementPanel es muy grande (1810 líneas)
 const CardsPanel = dynamic(
@@ -70,10 +80,25 @@ import { useAuth, type User } from "@/contexts/auth-context"
 import { CardGridSkeleton } from "@/components/ui/card-grid-skeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
+import Image from "next/image"
+import { optimizeCloudinaryUrl } from "@/lib/deck-builder/cloudinary-utils"
 
 function DeckBuilderContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
+  
+  // Sensores para drag & drop (optimizado para respuesta rápida)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3, // Reducido a 3px para activación más rápida
+      },
+    }),
+    useSensor(KeyboardSensor)
+  )
+  
+  // Estado para el overlay de drag
+  const [activeCardId, setActiveCardId] = useState<string | null>(null)
   
   // Cargar solo cartas originales (sin alternativas) para mejorar rendimiento inicial
   // Las alternativas se cargarán solo cuando se abra el modal en CardsPanel
@@ -130,6 +155,7 @@ function DeckBuilderContent() {
     showOnlyUnique: false,
     showOnlyBanned: false,
     showOnlyRework: false,
+    showOnlyAvailable: false,
   })
 
   // Filtrar cartas según los filtros (solo cartas originales, no alternativas)
@@ -228,6 +254,34 @@ function DeckBuilderContent() {
   const [cardReplacements, setCardReplacements] = useState<Map<string, string>>(new Map())
 
   // Función para reemplazar una carta por otra versión (arte alternativo)
+  const reorderCards = useCallback((startIndex: number, endIndex: number) => {
+    setDeckCards((prevDeckCards) => {
+      // Filtrar solo cartas con cantidad > 0 para obtener el array ordenado
+      const filteredCards = prevDeckCards.filter((dc) => dc.quantity > 0)
+      
+      // Reordenar en el array filtrado
+      const [removed] = filteredCards.splice(startIndex, 1)
+      filteredCards.splice(endIndex, 0, removed)
+      
+      // Crear un mapa de cardId -> nueva posición
+      const newOrderMap = new Map(filteredCards.map((dc, index) => [dc.cardId, index]))
+      
+      // Reordenar el array completo manteniendo las cartas con cantidad 0 al final
+      const cardsWithQuantity = prevDeckCards.filter((dc) => dc.quantity > 0)
+      const cardsWithoutQuantity = prevDeckCards.filter((dc) => dc.quantity === 0)
+      
+      // Ordenar las cartas con cantidad según el nuevo orden
+      const reorderedCardsWithQuantity = cardsWithQuantity.sort((a, b) => {
+        const indexA = newOrderMap.get(a.cardId) ?? Infinity
+        const indexB = newOrderMap.get(b.cardId) ?? Infinity
+        return indexA - indexB
+      })
+      
+      // Combinar: cartas reordenadas primero, luego las sin cantidad
+      return [...reorderedCardsWithQuantity, ...cardsWithoutQuantity]
+    })
+  }, [])
+
   const replaceCardInDeck = useCallback((oldCardId: string, newCardId: string) => {
     setDeckCards((prevDeckCards) => {
       // Buscar la carta original en el mazo
@@ -548,6 +602,31 @@ function DeckBuilderContent() {
         </div>
 
         {/* Contenedor principal con dos paneles */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          autoScroll={{ threshold: { x: 0.2, y: 0.2 }, acceleration: 10, interval: 5 }}
+          onDragStart={(event) => {
+            if (event.active.data.current?.type === "card") {
+              setActiveCardId(event.active.id as string)
+            }
+          }}
+          onDragEnd={(event: DragEndEvent) => {
+            setActiveCardId(null)
+            const { active, over } = event
+            
+            if (!over || active.id === over.id) return
+            
+            // Si se arrastra una carta al panel del mazo
+            if (active.data.current?.type === "card" && over.id === "deck-panel") {
+              const cardId = active.id as string
+              addCardToDeck(cardId)
+            }
+          }}
+          onDragCancel={() => {
+            setActiveCardId(null)
+          }}
+        >
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_450px] gap-0 min-h-0">
           {/* Panel izquierdo: Filtros compactos (solo desktop) + Cartas disponibles */}
           <div className="flex flex-col min-h-0">
@@ -646,6 +725,7 @@ function DeckBuilderContent() {
                   onLoadDeck={loadDeck}
                   onAddCard={addCardToDeck}
                   onRemoveCard={removeCardFromDeck}
+                  onReorderCards={reorderCards}
                   deckFormat={deckFormat}
                   onDeckFormatChange={setDeckFormat}
                   currentDeck={currentDeck}
@@ -658,6 +738,28 @@ function DeckBuilderContent() {
             </div>
           </ErrorBoundary>
         </div>
+        
+        {/* Drag Overlay - Muestra la carta mientras se arrastra (sin animaciones para mejor rendimiento) */}
+        <DragOverlay dropAnimation={null}>
+          {activeCardId ? (() => {
+            const card = allCards.find(c => c.id === activeCardId)
+            if (!card) return null
+            return (
+              <div className="aspect-[63/88] w-32 rounded-2xl overflow-hidden opacity-95 rotate-3 shadow-2xl" style={{ willChange: 'transform' }}>
+                <Image
+                  src={optimizeCloudinaryUrl(card.image, "desktop")}
+                  alt={card.name}
+                  width={200}
+                  height={280}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                  priority
+                />
+              </div>
+            )
+          })() : null}
+        </DragOverlay>
+        </DndContext>
       </main>
     </>
   )

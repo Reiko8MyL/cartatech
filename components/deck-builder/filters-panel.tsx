@@ -248,6 +248,7 @@ export const FiltersPanel = memo(function FiltersPanel({
       showOnlyUnique: false,
       showOnlyBanned: false,
       showOnlyRework: false,
+      showOnlyAvailable: false,
     })
   }
 
@@ -260,7 +261,8 @@ export const FiltersPanel = memo(function FiltersPanel({
     filters.cost.length > 0 ||
     filters.showOnlyUnique === true ||
     filters.showOnlyBanned === true ||
-    filters.showOnlyRework === true
+    filters.showOnlyRework === true ||
+    filters.showOnlyAvailable === true
 
   // Funciones helper para mostrar texto en los botones
   function getFilterButtonText(
@@ -321,8 +323,14 @@ export const FiltersPanel = memo(function FiltersPanel({
       {/* Fila de búsquedas - Siempre visible */}
       <div className={searchFieldsInRow ? "flex flex-col sm:flex-row gap-1.5" : "flex flex-col gap-1.5"}>
         <Input
+          ref={(input) => {
+            // Exponer el input para atajos de teclado
+            if (input && typeof window !== "undefined") {
+              (window as any).__deckBuilderSearchInput = input
+            }
+          }}
           type="text"
-          placeholder="Buscar por nombre..."
+          placeholder="Buscar por nombre... (Ctrl+K)"
           value={filters.search}
           onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
           className={searchFieldsInRow ? "w-full sm:flex-1 h-8 text-xs" : "w-full h-8 text-xs"}
@@ -627,24 +635,44 @@ export const FiltersPanel = memo(function FiltersPanel({
                   </label>
                 </div>
                 {deckFormat && (
-                  <div className="flex items-center space-x-1.5">
-                    <Checkbox
-                      id="filter-banned-expanded"
-                      checked={filters.showOnlyBanned === true}
-                      onCheckedChange={(checked) => {
-                        onFiltersChange({
-                          ...filters,
-                          showOnlyBanned: checked === true,
-                        })
-                      }}
-                    />
-                    <label
-                      htmlFor="filter-banned-expanded"
-                      className="text-xs cursor-pointer select-none"
-                    >
-                      En Ban List
-                    </label>
-                  </div>
+                  <>
+                    <div className="flex items-center space-x-1.5">
+                      <Checkbox
+                        id="filter-available-expanded"
+                        checked={filters.showOnlyAvailable === true}
+                        onCheckedChange={(checked) => {
+                          onFiltersChange({
+                            ...filters,
+                            showOnlyAvailable: checked === true,
+                          })
+                        }}
+                      />
+                      <label
+                        htmlFor="filter-available-expanded"
+                        className="text-xs cursor-pointer select-none"
+                      >
+                        Solo Disponibles
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-1.5">
+                      <Checkbox
+                        id="filter-banned-expanded"
+                        checked={filters.showOnlyBanned === true}
+                        onCheckedChange={(checked) => {
+                          onFiltersChange({
+                            ...filters,
+                            showOnlyBanned: checked === true,
+                          })
+                        }}
+                      />
+                      <label
+                        htmlFor="filter-banned-expanded"
+                        className="text-xs cursor-pointer select-none"
+                      >
+                        En Ban List
+                      </label>
+                    </div>
+                  </>
                 )}
                 <div className="flex items-center space-x-1.5">
                   <Checkbox
@@ -849,6 +877,23 @@ export const FiltersPanel = memo(function FiltersPanel({
               >
                 Solo Únicas
               </Button>
+              
+              {/* Solo Disponibles - Solo visible si hay deckFormat */}
+              {deckFormat && (
+                <Button
+                  variant={filters.showOnlyAvailable ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    onFiltersChange({
+                      ...filters,
+                      showOnlyAvailable: !filters.showOnlyAvailable,
+                    })
+                  }}
+                  className="h-7 text-xs px-2"
+                >
+                  Solo Disponibles
+                </Button>
+              )}
               
               {/* En Ban List - Solo visible si hay deckFormat */}
               {deckFormat && (

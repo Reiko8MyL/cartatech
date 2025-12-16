@@ -66,6 +66,7 @@ import { DeckActionsBar } from "./deck-actions-bar"
 import { DeckCardsList } from "./deck-cards-list"
 import { useMobilePanelDrag } from "@/hooks/use-mobile-panel-drag"
 import { useBannerSettings, useDeviceType } from "@/hooks/use-banner-settings"
+import { useDroppable } from "@dnd-kit/core"
 
 interface DeckManagementPanelProps {
   deckName: string
@@ -77,6 +78,7 @@ interface DeckManagementPanelProps {
   onLoadDeck: (deck: SavedDeck) => void
   onAddCard: (cardId: string) => void
   onRemoveCard: (cardId: string) => void
+  onReorderCards?: (startIndex: number, endIndex: number) => void
   deckFormat: DeckFormat
   onDeckFormatChange: (format: DeckFormat) => void
   currentDeck?: SavedDeck | null // Mazo actual si se está editando uno existente
@@ -94,6 +96,7 @@ export function DeckManagementPanel({
   onLoadDeck,
   onAddCard,
   onRemoveCard,
+  onReorderCards,
   deckFormat,
   onDeckFormatChange,
   currentDeck,
@@ -129,7 +132,28 @@ export function DeckManagementPanel({
     }
     loadCardMetadata()
   }, [])
+  
   const { user } = useAuth()
+  
+  // Atajos de teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S para guardar mazo
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault()
+        if (!user) {
+          // Guardar el mazo temporalmente antes de mostrar el diálogo
+          saveTemporaryDeck(deckName, deckCards, deckFormat)
+          setShowLoginDialog(true)
+          return
+        }
+        setShowSaveModal(true)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [user, deckName, deckCards, deckFormat])
   const router = useRouter()
   const [showLoadDialog, setShowLoadDialog] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -542,6 +566,11 @@ export function DeckManagementPanel({
   }, [])
 
   const maxHeight = getMaxHeight()
+  
+  // Drop target para el panel del mazo
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: "deck-panel",
+  })
 
   return (
     <>
@@ -558,8 +587,14 @@ export function DeckManagementPanel({
       )}
       
       <div 
-        ref={panelRef}
-        className="flex flex-col h-full lg:h-full bg-card overflow-hidden"
+        ref={(node) => {
+          panelRef.current = node
+          setDropRef(node)
+        }}
+        className={`flex flex-col h-full lg:h-full bg-card overflow-hidden ${isOver ? "ring-2 ring-primary ring-offset-2" : ""}`}
+        style={{
+          ...(isOver ? { transition: 'none' } : {}), // Sin transición cuando está sobre el drop target
+        }}
         style={{
           ...(isMobile ? {
             position: 'fixed',
@@ -599,6 +634,7 @@ export function DeckManagementPanel({
           allCards={allCards}
           onDragStart={isMobile ? handleMobileDragStart : undefined}
           isMobile={isMobile}
+          totalCards={stats.totalCards}
         />
 
         {/* Estadísticas */}
@@ -630,6 +666,7 @@ export function DeckManagementPanel({
           stats={stats}
           onAddCard={onAddCard}
           onRemoveCard={onRemoveCard}
+          onReorderCards={onReorderCards}
           isMobile={isMobile}
           panelHeight={panelHeight}
           minHeight={MIN_HEIGHT}

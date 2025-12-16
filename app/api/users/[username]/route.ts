@@ -63,6 +63,25 @@ export async function GET(
       }),
     ])
 
+    // Obtener contadores de seguimiento (con manejo de error si la tabla no existe)
+    let followerCount = 0;
+    let followingCount = 0;
+    try {
+      [followerCount, followingCount] = await Promise.all([
+        prisma.follow.count({
+          where: { followingId: user.id },
+        }),
+        prisma.follow.count({
+          where: { followerId: user.id },
+        }),
+      ]);
+    } catch (followError) {
+      // Si la tabla no existe o hay un error, usar valores por defecto
+      log.warn("Error al obtener contadores de seguimiento", {
+        error: followError instanceof Error ? followError.message : String(followError),
+      });
+    }
+
     // Obtener mazos públicos del usuario
     const publicDecks = await prisma.deck.findMany({
       where: {
@@ -99,6 +118,8 @@ export async function GET(
         publicDecks: publicDeckCount,
         totalLikes,
         totalViews: totalViews._sum.viewCount || 0,
+        followerCount,
+        followingCount,
       },
       publicDecks: publicDecks.map((deck: any) => ({
         ...deck,

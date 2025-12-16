@@ -19,18 +19,98 @@ export async function GET(request: NextRequest) {
       const limit = parseInt(searchParams.get("limit") || "12", 10);
       const skip = (page - 1) * limit;
 
-      // Obtener total de mazos públicos para paginación
-      const total = await prisma.deck.count({
-        where: {
-          isPublic: true,
-        },
-      });
+      // Parámetros de filtros
+      const format = searchParams.get("format") as "RE" | "RL" | "LI" | null;
+      const author = searchParams.get("author"); // username del autor
+      const dateFrom = searchParams.get("dateFrom"); // fecha desde (timestamp o ISO string)
+      const dateTo = searchParams.get("dateTo"); // fecha hasta (timestamp o ISO string)
+      const search = searchParams.get("search"); // búsqueda en nombre/descripción
+      
+      // Parámetros de ordenamiento
+      const sortBy = searchParams.get("sortBy") || "publishedAt"; // publishedAt, viewCount, createdAt, likeCount, favoriteCount
+      const sortOrder = searchParams.get("sortOrder") || "desc"; // asc, desc
+      
+      // Parámetros de filtros de popularidad
+      const minLikes = parseInt(searchParams.get("minLikes") || "0", 10);
+      const minFavorites = parseInt(searchParams.get("minFavorites") || "0", 10);
 
-      // Obtener solo mazos públicos con paginación
-      const decks = await prisma.deck.findMany({
-        where: {
-          isPublic: true,
-        },
+      // Construir where clause con filtros
+      const where: any = {
+        isPublic: true,
+        publishedAt: { not: null }, // Solo mazos publicados
+      };
+
+      // Filtro por formato
+      if (format && ["RE", "RL", "LI"].includes(format)) {
+        where.format = format;
+      }
+
+      // Filtro por autor (username)
+      if (author) {
+        where.user = {
+          username: {
+            contains: author,
+            mode: "insensitive",
+          },
+        };
+      }
+
+      // Filtro por rango de fechas (publicación)
+      if (dateFrom || dateTo) {
+        where.publishedAt = {};
+        if (dateFrom) {
+          // Si es un string de fecha (YYYY-MM-DD), agregar hora 00:00:00
+          const fromDateStr = dateFrom.includes("T") ? dateFrom : `${dateFrom}T00:00:00`;
+          const fromDate = new Date(fromDateStr);
+          where.publishedAt.gte = fromDate;
+        }
+        if (dateTo) {
+          // Si es un string de fecha (YYYY-MM-DD), agregar hora 23:59:59
+          const toDateStr = dateTo.includes("T") ? dateTo : `${dateTo}T23:59:59`;
+          const toDate = new Date(toDateStr);
+          where.publishedAt.lte = toDate;
+        }
+      }
+
+      // Filtro por búsqueda en nombre/descripción
+      if (search && search.trim()) {
+        where.OR = [
+          {
+            name: {
+              contains: search.trim(),
+              mode: "insensitive",
+            },
+          },
+          {
+            description: {
+              contains: search.trim(),
+              mode: "insensitive",
+            },
+          },
+        ];
+      }
+
+      // Construir orderBy según sortBy
+      // Para likeCount y favoriteCount, necesitamos ordenar por agregación
+      let orderBy: any = {};
+      if (sortBy === "viewCount") {
+        orderBy = { viewCount: sortOrder };
+      } else if (sortBy === "createdAt") {
+        orderBy = { createdAt: sortOrder };
+      } else if (sortBy === "publishedAt") {
+        orderBy = { publishedAt: sortOrder };
+      } else if (sortBy === "likeCount" || sortBy === "favoriteCount") {
+        // Para likes y favoritos, ordenaremos después de obtener los datos
+        // Por ahora, ordenar por publishedAt como fallback
+        orderBy = { publishedAt: "desc" };
+      } else {
+        // Default: ordenar por fecha de publicación
+        orderBy = { publishedAt: "desc" };
+      }
+
+      // Obtener mazos públicos con filtros (sin paginación inicial para poder filtrar por popularidad)
+      const allDecks = await prisma.deck.findMany({
+        where,
         include: {
           user: {
             select: {
@@ -38,15 +118,44 @@ export async function GET(request: NextRequest) {
               username: true,
             },
           },
+          _count: {
+            select: {
+              likes: true,
+              favorites: true,
+            },
+          },
         },
-        orderBy: {
-          publishedAt: "desc",
-        },
-        skip,
-        take: limit,
+        // Solo aplicar orderBy si no es por likes/favoritos (se ordenará después)
+        orderBy: (sortBy === "likeCount" || sortBy === "favoriteCount") ? { publishedAt: "desc" } : orderBy,
       });
 
-      const formattedDecks = decks.map((deck: any) => ({
+      // Filtrar por popularidad (mínimo de likes/favoritos)
+      let filteredDecks = allDecks.filter((deck) => {
+        const likeCount = deck._count?.likes || 0;
+        const favoriteCount = deck._count?.favorites || 0;
+        return likeCount >= minLikes && favoriteCount >= minFavorites;
+      });
+
+      // Ordenar por likes o favoritos si es necesario
+      if (sortBy === "likeCount") {
+        filteredDecks.sort((a, b) => {
+          const aLikes = a._count?.likes || 0;
+          const bLikes = b._count?.likes || 0;
+          return sortOrder === "desc" ? bLikes - aLikes : aLikes - bLikes;
+        });
+      } else if (sortBy === "favoriteCount") {
+        filteredDecks.sort((a, b) => {
+          const aFavorites = a._count?.favorites || 0;
+          const bFavorites = b._count?.favorites || 0;
+          return sortOrder === "desc" ? bFavorites - aFavorites : aFavorites - bFavorites;
+        });
+      }
+
+      // Aplicar paginación después de filtrar y ordenar
+      const total = filteredDecks.length;
+      const paginatedDecks = filteredDecks.slice(skip, skip + limit);
+
+      const formattedDecks = paginatedDecks.map((deck: any) => ({
         id: deck.id,
         name: deck.name,
         description: deck.description,
@@ -61,7 +170,15 @@ export async function GET(request: NextRequest) {
         backgroundImage: deck.backgroundImage,
         viewCount: deck.viewCount,
         tags: deck.tags,
+        likeCount: deck._count?.likes || 0,
+        favoriteCount: deck._count?.favorites || 0,
       }));
+
+      const duration = Date.now() - startTime;
+      log.api('GET', '/api/decks', 200, duration, { 
+        publicOnly: true, 
+        filters: { format, author, search, minLikes, minFavorites, sortBy } 
+      });
 
       return NextResponse.json({
         decks: formattedDecks,

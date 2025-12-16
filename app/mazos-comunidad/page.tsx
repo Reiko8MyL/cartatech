@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense, Fragment, memo, useCallback } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect, useMemo, Suspense, Fragment, memo, useCallback, useTransition } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -45,6 +45,8 @@ import { Pagination } from "@/components/ui/pagination"
 import { useBannerSettings, getBannerStyle, getOverlayStyle, useDeviceType, useBannerSettingsMap } from "@/hooks/use-banner-settings"
 import { getBackgroundImageId } from "@/lib/deck-builder/banner-utils"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
+import { DeckFiltersPanel, type DeckFiltersState } from "@/components/deck/deck-filters-panel"
+import type { PublicDecksFilters } from "@/lib/api/decks"
 
 // Lazy load componentes de anuncios - no críticos para render inicial
 const AdInline = dynamic(
@@ -58,14 +60,11 @@ const AdSidebar = dynamic(
 )
 
 type ViewMode = "grid" | "list"
-type SortBy = "name" | "edition" | "date" | "race" | "likes"
-type SortDirection = "asc" | "desc"
 
-interface DeckFilters {
-  search: string
+// Filtros del cliente (raza, edición, favoritos, liked) - se calculan en el cliente
+interface ClientFilters {
   race: string
   edition: string
-  format: string
   favorites: string
   liked: string
 }
@@ -73,9 +72,19 @@ interface DeckFilters {
 function MazosComunidadPage() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   
-  // Leer el parámetro de búsqueda de la URL
+  // Leer parámetros de la URL
   const searchFromUrl = searchParams.get("search") || ""
+  const formatFromUrl = searchParams.get("format") || ""
+  const authorFromUrl = searchParams.get("author") || ""
+  const dateFromUrl = searchParams.get("dateFrom") || ""
+  const dateToUrl = searchParams.get("dateTo") || ""
+  const sortByFromUrl = (searchParams.get("sortBy") || "publishedAt") as "publishedAt" | "viewCount" | "createdAt" | "likeCount" | "favoriteCount"
+  const sortOrderFromUrl = (searchParams.get("sortOrder") || "desc") as "asc" | "desc"
+  const minLikesFromUrl = searchParams.get("minLikes") || ""
+  const minFavoritesFromUrl = searchParams.get("minFavorites") || ""
   
   const [viewMode, setViewMode] = useState<ViewMode>("grid")
   const deviceType = useDeviceType()
@@ -83,13 +92,46 @@ function MazosComunidadPage() {
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1)
   
+  // Filtros del servidor (se envían a la API)
+  const [serverFilters, setServerFilters] = useState<DeckFiltersState>({
+    search: searchFromUrl,
+    format: formatFromUrl,
+    author: authorFromUrl,
+    dateFrom: dateFromUrl,
+    dateTo: dateToUrl,
+    sortBy: sortByFromUrl,
+    sortOrder: sortOrderFromUrl,
+    minLikes: minLikesFromUrl,
+    minFavorites: minFavoritesFromUrl,
+  })
+  
+  // Filtros del cliente (raza, edición, favoritos, liked) - se aplican después de recibir datos
+  const [clientFilters, setClientFilters] = useState<ClientFilters>({
+    race: "",
+    edition: "",
+    favorites: "",
+    liked: "",
+  })
+  
   // Obtener todas las cartas
   const { cards: allCards } = useCards(false);
   
-  // Obtener mazos públicos usando React Query (optimizado con cache)
-  // Usar paginación del servidor (12 mazos por página)
+  // Convertir serverFilters a formato de API
+  const apiFilters: PublicDecksFilters = useMemo(() => ({
+    search: serverFilters.search || undefined,
+    format: (serverFilters.format as "RE" | "RL" | "LI") || undefined,
+    author: serverFilters.author || undefined,
+    dateFrom: serverFilters.dateFrom || undefined,
+    dateTo: serverFilters.dateTo || undefined,
+    sortBy: serverFilters.sortBy,
+    sortOrder: serverFilters.sortOrder,
+    minLikes: serverFilters.minLikes ? parseInt(serverFilters.minLikes, 10) : undefined,
+    minFavorites: serverFilters.minFavorites ? parseInt(serverFilters.minFavorites, 10) : undefined,
+  }), [serverFilters])
+  
+  // Obtener mazos públicos usando React Query con filtros del servidor
   const ITEMS_PER_PAGE = 12
-  const { data: decksData, isLoading: isLoadingDecks } = usePublicDecksQuery(currentPage, ITEMS_PER_PAGE)
+  const { data: decksData, isLoading: isLoadingDecks } = usePublicDecksQuery(currentPage, ITEMS_PER_PAGE, apiFilters)
   const publicDecks = decksData?.decks || []
   const serverPagination = decksData?.pagination || null
   
@@ -136,32 +178,70 @@ function MazosComunidadPage() {
     }
   }, [publicDecks, allCards, deviceType]);
   
-  const [sortBy, setSortBy] = useState<SortBy>("date")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const [filters, setFilters] = useState<DeckFilters>({
-    search: searchFromUrl,
-    race: "",
-    edition: "",
-    format: "",
-    favorites: "",
-    liked: "",
-  })
-  
   // Estado de carga combinado
-  const isLoading = isLoadingDecks
+  const isLoading = isLoadingDecks || isPending
   
-  // Actualizar filtros cuando cambie el parámetro de búsqueda en la URL
+  // Actualizar filtros del servidor cuando cambien los parámetros de la URL
   useEffect(() => {
-    setFilters((prev) => {
-      if (prev.search !== searchFromUrl) {
-        return {
-          ...prev,
-          search: searchFromUrl,
-        }
-      }
-      return prev
+    setServerFilters({
+      search: searchFromUrl,
+      format: formatFromUrl,
+      author: authorFromUrl,
+      dateFrom: dateFromUrl,
+      dateTo: dateToUrl,
+      sortBy: sortByFromUrl,
+      sortOrder: sortOrderFromUrl,
+      minLikes: minLikesFromUrl,
+      minFavorites: minFavoritesFromUrl,
     })
-  }, [searchFromUrl])
+    // Resetear página cuando cambian los filtros de la URL
+    setCurrentPage(1)
+  }, [searchFromUrl, formatFromUrl, authorFromUrl, dateFromUrl, dateToUrl, sortByFromUrl, sortOrderFromUrl, minLikesFromUrl, minFavoritesFromUrl])
+  
+  // Función para actualizar URL con filtros
+  const updateURLFilters = useCallback((newFilters: DeckFiltersState) => {
+    startTransition(() => {
+      const params = new URLSearchParams()
+      
+      if (newFilters.search) params.set("search", newFilters.search)
+      if (newFilters.format) params.set("format", newFilters.format)
+      if (newFilters.author) params.set("author", newFilters.author)
+      if (newFilters.dateFrom) params.set("dateFrom", newFilters.dateFrom)
+      if (newFilters.dateTo) params.set("dateTo", newFilters.dateTo)
+      if (newFilters.sortBy && newFilters.sortBy !== "publishedAt") params.set("sortBy", newFilters.sortBy)
+      if (newFilters.sortOrder && newFilters.sortOrder !== "desc") params.set("sortOrder", newFilters.sortOrder)
+      if (newFilters.minLikes) params.set("minLikes", newFilters.minLikes)
+      if (newFilters.minFavorites) params.set("minFavorites", newFilters.minFavorites)
+      
+      const queryString = params.toString()
+      router.push(`/mazos-comunidad${queryString ? `?${queryString}` : ""}`, { scroll: false })
+    })
+  }, [router])
+  
+  // Manejar cambios en filtros del servidor
+  const handleServerFiltersChange = useCallback((newFilters: DeckFiltersState) => {
+    setServerFilters(newFilters)
+    setCurrentPage(1) // Resetear a página 1 cuando cambian los filtros
+    updateURLFilters(newFilters)
+  }, [updateURLFilters])
+  
+  // Limpiar filtros del servidor
+  const handleClearServerFilters = useCallback(() => {
+    const clearedFilters: DeckFiltersState = {
+      search: "",
+      format: "",
+      author: "",
+      dateFrom: "",
+      dateTo: "",
+      sortBy: "publishedAt",
+      sortOrder: "desc",
+      minLikes: "",
+      minFavorites: "",
+    }
+    setServerFilters(clearedFilters)
+    setCurrentPage(1)
+    router.push("/mazos-comunidad", { scroll: false })
+  }, [router])
   
   const [likes, setLikes] = useState<Record<string, string[]>>({})
   const [favorites, setFavorites] = useState<string[]>([])
@@ -202,11 +282,11 @@ function MazosComunidadPage() {
 
   // Calcular raza, edición, likes y favoritos para cada mazo
   const decksWithMetadata = useMemo(() => {
-    return publicDecks.map((deck: SavedDeck) => {
+    return publicDecks.map((deck: SavedDeck & { likeCount?: number; favoriteCount?: number }) => {
       const race = getDeckRace(deck.cards, allCards)
       const edition = getDeckEdition(deck.cards, allCards)
-      // Usar el estado likes directamente para actualización inmediata
-      const likeCount = deck.id ? (likes[deck.id]?.length || 0) : 0
+      // Usar likeCount de la API si está disponible, sino usar el estado local
+      const likeCount = deck.likeCount !== undefined ? deck.likeCount : (deck.id ? (likes[deck.id]?.length || 0) : 0)
       const userLiked = user && deck.id ? (likes[deck.id]?.includes(user.id) || false) : false
       // Usar el estado favorites en lugar de leer de localStorage para actualización inmediata
       const isFavorite = user && deck.id ? favorites.includes(deck.id) : false
@@ -225,63 +305,24 @@ function MazosComunidadPage() {
     })
   }, [publicDecks, allCards, likes, favorites, user])
 
-  // Filtrar mazos (solo a los mazos de la página actual del servidor)
-  // Nota: Los filtros se aplican solo a los mazos cargados de la página actual
-  // Para filtros más avanzados, se podría implementar filtrado en el servidor
+  // Filtrar mazos con filtros del cliente (raza, edición, favoritos, liked)
+  // Los filtros del servidor ya se aplicaron en la API
   const filteredDecks = useMemo(() => {
     let filtered = decksWithMetadata.filter((deck) => {
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
-        const matchesName = deck.name.toLowerCase().includes(searchLower)
-        const matchesDescription = deck.description?.toLowerCase().includes(searchLower) || false
-        if (!matchesName && !matchesDescription) return false
-      }
-
-      if (filters.race && deck.race !== filters.race) return false
-      if (filters.edition && deck.edition !== filters.edition) return false
-      if (filters.format && (deck.format || "RE") !== filters.format) return false
+      // Filtros del cliente
+      if (clientFilters.race && deck.race !== clientFilters.race) return false
+      if (clientFilters.edition && deck.edition !== clientFilters.edition) return false
       // Filtrar por favoritos: solo mostrar si el usuario está logueado y el mazo está en favoritos
-      if (filters.favorites === "favorites") {
+      if (clientFilters.favorites === "favorites") {
         if (!user || !deck.isFavorite) return false
       }
-      if (filters.liked === "liked" && !deck.userLiked) return false
+      if (clientFilters.liked === "liked" && !deck.userLiked) return false
 
       return true
     })
 
-    // Ordenar mazos
-    filtered.sort((a, b) => {
-      let comparison = 0
-
-      switch (sortBy) {
-        case "name":
-          comparison = a.name.localeCompare(b.name, "es", { sensitivity: "base" })
-          break
-        case "edition":
-          const editionA = a.edition || ""
-          const editionB = b.edition || ""
-          comparison = editionA.localeCompare(editionB, "es", { sensitivity: "base" })
-          break
-        case "date":
-          const dateA = a.publishedAt || a.createdAt
-          const dateB = b.publishedAt || b.createdAt
-          comparison = dateA - dateB
-          break
-        case "race":
-          const raceA = a.race || ""
-          const raceB = b.race || ""
-          comparison = raceA.localeCompare(raceB, "es", { sensitivity: "base" })
-          break
-        case "likes":
-          comparison = (a.likeCount || 0) - (b.likeCount || 0)
-          break
-      }
-
-      return sortDirection === "asc" ? comparison : -comparison
-    })
-
     return filtered
-  }, [decksWithMetadata, filters, sortBy, sortDirection, user])
+  }, [decksWithMetadata, clientFilters, user])
 
   // Usar los mazos filtrados directamente (ya están paginados por el servidor)
   const paginatedDecks = filteredDecks
@@ -317,10 +358,10 @@ function MazosComunidadPage() {
     })
   }, [paginatedDecks, allCards, settingsMap, bannerSetting])
 
-  // Resetear página cuando cambian los filtros
+  // Resetear página cuando cambian los filtros del cliente
   useEffect(() => {
     setCurrentPage(1)
-  }, [filters, sortBy, sortDirection])
+  }, [clientFilters])
 
   // Obtener valores únicos para los filtros
   const availableRaces = useMemo(() => {
@@ -347,18 +388,16 @@ function MazosComunidadPage() {
     return Array.from(formats).sort()
   }, [decksWithMetadata])
 
-  const clearFilters = () => {
-    setFilters({
-      search: "",
+  const clearClientFilters = () => {
+    setClientFilters({
       race: "",
       edition: "",
-      format: "",
       favorites: "",
       liked: "",
     })
   }
 
-  const hasActiveFilters = filters.search || filters.race || filters.edition || filters.format || filters.favorites || filters.liked
+  const hasActiveClientFilters = clientFilters.race || clientFilters.edition || clientFilters.favorites || clientFilters.liked
 
   const handleToggleLike = async (deckId: string) => {
     if (!user) return
@@ -466,37 +505,11 @@ function MazosComunidadPage() {
               Mazos de la Comunidad
             </h1>
             <p className="mt-2 text-muted-foreground">
-              {filteredDecks.length} {filteredDecks.length === 1 ? "mazo público" : "mazos públicos"}
-              {hasActiveFilters && ` (de ${publicDecks.length} total)`}
+              {serverPagination?.total ?? filteredDecks.length} {serverPagination?.total === 1 ? "mazo público" : "mazos públicos"}
+              {hasActiveClientFilters && ` (${filteredDecks.length} después de filtros del cliente)`}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortBy)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Alfabético</SelectItem>
-                  <SelectItem value="edition">Edición</SelectItem>
-                  <SelectItem value="date">Fecha</SelectItem>
-                  <SelectItem value="race">Raza</SelectItem>
-                  <SelectItem value="likes">Más gustados</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
-                title={sortDirection === "asc" ? "Orden ascendente" : "Orden descendente"}
-              >
-                {sortDirection === "asc" ? (
-                  <ArrowUp className="h-4 w-4" />
-                ) : (
-                  <ArrowDown className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
             <div className="flex border rounded-md">
               <Button
                 variant={viewMode === "grid" ? "default" : "ghost"}
@@ -521,111 +534,89 @@ function MazosComunidadPage() {
           </div>
         </div>
 
-        {/* Filtros */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Filtros de Búsqueda</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nombre o descripción..."
-                    value={filters.search}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    className="pl-9"
-                  />
+        {/* Filtros del servidor */}
+        <DeckFiltersPanel
+          filters={serverFilters}
+          onFiltersChange={handleServerFiltersChange}
+          onClearFilters={handleClearServerFilters}
+          totalResults={serverPagination?.total}
+          className="mb-6"
+        />
+
+        {/* Filtros del cliente (raza, edición, favoritos, liked) */}
+        {hasActiveClientFilters && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Filtros Adicionales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Select
+                    value={clientFilters.race || "all"}
+                    onValueChange={(value) => setClientFilters({ ...clientFilters, race: value === "all" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas las razas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las razas</SelectItem>
+                      {availableRaces.map((race) => (
+                        <SelectItem key={race} value={race}>
+                          {race}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={clientFilters.edition || "all"}
+                    onValueChange={(value) => setClientFilters({ ...clientFilters, edition: value === "all" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas las ediciones" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las ediciones</SelectItem>
+                      {availableEditions.map((edition) => (
+                        <SelectItem key={edition} value={edition}>
+                          {edition}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {user && (
+                    <>
+                      <Button
+                        variant={clientFilters.favorites === "favorites" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setClientFilters({ ...clientFilters, favorites: clientFilters.favorites === "favorites" ? "" : "favorites" })}
+                        className="w-full"
+                      >
+                        <Star className={`h-4 w-4 mr-2 ${clientFilters.favorites === "favorites" ? "fill-current" : ""}`} />
+                        Solo favoritos
+                      </Button>
+                      <Button
+                        variant={clientFilters.liked === "liked" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setClientFilters({ ...clientFilters, liked: clientFilters.liked === "liked" ? "" : "liked" })}
+                        className="w-full"
+                      >
+                        <Heart className={`h-4 w-4 mr-2 ${clientFilters.liked === "liked" ? "fill-current" : ""}`} />
+                        Solo con Like
+                      </Button>
+                    </>
+                  )}
                 </div>
-                <Select
-                  value={filters.race || "all"}
-                  onValueChange={(value) => setFilters({ ...filters, race: value === "all" ? "" : value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas las razas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las razas</SelectItem>
-                    {availableRaces.map((race) => (
-                      <SelectItem key={race} value={race}>
-                        {race}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={filters.edition || "all"}
-                  onValueChange={(value) => setFilters({ ...filters, edition: value === "all" ? "" : value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas las ediciones" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las ediciones</SelectItem>
-                    {availableEditions.map((edition) => (
-                      <SelectItem key={edition} value={edition}>
-                        {edition}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={filters.format || "all"}
-                  onValueChange={(value) => setFilters({ ...filters, format: value === "all" ? "" : value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos los formatos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los formatos</SelectItem>
-                    {availableFormats.map((format) => (
-                      <SelectItem key={format} value={format}>
-                        {getDeckFormatName(format)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {user && (
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Favoritos:</Label>
-                    <Button
-                      variant={filters.favorites === "favorites" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFilters({ ...filters, favorites: filters.favorites === "favorites" ? "" : "favorites" })}
-                      aria-label={filters.favorites === "favorites" ? "Mostrar todos los mazos" : "Solo favoritos"}
-                    >
-                      <Star className={`h-3 w-3 mr-1 ${filters.favorites === "favorites" ? "fill-current" : ""}`} />
-                      Solo favoritos
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Likes:</Label>
-                    <Button
-                      variant={filters.liked === "liked" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setFilters({ ...filters, liked: filters.liked === "liked" ? "" : "liked" })}
-                      aria-label={filters.liked === "liked" ? "Mostrar todos los mazos" : "Solo con like"}
-                    >
-                      <Heart className={`h-3 w-3 mr-1 ${filters.liked === "liked" ? "fill-current" : ""}`} />
-                      Solo con Like
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={clearClientFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Limpiar Filtros Adicionales
+                  </Button>
                 </div>
-              )}
-            </div>
-            {hasActiveFilters && (
-              <div className="mt-4 flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-2" />
-                  Limpiar Filtros
-                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className={`${viewMode === "grid" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-4"} animate-in fade-in duration-300`}>
@@ -637,19 +628,28 @@ function MazosComunidadPage() {
           <Card>
             <CardHeader>
               <CardTitle>
-                {hasActiveFilters ? "No se encontraron mazos" : "No hay mazos públicos aún"}
+                {(hasActiveClientFilters || serverFilters.search || serverFilters.format || serverFilters.author || serverFilters.dateFrom || serverFilters.dateTo) ? "No se encontraron mazos" : "No hay mazos públicos aún"}
               </CardTitle>
               <CardDescription>
-                {hasActiveFilters
+                {(hasActiveClientFilters || serverFilters.search || serverFilters.format || serverFilters.author || serverFilters.dateFrom || serverFilters.dateTo)
                   ? "Intenta ajustar los filtros para encontrar mazos."
                   : "Sé el primero en compartir tu mazo con la comunidad. Crea un mazo en el Deck Builder y publícalo desde \"Mis Mazos\"."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {hasActiveFilters ? (
-                <Button variant="outline" onClick={clearFilters}>
-                  Limpiar Filtros
-                </Button>
+              {(hasActiveClientFilters || serverFilters.search || serverFilters.format || serverFilters.author || serverFilters.dateFrom || serverFilters.dateTo) ? (
+                <div className="flex gap-2">
+                  {(hasActiveClientFilters) && (
+                    <Button variant="outline" onClick={clearClientFilters}>
+                      Limpiar Filtros Adicionales
+                    </Button>
+                  )}
+                  {(serverFilters.search || serverFilters.format || serverFilters.author || serverFilters.dateFrom || serverFilters.dateTo) && (
+                    <Button variant="outline" onClick={handleClearServerFilters}>
+                      Limpiar Filtros Principales
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <div className="flex gap-3">
                   <Button asChild>

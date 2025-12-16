@@ -56,16 +56,52 @@ export async function getUserDecks(
   }
 }
 
+export interface PublicDecksFilters {
+  search?: string;
+  format?: "RE" | "RL" | "LI" | "";
+  author?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: "publishedAt" | "viewCount" | "createdAt" | "likeCount" | "favoriteCount";
+  sortOrder?: "asc" | "desc";
+  minLikes?: number;
+  minFavorites?: number;
+}
+
 /**
- * Obtiene los mazos públicos desde la API con paginación
+ * Obtiene los mazos públicos desde la API con paginación y filtros
  */
 export async function getPublicDecks(
   page: number = 1,
-  limit: number = 12
+  limit: number = 12,
+  filters?: PublicDecksFilters
 ): Promise<PaginatedResponse<SavedDeck>> {
   try {
+    const params = new URLSearchParams({
+      publicOnly: "true",
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    // Agregar filtros a los parámetros
+    if (filters) {
+      if (filters.search) params.append("search", filters.search);
+      if (filters.format) params.append("format", filters.format);
+      if (filters.author) params.append("author", filters.author);
+      if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.append("dateTo", filters.dateTo);
+      if (filters.sortBy) params.append("sortBy", filters.sortBy);
+      if (filters.sortOrder) params.append("sortOrder", filters.sortOrder);
+      if (filters.minLikes !== undefined && filters.minLikes > 0) {
+        params.append("minLikes", filters.minLikes.toString());
+      }
+      if (filters.minFavorites !== undefined && filters.minFavorites > 0) {
+        params.append("minFavorites", filters.minFavorites.toString());
+      }
+    }
+
     const response = await fetch(
-      `${API_BASE_URL}/api/decks?publicOnly=true&page=${page}&limit=${limit}`
+      `${API_BASE_URL}/api/decks?${params.toString()}`
     );
     
     if (!response.ok) {

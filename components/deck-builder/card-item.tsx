@@ -6,6 +6,8 @@ import { Plus, Minus, X, Info } from "lucide-react"
 import type { Card } from "@/lib/deck-builder/types"
 import { optimizeCloudinaryUrl } from "@/lib/deck-builder/cloudinary-utils"
 import { useDeviceType } from "@/contexts/device-context"
+import { useDraggable } from "@dnd-kit/core"
+import { CSS } from "@dnd-kit/utilities"
 
 interface CardItemProps {
   card: Card
@@ -46,6 +48,27 @@ export const CardItem = memo(function CardItem({
 }: CardItemProps) {
   const touchStartTimeRef = useRef<number | null>(null)
   const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Drag & Drop
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: card.id,
+    data: {
+      type: "card",
+      card,
+    },
+  })
+  
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.6 : 1,
+    transition: isDragging ? 'none' : undefined, // Sin transición durante el drag para mejor rendimiento
+  }
   
   // Obtener tipo de dispositivo desde contexto (compartido, sin overhead)
   const deviceType = useDeviceType()
@@ -89,13 +112,17 @@ export const CardItem = memo(function CardItem({
 
   return (
     <div
-      className="group relative aspect-[63/88] cursor-pointer rounded-2xl overflow-hidden select-none"
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`group relative aspect-[63/88] cursor-grab active:cursor-grabbing rounded-2xl overflow-hidden select-none ${isDragging ? "z-50" : ""}`}
       role="button"
       tabIndex={0}
       aria-label={`${card.name} - ${quantity > 0 ? `Cantidad: ${quantity}` : 'No está en el mazo'}`}
       onClick={() => {
-        // Solo ejecutar click si no se activó el long press
-        if (!touchTimeoutRef.current || Date.now() - (touchStartTimeRef.current || 0) < 800) {
+        // Solo ejecutar click si no se activó el long press y no se está arrastrando
+        if (!isDragging && (!touchTimeoutRef.current || Date.now() - (touchStartTimeRef.current || 0) < 800)) {
           onCardClick(card)
         }
         // Limpiar timeout si existe

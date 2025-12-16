@@ -32,6 +32,9 @@ model User {
   collection  UserCollection?
   comments    Comment[]
   notifications Notification[]
+  // Relaciones de seguimiento
+  followers   Follow[] @relation("UserFollowers") // Usuarios que me siguen
+  following   Follow[] @relation("UserFollowing") // Usuarios que sigo
 
   @@map("users")
 }
@@ -270,5 +273,22 @@ model DeckPanelBannerSettings {
   @@index([context])
   @@index([backgroundImageId])
   @@map("deck_panel_banner_settings")
+}
+
+model Follow {
+  id        String   @id @default(cuid())
+  followerId String // Usuario que sigue
+  followingId String // Usuario seguido
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  follower  User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@index([createdAt])
+  @@map("follows")
 }
 

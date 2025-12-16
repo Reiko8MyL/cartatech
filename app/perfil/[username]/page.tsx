@@ -18,7 +18,8 @@ import {
 } from "@/lib/deck-builder/utils"
 import { useCards } from "@/hooks/use-cards"
 import type { DeckFormat } from "@/lib/deck-builder/types"
-import { Eye, Calendar, Heart, Globe, User, ArrowLeft, Star, TrendingUp, BookOpen } from "lucide-react"
+import { Eye, Calendar, Heart, Globe, User, ArrowLeft, Star, TrendingUp, BookOpen, Users, UserPlus } from "lucide-react"
+import { FollowButton } from "@/components/user/follow-button"
 import { DeckCardSkeleton } from "@/components/ui/deck-card-skeleton"
 import { optimizeCloudinaryUrl, detectDeviceType, isCloudinaryOptimized } from "@/lib/deck-builder/cloudinary-utils"
 import { AvatarCard } from "@/components/ui/avatar-card"
@@ -157,16 +158,35 @@ export default function UserProfilePage() {
                 />
               </div>
               <div className="flex-1 space-y-3">
-                <div>
-                  <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-primary via-primary/80 to-secondary bg-clip-text text-transparent">
-                    {profile.user.username}
-                  </h1>
-                  <div className="flex items-center gap-2 mt-3 text-muted-foreground">
-                    <div className="p-1.5 rounded-full bg-primary/10">
-                      <User className="h-4 w-4 text-primary" />
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-primary via-primary/80 to-secondary bg-clip-text text-transparent">
+                      {profile.user.username}
+                    </h1>
+                    <div className="flex items-center gap-2 mt-3 text-muted-foreground">
+                      <div className="p-1.5 rounded-full bg-primary/10">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">Miembro desde {joinDate}</span>
                     </div>
-                    <span className="text-sm font-medium">Miembro desde {joinDate}</span>
                   </div>
+                  <FollowButton
+                    username={username}
+                    variant="default"
+                    size="default"
+                    onFollowChange={(isFollowing, followerCount) => {
+                      // Actualizar contador de seguidores en el perfil
+                      if (profile) {
+                        setProfile({
+                          ...profile,
+                          stats: {
+                            ...profile.stats,
+                            followerCount,
+                          },
+                        });
+                      }
+                    }}
+                  />
                 </div>
                 {profile.user.bio && (
                   <div className="mt-4 p-4 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
@@ -181,7 +201,7 @@ export default function UserProfilePage() {
 
           {/* Estadísticas mejoradas */}
           <CardContent className="p-6 sm:p-8 bg-gradient-to-b from-transparent to-muted/20">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
               <div className="text-center p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 hover:border-primary/40 hover:shadow-lg transition-all duration-300 group">
                 <div className="flex items-center justify-center mb-3">
                   <div className="p-3 rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors">
@@ -217,6 +237,24 @@ export default function UserProfilePage() {
                 </div>
                 <p className="text-4xl font-extrabold text-foreground mb-1">{profile.stats.totalViews}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground font-medium">Vistas Totales</p>
+              </div>
+              <div className="text-center p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 hover:border-purple-500/40 hover:shadow-lg transition-all duration-300 group">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="p-3 rounded-full bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
+                    <Users className="h-6 w-6 text-purple-500" />
+                  </div>
+                </div>
+                <p className="text-4xl font-extrabold text-foreground mb-1">{profile.stats.followerCount || 0}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">Seguidores</p>
+              </div>
+              <div className="text-center p-5 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 hover:border-cyan-500/40 hover:shadow-lg transition-all duration-300 group">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="p-3 rounded-full bg-cyan-500/20 group-hover:bg-cyan-500/30 transition-colors">
+                    <UserPlus className="h-6 w-6 text-cyan-500" />
+                  </div>
+                </div>
+                <p className="text-4xl font-extrabold text-foreground mb-1">{profile.stats.followingCount || 0}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">Siguiendo</p>
               </div>
             </div>
           </CardContent>

@@ -276,6 +276,22 @@ export function filterCards(cards: Card[], filters: DeckFilters, deckFormat?: De
     filtered = filtered.filter((card) => card.isUnique);
   }
 
+  // Filtrar solo cartas disponibles según ban list (según el formato del deck)
+  // Muestra solo cartas que NO están baneadas (banListValue > 0)
+  if (filters.showOnlyAvailable && deckFormat) {
+    filtered = filtered.filter((card) => {
+      // Obtener el valor de ban list según el formato, con fallback a 3 (Libre) si es null/undefined
+      const banListValue = deckFormat === "RE" 
+        ? (card.banListRE ?? 3)
+        : deckFormat === "RL" 
+        ? (card.banListRL ?? 3)
+        : (card.banListLI ?? 3);
+      
+      // Solo mostrar cartas disponibles (no baneadas)
+      return banListValue > 0;
+    });
+  }
+
   // Filtrar solo cartas afectadas por ban list (según el formato del deck)
   // Debe mostrar solo las cartas que tienen el tag rojo visible, igual que en card-item.tsx
   // Tag rojo se muestra cuando: banListValue === 0 (BAN), banListValue === 1 && !isUnique (Max 1), banListValue === 2 (Max 2)

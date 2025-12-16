@@ -20,6 +20,7 @@ interface DeckHeaderProps {
   allCards: CardType[]
   onDragStart?: (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => void
   isMobile?: boolean
+  totalCards: number
 }
 
 export function DeckHeader({
@@ -31,6 +32,7 @@ export function DeckHeader({
   allCards,
   onDragStart,
   isMobile = false,
+  totalCards,
 }: DeckHeaderProps) {
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
@@ -137,6 +139,10 @@ export function DeckHeader({
             <h2 className="text-xl font-semibold flex-1 truncate">
               {deckName || "Mazo sin nombre"}
             </h2>
+            {/* Badge de total de cartas */}
+            <div className="px-2.5 py-1 bg-muted rounded-md text-sm font-medium">
+              {totalCards}/50
+            </div>
             {!currentDeck?.id && (
               <Button
                 size="icon"
