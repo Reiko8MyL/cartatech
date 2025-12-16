@@ -22,7 +22,7 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ✅ Sistema de banners personalizados
 - ✅ Optimizaciones de Next.js (compresión, imágenes, bundle analyzer)
 - ✅ Code splitting de componentes grandes (deck-management-panel reducido de 1826 a 691 líneas, ~62% de reducción)
-- ✅ Code splitting de componentes grandes (deck-management-panel reducido de 1826 a 691 líneas)
+- ✅ Sistema de búsqueda global con autocompletado e historial
 
 ### 🔄 En Progreso / Pendiente Alta Prioridad
 - ⏳ Metadatos dinámicos por página (SEO)
@@ -236,20 +236,30 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 
 ---
 
-### 3.3 Sistema de Búsqueda Global 🟢
+### 3.3 Sistema de Búsqueda Global ✅
 
-**Estado Actual:** ⚠️ Búsqueda limitada a componentes específicos
+**Estado Actual:** ✅ Sistema de búsqueda global con autocompletado implementado
 
-**Mejoras Necesarias:**
+**Mejoras Implementadas:**
 
-- [ ] **Autocompletado inteligente**
-  - Sugerencias mientras el usuario escribe
-  - Búsqueda en tiempo real de cartas y mazos
-  - Historial de búsquedas recientes
+- [x] **Autocompletado inteligente**
+  - ✅ Sugerencias mientras el usuario escribe (debounce de 300ms)
+  - ✅ Búsqueda en tiempo real de cartas y mazos (separada por tipo)
+  - ✅ Historial de búsquedas recientes (localStorage, máximo 10 por tipo)
+  - ✅ Navegación con teclado (flechas, Enter, Esc)
+  - ✅ Integración con React Query para caché
+  - ✅ Rate limiting en API
 
-**Archivos a crear:**
-- `components/search/autocomplete.tsx`
-- `app/api/search/autocomplete/route.ts`
+**Archivos creados:**
+- ✅ `components/search/search-autocomplete.tsx` - Componente principal con autocompletado
+- ✅ `app/api/search/autocomplete/route.ts` - API de autocompletado
+- ✅ `lib/api/search.ts` - Funciones cliente para la API
+- ✅ `lib/search/search-history.ts` - Gestión de historial de búsquedas
+
+**Archivos modificados:**
+- ✅ `components/home/hero-search.tsx` - Actualizado para usar SearchAutocomplete
+
+**Impacto esperado:** ✅ Mejor UX en búsqueda, descubrimiento más rápido de contenido - COMPLETADO
 
 ---
 
