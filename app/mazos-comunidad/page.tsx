@@ -490,7 +490,7 @@ function MazosComunidadPage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Sidebar de anuncios en desktop */}
         {/* DESACTIVADO TEMPORALMENTE - Para reactivar, descomentar la sección siguiente */}
@@ -963,7 +963,7 @@ function MazosComunidadPage() {
 export default function MazosComunidadPageWrapper() {
   return (
     <Suspense fallback={
-      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (

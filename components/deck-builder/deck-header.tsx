@@ -127,10 +127,20 @@ export function DeckHeader({
               className="flex-1"
               autoFocus
             />
-            <Button size="icon" variant="ghost" onClick={handleSaveName}>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              onClick={handleSaveName}
+              aria-label="Guardar nombre del mazo"
+            >
               <Check className="size-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={handleCancelEdit}>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              onClick={handleCancelEdit}
+              aria-label="Cancelar edición del nombre"
+            >
               <X className="size-4" />
             </Button>
           </>
@@ -151,6 +161,7 @@ export function DeckHeader({
                   setTempName(deckName)
                   setIsEditingName(true)
                 }}
+                aria-label="Editar nombre del mazo"
                 title="Editar nombre del mazo"
               >
                 <Edit2 className="size-4" />
@@ -161,6 +172,7 @@ export function DeckHeader({
                 size="icon"
                 variant="ghost"
                 disabled
+                aria-label="El nombre del mazo se edita desde el modal de guardar"
                 title="El nombre del mazo se edita desde el modal de guardar"
                 className="cursor-not-allowed"
               >

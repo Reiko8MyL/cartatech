@@ -357,7 +357,7 @@ export default function MisMazosPage() {
 
   if (!user) {
     return (
-      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Mis Mazos</h1>
           <Card className="mt-6">
@@ -384,7 +384,7 @@ export default function MisMazosPage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>

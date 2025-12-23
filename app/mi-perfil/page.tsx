@@ -337,7 +337,7 @@ export default function MiPerfilPage() {
 
   if (isLoading) {
     return (
-      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <Skeleton className="h-48 w-full mb-6 rounded-lg" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -352,7 +352,7 @@ export default function MiPerfilPage() {
 
   if (!profile) {
     return (
-      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <Card>
             <CardHeader>
@@ -376,7 +376,7 @@ export default function MiPerfilPage() {
   })
 
   return (
-    <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <main id="main-content" className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
         <Button
           variant="ghost"

@@ -508,7 +508,7 @@ function GaleriaContent() {
     filters.showOnlyRework === true
 
   return (
-    <main className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 px-4 sm:px-6 md:px-8 lg:px-6 xl:px-8 py-4 max-w-[1920px] mx-auto">
+    <main id="main-content" className="w-full min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row gap-4 px-4 sm:px-6 md:px-8 lg:px-6 xl:px-8 py-4 max-w-[1920px] mx-auto">
       {/* Sidebar izquierdo - Filtros y opciones - 20% más estrecho */}
       <aside className="w-full lg:w-64 xl:w-[307px] flex-shrink-0 space-y-4">
         {/* Header con título y contador - Solo visible en móvil */}
@@ -568,9 +568,9 @@ function GaleriaContent() {
       <div className="flex-1 min-w-0">
         {/* Header con título y contador - Solo visible en desktop */}
         <div className="hidden lg:block mb-4">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-1">
             Galería de Cartas
-          </h1>
+          </h2>
           <p className="text-sm sm:text-base text-muted-foreground">
             {hasActiveFilters ? (
               <>

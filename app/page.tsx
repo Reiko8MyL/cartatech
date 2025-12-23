@@ -19,7 +19,7 @@ export const metadata: Metadata = genMeta({
 export default function Home() {
   return (
     <>
-      <main className="flex flex-col">
+      <main id="main-content" className="flex flex-col">
         {/* Hero Section con fondo de imagen - Ocupa toda la altura del viewport */}
         <section
           className="relative h-screen flex items-start justify-center px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 md:pt-20 hero-section"

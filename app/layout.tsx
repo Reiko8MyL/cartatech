@@ -16,6 +16,7 @@ import { AdSenseScript } from "@/components/ads/adsense-script";
 import { WebsiteJsonLd } from "@/components/seo/json-ld";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { DeviceProvider } from "@/contexts/device-context";
+import { SkipLinks } from "@/components/accessibility/skip-links";
 
 // Lazy load componentes pesados que no son críticos para el render inicial
 // WelcomeTour: Solo se muestra después de interacción del usuario
@@ -211,6 +212,7 @@ export default function RootLayout({
             <DeviceProvider>
           <ErrorBoundary>
             <AuthProviderWrapper>
+              <SkipLinks />
               <ScrollToTop />
               <Navbar />
               {/* Banner superior de anuncios - Solo visible en desktop */}
@@ -227,6 +229,13 @@ export default function RootLayout({
                 position="top-right"
                 richColors
                 closeButton
+              />
+              {/* Aria-live region para notificaciones dinámicas */}
+              <div 
+                aria-live="polite" 
+                aria-atomic="true" 
+                className="sr-only"
+                id="toast-announcements"
               />
               {/* WelcomeTour: Carga diferida, no bloquea render inicial */}
               <Suspense fallback={null}>

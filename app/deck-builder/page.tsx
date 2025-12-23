@@ -585,7 +585,7 @@ function DeckBuilderContent() {
         onConfirm={confirmClearDeck}
         variant="default"
       />
-      <main className="w-full h-full flex flex-col px-2 sm:px-4 lg:px-6 pb-0">
+      <main id="main-content" className="w-full h-full flex flex-col px-2 sm:px-4 lg:px-6 pb-0">
         <h1 className="sr-only">Deck Builder - Constructor de Mazos</h1>
         
         {/* Panel de filtros - Solo visible en móvil/tablet */}
@@ -768,7 +768,7 @@ function DeckBuilderContent() {
 export default function DeckBuilderPage() {
   return (
     <Suspense fallback={
-      <main className="w-full h-full flex flex-col px-2 sm:px-4 lg:px-6 pb-0">
+      <main id="main-content" className="w-full h-full flex flex-col px-2 sm:px-4 lg:px-6 pb-0">
         {/* Panel de filtros - Solo visible en móvil/tablet */}
         <div className="mb-0 lg:hidden">
           <div className="h-20 bg-muted animate-pulse rounded-lg" />
