@@ -9,6 +9,7 @@ export interface UserProfile {
     avatarPositionX: number | null
     avatarPositionY: number | null
     bio: string | null
+    profileBannerImage: string | null
     createdAt: number
   }
   stats: {
@@ -43,6 +44,7 @@ export interface MyProfile {
     avatarPositionX: number | null
     avatarPositionY: number | null
     bio: string | null
+    profileBannerImage: string | null
     createdAt: number
     updatedAt: number
   }
@@ -207,6 +209,7 @@ export async function updateMyProfile(
     avatarPositionX?: number | null
     avatarPositionY?: number | null
     bio?: string | null
+    profileBannerImage?: string | null
   }
 ): Promise<{ success: boolean; user?: MyProfile['user']; error?: string }> {
   try {

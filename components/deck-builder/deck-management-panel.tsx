@@ -18,7 +18,6 @@ import {
 import type { DeckCard, DeckStats, SavedDeck, DeckFormat } from "@/lib/deck-builder/types"
 import type { Card as CardType } from "@/lib/deck-builder/types"
 import {
-  generateDeckCode,
   getUserDecksFromLocalStorage,
   getSavedDecksFromLocalStorage,
   deleteDeckFromLocalStorage,
@@ -43,8 +42,8 @@ const SaveDeckModal = dynamic(
 )
 
 // Lazy load componentes pesados
-const ExportImageModal = dynamic(
-  () => import("./export-image-modal").then((mod) => ({ default: mod.ExportImageModal })),
+const ExportDeckModal = dynamic(
+  () => import("./export-deck-modal").then((mod) => ({ default: mod.ExportDeckModal })),
   {
     loading: () => null
   }
@@ -140,7 +139,6 @@ export function DeckManagementPanel({
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([])
   const [isLoadingDecks, setIsLoadingDecks] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deckToDelete, setDeckToDelete] = useState<string | null>(null)
   
@@ -171,36 +169,6 @@ export function DeckManagementPanel({
     isMobile,
   })
 
-  function handleCopyCode() {
-    const code = generateDeckCode(deckCards)
-    try {
-      if (
-        typeof navigator !== "undefined" &&
-        navigator.clipboard &&
-        typeof navigator.clipboard.writeText === "function"
-      ) {
-        void navigator.clipboard.writeText(code)
-      } else if (typeof document !== "undefined") {
-        const textarea = document.createElement("textarea")
-        textarea.value = code
-        textarea.style.position = "fixed"
-        textarea.style.opacity = "0"
-        document.body.appendChild(textarea)
-        textarea.focus()
-        textarea.select()
-        try {
-          document.execCommand("copy")
-        } finally {
-          document.body.removeChild(textarea)
-        }
-      }
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      toastSuccess("Código TTS copiado al portapapeles")
-    } catch {
-      toastError("No se pudo copiar el código TTS. Por favor cópialo manualmente.")
-    }
-  }
 
   function handleSaveDeck() {
     if (!user) {
@@ -369,51 +337,6 @@ export function DeckManagementPanel({
     } finally {
       setDeckToDelete(null)
     }
-  }
-
-  async function handleExportList() {
-    // Usar cardMap que ya incluye las alternativas
-    const typeOrder = ["Aliado", "Arma", "Talismán", "Tótem", "Oro"]
-    const lookup = cardMap
-    const ordered = [...deckCards]
-      .filter((d) => d.quantity > 0)
-      .sort((a, b) => {
-        const ca = lookup.get(a.cardId)
-        const cb = lookup.get(b.cardId)
-        if (!ca || !cb) return 0
-        const ta = typeOrder.indexOf(ca.type)
-        const tb = typeOrder.indexOf(cb.type)
-        if (ta !== tb) return ta - tb
-        const costA = ca.cost ?? 0
-        const costB = cb.cost ?? 0
-        return costA - costB
-      })
-
-    const lines: string[] = []
-    for (const d of ordered) {
-      const c = lookup.get(d.cardId)
-      if (c) lines.push(`${d.quantity}x ${c.name}`)
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    
-    // Tracking de analytics (no bloqueante)
-    if (currentDeck?.id) {
-      const deckId = currentDeck.id;
-      import("@/lib/analytics/events").then(({ trackDeckExported }) => {
-        trackDeckExported(deckId, "list");
-      }).catch(() => {
-        // Silenciar errores de analytics
-      });
-    }
-    
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${deckName || "mazo"}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
   }
 
   // Funciones de exportación de imágenes movidas a lib/deck-builder/export-image-utils.ts
@@ -620,15 +543,12 @@ export function DeckManagementPanel({
 
         {/* Botones de acción */}
         <DeckActionsBar
-          copied={copied}
           currentDeck={currentDeck}
           user={user}
-          onCopyCode={handleCopyCode}
           onSave={handleSaveDeck}
           onLoad={openLoadDialog}
           onClear={onClearDeck}
           onExportImage={handleExportImage}
-          onExportList={handleExportList}
         />
 
       {/* Lista de cartas del mazo */}
@@ -678,10 +598,10 @@ export function DeckManagementPanel({
         </Suspense>
       )}
 
-      {/* Modal de exportación de imagen */}
+      {/* Modal de exportación de mazo */}
       {showExportModal && (
         <Suspense fallback={null}>
-          <ExportImageModal
+          <ExportDeckModal
             isOpen={showExportModal}
             onClose={() => setShowExportModal(false)}
             deckName={deckName}
@@ -689,6 +609,11 @@ export function DeckManagementPanel({
             stats={stats}
             allCards={allCards}
             cardMap={cardMap}
+            deckFormat={deckFormat}
+            description={currentDeck?.description}
+            tags={currentDeck?.tags}
+            techCardId={currentDeck?.techCardId}
+            backgroundImage={currentDeck?.backgroundImage}
             currentDeckId={currentDeck?.id}
           />
         </Suspense>

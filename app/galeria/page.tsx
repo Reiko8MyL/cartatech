@@ -638,6 +638,7 @@ function GaleriaContent() {
                                   fill
                                   className="object-contain"
                                   sizes="(max-width: 640px) 40px, 48px"
+                                  unoptimized
                                 />
                               </div>
                             )}

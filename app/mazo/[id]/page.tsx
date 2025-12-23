@@ -1659,6 +1659,7 @@ export default function ViewDeckPage() {
                               sizes="40px"
                               loading="lazy"
                               decoding="async"
+                              unoptimized
                             />
                           </div>
                         )}

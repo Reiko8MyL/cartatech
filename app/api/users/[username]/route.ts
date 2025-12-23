@@ -29,6 +29,7 @@ export async function GET(
         avatarPositionX: true,
         avatarPositionY: true,
         bio: true,
+        profileBannerImage: true,
         createdAt: true,
       },
     })

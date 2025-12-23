@@ -648,24 +648,24 @@ export const FiltersPanel = memo(function FiltersPanel({
                         Solo Disponibles
                       </label>
                     </div>
-                    <div className="flex items-center space-x-1.5">
-                      <Checkbox
-                        id="filter-banned-expanded"
-                        checked={filters.showOnlyBanned === true}
-                        onCheckedChange={(checked) => {
-                          onFiltersChange({
-                            ...filters,
-                            showOnlyBanned: checked === true,
-                          })
-                        }}
-                      />
-                      <label
-                        htmlFor="filter-banned-expanded"
-                        className="text-xs cursor-pointer select-none"
-                      >
-                        En Ban List
-                      </label>
-                    </div>
+                  <div className="flex items-center space-x-1.5">
+                    <Checkbox
+                      id="filter-banned-expanded"
+                      checked={filters.showOnlyBanned === true}
+                      onCheckedChange={(checked) => {
+                        onFiltersChange({
+                          ...filters,
+                          showOnlyBanned: checked === true,
+                        })
+                      }}
+                    />
+                    <label
+                      htmlFor="filter-banned-expanded"
+                      className="text-xs cursor-pointer select-none"
+                    >
+                      En Ban List
+                    </label>
+                  </div>
                   </>
                 )}
                 <div className="flex items-center space-x-1.5">

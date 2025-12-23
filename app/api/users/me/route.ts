@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
           avatarPositionX: true,
           avatarPositionY: true,
           bio: true,
+          profileBannerImage: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -346,7 +347,7 @@ export async function PUT(request: NextRequest) {
   try {
     const userId = request.headers.get("x-user-id") || request.nextUrl.searchParams.get("userId");
     const body = await request.json();
-    const { avatarCardId, avatarZoom, avatarPositionX, avatarPositionY, bio } = body;
+    const { avatarCardId, avatarZoom, avatarPositionX, avatarPositionY, bio, profileBannerImage } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -447,6 +448,7 @@ export async function PUT(request: NextRequest) {
         ...(avatarPositionX !== undefined && { avatarPositionX: positionXValue }),
         ...(avatarPositionY !== undefined && { avatarPositionY: positionYValue }),
         ...(bio !== undefined && { bio: bio || null }), // Permitir eliminar bio con string vacío
+        ...(profileBannerImage !== undefined && { profileBannerImage: profileBannerImage || null }), // Permitir eliminar banner con null
       },
       select: {
         id: true,
@@ -458,6 +460,7 @@ export async function PUT(request: NextRequest) {
         avatarPositionX: true,
         avatarPositionY: true,
         bio: true,
+        profileBannerImage: true,
         createdAt: true,
         updatedAt: true,
       },

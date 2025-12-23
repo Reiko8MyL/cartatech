@@ -20,6 +20,7 @@ model User {
   avatarPositionX Float?  // Posición X del extracto (0-100, porcentaje)
   avatarPositionY Float?  // Posición Y del extracto (0-100, porcentaje)
   bio       String?  // Biografía o descripción del usuario
+  profileBannerImage String?  // URL de la imagen de fondo del banner del perfil
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

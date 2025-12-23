@@ -44,3 +44,13 @@ export default function RegistroLayout({
 
 
 
+
+
+
+
+
+
+
+
+
+

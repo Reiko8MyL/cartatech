@@ -1101,6 +1101,7 @@ export default function AgregarCartaPage() {
                       fill
                       className="object-contain"
                       onError={() => setPreviewImage(null)}
+                      unoptimized={previewImage.includes('res.cloudinary.com')}
                     />
                   </div>
                 )}

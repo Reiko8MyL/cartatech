@@ -2,15 +2,65 @@ import type { Card, DeckCard, DeckStats } from "./types"
 import { getDeckEditionLogo, getAllyIconUrl } from "./utils"
 
 /**
- * Función auxiliar para cargar imágenes
+ * Optimiza una URL de Cloudinary para exportación de alta calidad
+ * Obtiene la imagen en máxima resolución sin reducir tamaño
+ * Usa q_100 (máxima calidad) y f_auto (mejor formato automático)
  */
-export function loadImage(src: string): Promise<HTMLImageElement> {
+function optimizeCloudinaryUrlForExport(imageUrl: string): string {
+  // Si no es Cloudinary, retornar tal cual
+  if (!imageUrl.includes('res.cloudinary.com') || !imageUrl.includes('/upload/')) {
+    return imageUrl
+  }
+  
+  const uploadIndex = imageUrl.indexOf('/upload/')
+  const beforeUpload = imageUrl.substring(0, uploadIndex + 8) // '/upload/'
+  const afterUpload = imageUrl.substring(uploadIndex + 8)
+  
+  // Si ya tiene transformaciones (w_, h_, c_, f_, q_, etc.), reemplazarlas
+  // Buscar el patrón: transformaciones seguido de /v o /folder
+  // Ejemplo: /upload/w_300,q_auto,f_auto/v123456/file.webp
+  // Queremos: /upload/q_100,f_auto/v123456/file.webp
+  
+  // Buscar si tiene una versión (v123456) o un folder después de las transformaciones
+  const pathMatch = afterUpload.match(/\/(v\d+\/|.*\/)([^\/]+\.(webp|jpg|jpeg|png))/)
+  
+  if (pathMatch) {
+    // Reconstruir con solo calidad y formato, sin limitaciones de tamaño
+    return `${beforeUpload}q_100,f_auto/${pathMatch[1]}${pathMatch[2]}`
+  }
+  
+  // Si no encontramos el patrón esperado, intentar extraer el nombre del archivo directamente
+  const fileNameMatch = afterUpload.match(/([^\/]+\.(webp|jpg|jpeg|png))$/)
+  if (fileNameMatch) {
+    // Buscar si hay una versión antes del nombre del archivo
+    const versionBeforeFile = afterUpload.match(/(v\d+\/)/)
+    if (versionBeforeFile) {
+      const versionIndex = afterUpload.indexOf(versionBeforeFile[1])
+      const pathAfterVersion = afterUpload.substring(versionIndex)
+      return `${beforeUpload}q_100,f_auto/${pathAfterVersion}`
+    }
+    // Si no hay versión, usar solo el nombre del archivo
+    return `${beforeUpload}q_100,f_auto/${fileNameMatch[1]}`
+  }
+  
+  // Fallback: agregar optimizaciones al inicio (funcionará si no hay transformaciones previas)
+  return `${beforeUpload}q_100,f_auto/${afterUpload}`
+}
+
+/**
+ * Función auxiliar para cargar imágenes con alta calidad para exportación
+ */
+export function loadImage(src: string, forExport: boolean = false): Promise<HTMLImageElement> {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new window.Image()
     img.crossOrigin = "anonymous"
+    
+    // Optimizar URL para exportación si es necesario
+    const optimizedSrc = forExport ? optimizeCloudinaryUrlForExport(src) : src
+    
     img.onload = () => resolve(img)
     img.onerror = reject
-    img.src = src
+    img.src = optimizedSrc
   })
 }
 
@@ -196,6 +246,7 @@ interface CardToDraw {
 
 /**
  * Genera imagen horizontal (1920x1080)
+ * Usa super-sampling (2x) para mejor calidad de texto e imágenes
  */
 export async function generateHorizontalImage(
   deckName: string,
@@ -206,31 +257,54 @@ export async function generateHorizontalImage(
 ): Promise<string | null> {
   if (typeof document === "undefined") return null
 
-  const canvas = document.createElement("canvas")
-  const width = 1920
-  const height = 1080
-  canvas.width = width
-  canvas.height = height
+  // Resolución final
+  const finalWidth = 1920
+  const finalHeight = 1080
+  
+  // Factor de super-sampling (2x para mejor calidad)
+  const scaleFactor = 2
+  const renderWidth = finalWidth * scaleFactor
+  const renderHeight = finalHeight * scaleFactor
 
-  const ctx = canvas.getContext("2d")
-  if (!ctx) return null
+  // Canvas de renderizado a alta resolución
+  const renderCanvas = document.createElement("canvas")
+  renderCanvas.width = renderWidth
+  renderCanvas.height = renderHeight
 
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = "high"
+  const renderCtx = renderCanvas.getContext("2d")
+  if (!renderCtx) return null
+
+  // Configurar contexto para máxima calidad
+  renderCtx.imageSmoothingEnabled = true
+  renderCtx.imageSmoothingQuality = "high"
+  
+  // Escalar el contexto para que todas las coordenadas sean relativas a la resolución final
+  renderCtx.scale(scaleFactor, scaleFactor)
+  
+  // Canvas final para exportar
+  const finalCanvas = document.createElement("canvas")
+  finalCanvas.width = finalWidth
+  finalCanvas.height = finalHeight
+  const finalCtx = finalCanvas.getContext("2d")
+  if (!finalCtx) return null
+  
+  finalCtx.imageSmoothingEnabled = true
+  finalCtx.imageSmoothingQuality = "high"
 
   try {
-    const layoutTop = await drawTitleAndBadges(ctx, width, deckName, stats, deckCards, allCards)
+    // Usar renderCtx para dibujar todo
+    const layoutTop = await drawTitleAndBadges(renderCtx, finalWidth, deckName, stats, deckCards, allCards)
 
     // Dibujar logo de edición en la esquina superior derecha
     const editionLogoUrl = getDeckEditionLogo(deckCards, allCards)
     if (editionLogoUrl) {
       try {
-        const editionLogo = await loadImage(editionLogoUrl)
+        const editionLogo = await loadImage(editionLogoUrl, true)
         const logoSize = 80 // Tamaño del logo
         const logoMargin = 20 // Margen desde los bordes
-        const logoX = width - logoSize - logoMargin
+        const logoX = finalWidth - logoSize - logoMargin
         const logoY = logoMargin
-        ctx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
+        renderCtx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
       } catch {
         // Si falla la carga del logo, continuar sin él
       }
@@ -305,7 +379,7 @@ export async function generateHorizontalImage(
 
     const marginLeft = 80
     const marginRight = 80
-    const usableRight = width - marginRight
+    const usableRight = finalWidth - marginRight
 
     // Simular layout para calcular escala
     let simulatedCurrentY = layoutTop
@@ -336,7 +410,7 @@ export async function generateHorizontalImage(
     }
 
     // Calcular factor de escala
-    const availableHeight = height - layoutTop - 40
+    const availableHeight = finalHeight - layoutTop - 40
     const usedHeight = simulatedCurrentY - layoutTop
     let scale = 1
     if (usedHeight > 0 && availableHeight > 0) {
@@ -380,8 +454,9 @@ export async function generateHorizontalImage(
           const x = baseX + i * stackOffset
           const y = baseY
           try {
-            const img = await loadImage(card.image)
-            ctx.drawImage(img, x, y, cardWidth, cardHeight)
+            // Cargar imagen en alta calidad para exportación
+            const img = await loadImage(card.image, true)
+            renderCtx.drawImage(img, x, y, cardWidth, cardHeight)
           } catch {
             // ignore
           }
@@ -393,7 +468,10 @@ export async function generateHorizontalImage(
       currentY = rowY + cardHeight + gapY
     }
 
-    return canvas.toDataURL("image/png", 1.0)
+    // Escalar el canvas de alta resolución al tamaño final con alta calidad
+    finalCtx.drawImage(renderCanvas, 0, 0, finalWidth, finalHeight)
+    
+    return finalCanvas.toDataURL("image/png", 1.0)
   } catch {
     return null
   }
@@ -401,6 +479,7 @@ export async function generateHorizontalImage(
 
 /**
  * Genera imagen vertical (1080x1080) para Instagram
+ * Usa super-sampling (2x) para mejor calidad de texto e imágenes
  */
 export async function generateVerticalImage(
   deckName: string,
@@ -411,32 +490,54 @@ export async function generateVerticalImage(
 ): Promise<string | null> {
   if (typeof document === "undefined") return null
 
-  const canvas = document.createElement("canvas")
-  const width = 1080
-  const height = 1080
-  canvas.width = width
-  canvas.height = height
+  // Resolución final
+  const finalWidth = 1080
+  const finalHeight = 1080
+  
+  // Factor de super-sampling (2x para mejor calidad)
+  const scaleFactor = 2
+  const renderWidth = finalWidth * scaleFactor
+  const renderHeight = finalHeight * scaleFactor
 
-  const ctx = canvas.getContext("2d")
-  if (!ctx) return null
+  // Canvas de renderizado a alta resolución
+  const renderCanvas = document.createElement("canvas")
+  renderCanvas.width = renderWidth
+  renderCanvas.height = renderHeight
 
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = "high"
+  const renderCtx = renderCanvas.getContext("2d")
+  if (!renderCtx) return null
+
+  // Configurar contexto para máxima calidad
+  renderCtx.imageSmoothingEnabled = true
+  renderCtx.imageSmoothingQuality = "high"
+  
+  // Escalar el contexto para que todas las coordenadas sean relativas a la resolución final
+  renderCtx.scale(scaleFactor, scaleFactor)
+  
+  // Canvas final para exportar
+  const finalCanvas = document.createElement("canvas")
+  finalCanvas.width = finalWidth
+  finalCanvas.height = finalHeight
+  const finalCtx = finalCanvas.getContext("2d")
+  if (!finalCtx) return null
+  
+  finalCtx.imageSmoothingEnabled = true
+  finalCtx.imageSmoothingQuality = "high"
 
   try {
     // Dibujar fondo cortado desde la derecha
-    const layoutTop = await drawTitleAndBadges(ctx, width, deckName, stats, deckCards, allCards, true)
+    const layoutTop = await drawTitleAndBadges(renderCtx, finalWidth, deckName, stats, deckCards, allCards, true)
 
     // Dibujar logo de edición en la esquina superior derecha
     const editionLogoUrl = getDeckEditionLogo(deckCards, allCards)
     if (editionLogoUrl) {
       try {
-        const editionLogo = await loadImage(editionLogoUrl)
+        const editionLogo = await loadImage(editionLogoUrl, true)
         const logoSize = 80 // Tamaño del logo
         const logoMargin = 20 // Margen desde los bordes
-        const logoX = width - logoSize - logoMargin
+        const logoX = finalWidth - logoSize - logoMargin
         const logoY = logoMargin
-        ctx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
+        renderCtx.drawImage(editionLogo, logoX, logoY, logoSize, logoSize)
       } catch {
         // Si falla la carga del logo, continuar sin él
       }
@@ -528,8 +629,8 @@ export async function generateVerticalImage(
     const marginBottom = 40
     
     // Calcular tamaño de carta para que quepa en el espacio disponible
-    const availableHeight = height - layoutTop - marginBottom
-    const availableWidth = width - marginLeft - marginRight
+    const availableHeight = finalHeight - layoutTop - marginBottom
+    const availableWidth = finalWidth - marginLeft - marginRight
     const gap = 8
     
     const maxCardWidth = (availableWidth - (cols - 1) * gap) / cols
@@ -548,7 +649,7 @@ export async function generateVerticalImage(
 
     // Centrar el grid horizontalmente
     const totalGridWidth = cols * actualCardWidth + (cols - 1) * gap
-    const startX = (width - totalGridWidth) / 2
+    const startX = (finalWidth - totalGridWidth) / 2
     const startY = layoutTop
 
     // Dibujar cartas en grid con contadores
@@ -561,8 +662,9 @@ export async function generateVerticalImage(
       const y = startY + row * (actualCardHeight + gap)
 
       try {
-        const img = await loadImage(card.image)
-        ctx.drawImage(img, x, y, actualCardWidth, actualCardHeight)
+        // Cargar imagen en alta calidad para exportación
+        const img = await loadImage(card.image, true)
+        renderCtx.drawImage(img, x, y, actualCardWidth, actualCardHeight)
         
         // Dibujar contador si hay más de una copia
         if (quantity > 1) {
@@ -571,28 +673,31 @@ export async function generateVerticalImage(
           const counterX = x + actualCardWidth / 2
           const counterY = y + counterRadius
           
-          ctx.beginPath()
-          ctx.arc(counterX, counterY, counterRadius, 0, Math.PI * 2)
-          ctx.fillStyle = "rgba(0, 0, 0, 0.4)"
-          ctx.fill()
+          renderCtx.beginPath()
+          renderCtx.arc(counterX, counterY, counterRadius, 0, Math.PI * 2)
+          renderCtx.fillStyle = "rgba(0, 0, 0, 0.4)"
+          renderCtx.fill()
           
-          // Texto del contador
-          ctx.fillStyle = "white"
-          ctx.font = "bold 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
-          ctx.textAlign = "center"
-          ctx.textBaseline = "middle"
-          ctx.fillText(String(quantity), counterX, counterY)
+          // Texto del contador con mejor calidad
+          renderCtx.fillStyle = "white"
+          renderCtx.font = "bold 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+          renderCtx.textAlign = "center"
+          renderCtx.textBaseline = "middle"
+          renderCtx.fillText(String(quantity), counterX, counterY)
           
           // Restaurar alineación por defecto
-          ctx.textAlign = "left"
-          ctx.textBaseline = "top"
+          renderCtx.textAlign = "left"
+          renderCtx.textBaseline = "top"
         }
       } catch {
         // ignore
       }
     }
 
-    return canvas.toDataURL("image/png", 1.0)
+    // Escalar el canvas de alta resolución al tamaño final con alta calidad
+    finalCtx.drawImage(renderCanvas, 0, 0, finalWidth, finalHeight)
+    
+    return finalCanvas.toDataURL("image/png", 1.0)
   } catch {
     return null
   }

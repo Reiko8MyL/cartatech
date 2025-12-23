@@ -11,12 +11,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/contexts/auth-context"
 import { getMyProfile, updateMyProfile, type MyProfile } from "@/lib/api/users"
-import { Save, User, Mail, Calendar, Globe, Lock, ArrowLeft, Loader2, ImageIcon, X, Eye, BookOpen, Heart, TrendingUp, Star, Edit2 } from "lucide-react"
+import { Save, User, Mail, Calendar, Globe, Lock, ArrowLeft, Loader2, ImageIcon, X, Eye, BookOpen, Heart, TrendingUp, Star, Edit2, EyeIcon, Palette } from "lucide-react"
 import { toast } from "sonner"
 import { useCards } from "@/hooks/use-cards"
 import { AvatarCard } from "@/components/ui/avatar-card"
 import { AvatarCardSelector } from "@/components/profile/avatar-card-selector"
 import { AvatarEditor } from "@/components/profile/avatar-editor"
+import { ProfileBannerSelector } from "@/components/profile/profile-banner-selector"
+import { PublicProfileView } from "@/components/profile/public-profile-view"
+import { getUserProfile, type UserProfile } from "@/lib/api/users"
 import {
   Dialog,
   DialogContent,
@@ -50,6 +53,10 @@ export default function MiPerfilPage() {
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false)
   const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false)
   const [editingCardId, setEditingCardId] = useState<string | null>(null)
+  const [isBannerSelectorOpen, setIsBannerSelectorOpen] = useState(false)
+  const [isPublicViewOpen, setIsPublicViewOpen] = useState(false)
+  const [publicProfile, setPublicProfile] = useState<UserProfile | null>(null)
+  const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false)
   const deviceType = useDeviceType()
   
   // Cargar todas las cartas para el selector
@@ -152,6 +159,48 @@ export default function MiPerfilPage() {
       toast.error("Error al guardar el perfil")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleSelectBanner = async (bannerUrl: string | null) => {
+    if (!currentUser?.id || !profile) return
+
+    setIsSaving(true)
+    try {
+      const result = await updateMyProfile(currentUser.id, {
+        profileBannerImage: bannerUrl,
+      })
+
+      if (result.success && result.user) {
+        setProfile({
+          ...profile,
+          user: result.user,
+        })
+        toast.success("Banner actualizado correctamente")
+      } else {
+        toast.error(result.error || "Error al actualizar el banner")
+      }
+    } catch (error) {
+      console.error("Error al guardar banner:", error)
+      toast.error("Error al guardar el banner")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleOpenPublicView = async () => {
+    if (!currentUser?.username) return
+    
+    setIsLoadingPublicProfile(true)
+    setIsPublicViewOpen(true)
+    try {
+      const publicProfileData = await getUserProfile(currentUser.username)
+      setPublicProfile(publicProfileData)
+    } catch (error) {
+      console.error("Error al cargar vista pública:", error)
+      toast.error("Error al cargar la vista pública")
+    } finally {
+      setIsLoadingPublicProfile(false)
     }
   }
 
@@ -304,7 +353,21 @@ export default function MiPerfilPage() {
 
         {/* Header del perfil mejorado */}
         <Card className="overflow-hidden border-2 shadow-xl">
-          <div className="relative bg-gradient-to-br from-primary/30 via-secondary/20 to-primary/10 p-8 sm:p-10">
+          <div 
+            className="relative bg-gradient-to-br from-primary/30 via-secondary/20 to-primary/10 p-8 sm:p-10"
+            style={{
+              backgroundImage: profile.user.profileBannerImage 
+                ? `url(${profile.user.profileBannerImage})`
+                : `url(https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/minilogo_pc0v1m.webp)`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              opacity: 0.7,
+            }}
+          >
+            {/* Overlay oscuro adicional para mejor contraste */}
+            <div className="absolute inset-0 bg-black/20" />
+            
             {/* Patrón de fondo sutil */}
             <div className="absolute inset-0 opacity-[0.03]">
               <div className="absolute inset-0" style={{
@@ -312,7 +375,30 @@ export default function MiPerfilPage() {
                 backgroundSize: '24px 24px'
               }} />
             </div>
-            <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-8">
+            
+            {/* Botones de acción en la esquina superior derecha */}
+            <div className="absolute top-4 right-4 z-30 flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsBannerSelectorOpen(true)}
+                disabled={isSaving}
+                className="bg-background/90 backdrop-blur-sm hover:bg-background"
+              >
+                <Palette className="h-4 w-4 mr-2" />
+                Cambiar Banner
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenPublicView}
+                className="bg-background/90 backdrop-blur-sm hover:bg-background"
+              >
+                <EyeIcon className="h-4 w-4 mr-2" />
+                Vista Público
+              </Button>
+            </div>
+            <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-8 z-10">
               {/* Avatar con controles */}
               <div className="relative group">
                 {/* Efecto de resplandor detrás del avatar */}
@@ -861,6 +947,40 @@ export default function MiPerfilPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Selector de banner */}
+        <ProfileBannerSelector
+          isOpen={isBannerSelectorOpen}
+          onClose={() => setIsBannerSelectorOpen(false)}
+          currentBannerImage={profile.user.profileBannerImage}
+          onSelect={handleSelectBanner}
+        />
+
+        {/* Modal de vista pública */}
+        <Dialog open={isPublicViewOpen} onOpenChange={setIsPublicViewOpen}>
+          <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Vista Público</DialogTitle>
+              <DialogDescription>
+                Así es como otros usuarios verán tu perfil público
+              </DialogDescription>
+            </DialogHeader>
+            {isLoadingPublicProfile ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : publicProfile ? (
+              <PublicProfileView 
+                profile={publicProfile}
+                currentUserId={currentUser?.id}
+              />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                No se pudo cargar la vista pública
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   )
