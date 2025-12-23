@@ -104,12 +104,6 @@ export function Navbar() {
                     Mi Perfil
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/perfil/${user.username}`}>
-                    <Globe className="mr-2 h-4 w-4" />
-                    Ver Perfil Público
-                  </Link>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/mis-mazos" className="cursor-pointer">

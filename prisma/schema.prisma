@@ -21,6 +21,13 @@ model User {
   avatarPositionY Float?  // Posición Y del extracto (0-100, porcentaje)
   bio       String?  // Biografía o descripción del usuario
   profileBannerImage String?  // URL de la imagen de fondo del banner del perfil
+  country   String?  // País del usuario
+  region    String?  // Región/estado del usuario
+  city      String?  // Ciudad del usuario
+  favoriteRaces Json?  // Array de razas favoritas (máx 3) ["Raza1", "Raza2", "Raza3"]
+  favoriteFormat String?  // Formato favorito: "RE", "RL", "LI"
+  team      String?  // Team al que pertenece
+  preferredStore String?  // Tienda TCG preferida
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

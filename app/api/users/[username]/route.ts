@@ -30,6 +30,13 @@ export async function GET(
         avatarPositionY: true,
         bio: true,
         profileBannerImage: true,
+        country: true,
+        region: true,
+        city: true,
+        favoriteRaces: true,
+        favoriteFormat: true,
+        team: true,
+        preferredStore: true,
         createdAt: true,
       },
     })
@@ -109,9 +116,20 @@ export async function GET(
     const duration = Date.now() - startTime;
     log.api('GET', `/api/users/${username}`, 200, duration);
     
+    // Parsear favoriteRaces si es un string JSON
+    let favoriteRacesParsed = user.favoriteRaces;
+    if (typeof user.favoriteRaces === 'string') {
+      try {
+        favoriteRacesParsed = JSON.parse(user.favoriteRaces);
+      } catch (e) {
+        favoriteRacesParsed = null;
+      }
+    }
+
     return NextResponse.json({
       user: {
         ...user,
+        favoriteRaces: favoriteRacesParsed,
         createdAt: user.createdAt.getTime(),
       },
       stats: {

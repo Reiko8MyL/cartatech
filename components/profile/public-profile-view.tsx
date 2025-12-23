@@ -63,17 +63,21 @@ export function PublicProfileView({ profile, currentUserId, onFollowChange }: Pu
   return (
     <div className="space-y-8">
       {/* Header del perfil mejorado */}
-      <Card className="overflow-hidden border-2 shadow-xl">
+      <Card className="overflow-hidden shadow-xl">
         <div 
           className="relative bg-gradient-to-br from-primary/30 via-secondary/20 to-primary/10 p-8 sm:p-10"
-          style={{
-            backgroundImage: `url(${bannerImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            opacity: 0.7,
-          }}
         >
+          {/* Imagen de fondo con opacidad */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${bannerImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              opacity: 0.7,
+            }}
+          />
           {/* Overlay oscuro adicional para mejor contraste */}
           <div className="absolute inset-0 bg-black/20" />
           
@@ -92,7 +96,7 @@ export function PublicProfileView({ profile, currentUserId, onFollowChange }: Pu
               <div className="absolute inset-0 bg-secondary/20 rounded-full blur-xl" />
               <AvatarCard
                 card={profile.user.avatarCardId ? allCards.find((c) => c.id === profile.user.avatarCardId) || null : null}
-                size={140}
+                size={168}
                 username={profile.user.username}
                 zoom={profile.user.avatarZoom ?? 1.0}
                 positionX={profile.user.avatarPositionX ?? 50}
@@ -119,6 +123,60 @@ export function PublicProfileView({ profile, currentUserId, onFollowChange }: Pu
                   <p className="text-sm sm:text-base text-foreground/90 leading-relaxed">
                     {profile.user.bio}
                   </p>
+                </div>
+              )}
+              
+              {/* Información adicional */}
+              {(profile.user.country || profile.user.region || profile.user.city || 
+                (Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0) ||
+                profile.user.favoriteFormat || profile.user.team || profile.user.preferredStore) && (
+                <div className="mt-4 p-4 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {(profile.user.country || profile.user.region || profile.user.city) && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-semibold">Ubicación</p>
+                        <p className="text-sm">
+                          {[profile.user.city, profile.user.region, profile.user.country]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-semibold">Razas Favoritas</p>
+                        <div className="flex flex-wrap gap-2">
+                          {profile.user.favoriteRaces.map((race) => (
+                            <span key={race} className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
+                              {race}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {profile.user.favoriteFormat && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-semibold">Formato Favorito</p>
+                        <p className="text-sm">{getDeckFormatName(profile.user.favoriteFormat as DeckFormat)}</p>
+                      </div>
+                    )}
+                    
+                    {profile.user.team && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-semibold">Team</p>
+                        <p className="text-sm">{profile.user.team}</p>
+                      </div>
+                    )}
+                    
+                    {profile.user.preferredStore && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-semibold">Tienda TCG Preferida</p>
+                        <p className="text-sm">{profile.user.preferredStore}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

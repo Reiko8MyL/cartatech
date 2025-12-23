@@ -57,6 +57,13 @@ export async function GET(request: NextRequest) {
           avatarPositionY: true,
           bio: true,
           profileBannerImage: true,
+          country: true,
+          region: true,
+          city: true,
+          favoriteRaces: true,
+          favoriteFormat: true,
+          team: true,
+          preferredStore: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -347,7 +354,21 @@ export async function PUT(request: NextRequest) {
   try {
     const userId = request.headers.get("x-user-id") || request.nextUrl.searchParams.get("userId");
     const body = await request.json();
-    const { avatarCardId, avatarZoom, avatarPositionX, avatarPositionY, bio, profileBannerImage } = body;
+    const { 
+      avatarCardId, 
+      avatarZoom, 
+      avatarPositionX, 
+      avatarPositionY, 
+      bio, 
+      profileBannerImage,
+      country,
+      region,
+      city,
+      favoriteRaces,
+      favoriteFormat,
+      team,
+      preferredStore,
+    } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -449,6 +470,13 @@ export async function PUT(request: NextRequest) {
         ...(avatarPositionY !== undefined && { avatarPositionY: positionYValue }),
         ...(bio !== undefined && { bio: bio || null }), // Permitir eliminar bio con string vacío
         ...(profileBannerImage !== undefined && { profileBannerImage: profileBannerImage || null }), // Permitir eliminar banner con null
+        ...(country !== undefined && { country: country || null }),
+        ...(region !== undefined && { region: region || null }),
+        ...(city !== undefined && { city: city || null }),
+        ...(favoriteRaces !== undefined && { favoriteRaces: favoriteRaces && Array.isArray(favoriteRaces) ? favoriteRaces : null }),
+        ...(favoriteFormat !== undefined && { favoriteFormat: favoriteFormat || null }),
+        ...(team !== undefined && { team: team || null }),
+        ...(preferredStore !== undefined && { preferredStore: preferredStore || null }),
       },
       select: {
         id: true,
@@ -461,6 +489,13 @@ export async function PUT(request: NextRequest) {
         avatarPositionY: true,
         bio: true,
         profileBannerImage: true,
+        country: true,
+        region: true,
+        city: true,
+        favoriteRaces: true,
+        favoriteFormat: true,
+        team: true,
+        preferredStore: true,
         createdAt: true,
         updatedAt: true,
       },

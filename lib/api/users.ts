@@ -10,6 +10,13 @@ export interface UserProfile {
     avatarPositionY: number | null
     bio: string | null
     profileBannerImage: string | null
+    country: string | null
+    region: string | null
+    city: string | null
+    favoriteRaces: string[] | null
+    favoriteFormat: string | null
+    team: string | null
+    preferredStore: string | null
     createdAt: number
   }
   stats: {
@@ -45,6 +52,13 @@ export interface MyProfile {
     avatarPositionY: number | null
     bio: string | null
     profileBannerImage: string | null
+    country: string | null
+    region: string | null
+    city: string | null
+    favoriteRaces: string[] | null
+    favoriteFormat: string | null
+    team: string | null
+    preferredStore: string | null
     createdAt: number
     updatedAt: number
   }
@@ -210,6 +224,13 @@ export async function updateMyProfile(
     avatarPositionY?: number | null
     bio?: string | null
     profileBannerImage?: string | null
+    country?: string | null
+    region?: string | null
+    city?: string | null
+    favoriteRaces?: string[] | null
+    favoriteFormat?: string | null
+    team?: string | null
+    preferredStore?: string | null
   }
 ): Promise<{ success: boolean; user?: MyProfile['user']; error?: string }> {
   try {
