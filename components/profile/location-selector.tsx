@@ -65,7 +65,6 @@ const LOCATION_DATA: Record<string, Record<string, string[]>> = {
   },
 }
 
-const COUNTRIES = Object.keys(LOCATION_DATA)
 
 interface LocationSelectorProps {
   country?: string | null
@@ -171,9 +170,12 @@ export function LocationSelector({
           <Input
             id="country"
             type="text"
-            placeholder="Buscar país..."
+            placeholder={country ? country : "Buscar país..."}
             value={countrySearch}
-            onChange={(e) => setCountrySearch(e.target.value)}
+            onChange={(e) => {
+              setCountrySearch(e.target.value)
+              setCountryOpen(true)
+            }}
             onFocus={() => setCountryOpen(true)}
             className="pr-10"
           />
@@ -198,18 +200,18 @@ export function LocationSelector({
           )}
         </div>
         {country && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Seleccionado:</span>
-            <span className="text-sm font-medium">{country}</span>
+          <div className="flex items-center gap-2 mt-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => {
                 onCountryChange(null)
                 setCountrySearch("")
               }}
+              className="h-7"
             >
-              ×
+              <X className="h-3 w-3 mr-1" />
+              {country}
             </Button>
           </div>
         )}
@@ -223,7 +225,7 @@ export function LocationSelector({
             <Input
               id="region"
               type="text"
-              placeholder="Buscar región..."
+              placeholder={region ? region : "Buscar región..."}
               value={regionSearch}
               onChange={(e) => {
                 setRegionSearch(e.target.value)
@@ -260,18 +262,18 @@ export function LocationSelector({
             )}
           </div>
           {region && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Seleccionado:</span>
-              <span className="text-sm font-medium">{region}</span>
+            <div className="flex items-center gap-2 mt-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   onRegionChange(null)
                   setRegionSearch("")
                 }}
+                className="h-7"
               >
-                ×
+                <X className="h-3 w-3 mr-1" />
+                {region}
               </Button>
             </div>
           )}
@@ -286,7 +288,7 @@ export function LocationSelector({
             <Input
               id="city"
               type="text"
-              placeholder="Buscar ciudad..."
+              placeholder={city ? city : "Buscar ciudad..."}
               value={citySearch}
               onChange={(e) => {
                 setCitySearch(e.target.value)
@@ -323,18 +325,18 @@ export function LocationSelector({
             )}
           </div>
           {city && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Seleccionado:</span>
-              <span className="text-sm font-medium">{city}</span>
+            <div className="flex items-center gap-2 mt-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   onCityChange(null)
                   setCitySearch("")
                 }}
+                className="h-7"
               >
-                ×
+                <X className="h-3 w-3 mr-1" />
+                {city}
               </Button>
             </div>
           )}

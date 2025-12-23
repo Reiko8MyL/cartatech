@@ -1,9 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Lock, Globe } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Button } from "@/components/ui/button"
+import { Lock, Globe, ChevronDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface PrivacySettingsProps {
   showLocation: boolean
@@ -30,18 +34,32 @@ export function PrivacySettings({
   onShowTeamChange,
   onShowPreferredStoreChange,
 }: PrivacySettingsProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Lock className="h-5 w-5" />
-          Configuración de Privacidad
-        </CardTitle>
-        <CardDescription>
-          Controla qué información quieres mostrar en tu perfil público
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                <CardTitle>Configuración de Privacidad</CardTitle>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  isOpen && "transform rotate-180"
+                )}
+              />
+            </div>
+            <CardDescription>
+              Controla qué información quieres mostrar en tu perfil público
+            </CardDescription>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="show-location" className="flex items-center gap-2">
@@ -113,8 +131,10 @@ export function PrivacySettings({
             checked={showPreferredStore}
             onCheckedChange={onShowPreferredStoreChange}
           />
-        </div>
-      </CardContent>
+          </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   )
 }
