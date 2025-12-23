@@ -1,0 +1,396 @@
+---
+alwaysApply: true
+---
+
+# Contexto del Proyecto CartaTech - Estado de Producción
+
+## Estado Actual del Proyecto
+
+**El sitio está en PRODUCCIÓN y funcionando en la web.**
+
+**Última actualización de documentación**: Enero 2025
+
+### Estado de Implementación Reciente
+
+**✅ Completado (Enero 2025):**
+- ✅ Sistema de Perfiles Mejorado: Banners personalizados para perfiles, campos adicionales (ubicación, razas favoritas, formato favorito, team, tienda TCG), configuración de privacidad colapsable, vista pública integrada en perfil privado
+- ✅ LocationSelector Completo: Base de datos completa de países latinoamericanos y principales con todas sus regiones y ciudades/comunas (más de 300 comunas para Chile)
+- ✅ Optimización de Imágenes: Todos los componentes Image que usan Cloudinary tienen `unoptimized` configurado para evitar consumir transformaciones de Vercel. Sistema completo de optimización con Cloudinary para todas las imágenes del proyecto.
+
+**✅ Completado (Diciembre 2024):**
+- ✅ SEO y Metadatos: Metadatos dinámicos implementados en todas las páginas principales, Schema.org JSON-LD completo (mazos, usuarios, listas, breadcrumbs)
+- ✅ Paginación: Implementada en todas las listas grandes (mazos públicos, comentarios, panel de administración)
+- ✅ Analytics: Todos los eventos críticos implementados y funcionando (crear mazo, publicar, favoritar, comentar, buscar cartas, exportar, compartir)
+- ✅ Code Splitting: `deck-management-panel` refactorizado (reducido de ~1826 a 691 líneas, ~62% de reducción)
+- ✅ Sistema de Compartir: Mejorado con códigos cortos, previews OG mejorados, botones de redes sociales, soporte para Web Share API
+- ✅ Sistema de Seguimiento (Follow): Implementado sistema completo de seguidores/seguidos con APIs, UI en perfiles y notificaciones
+- ✅ Mejoras en Deck Builder: Badge de total de cartas, sistema de Drag & Drop para agregar y reordenar cartas, filtros mejorados
+- ✅ Exportación de Mazos Mejorada: Modal unificado con formatos Imagen (alta calidad con super-sampling 2x), Lista (Texto) y TTS Code
+
+**⏳ Pendiente Alta Prioridad:**
+- Filtros avanzados en mazos públicos (por formato, raza, fecha, popularidad)
+- Exportación avanzada (PDF, formatos especializados)
+
+### Información de Despliegue
+- **URL de Producción**: https://www.cartatech.cl/
+- **Plataforma de Hosting**: Vercel
+- **Estado**: Desplegado y activo
+- **Repositorio GitHub**: https://github.com/Reiko8MyL/cartatech
+- **Rama Principal**: `main`
+
+### Información Técnica
+- **Framework**: Next.js 16.0.7 (App Router)
+- **Lenguaje**: TypeScript 5.x
+- **Estilos**: Tailwind CSS 4 (@tailwindcss/postcss) + Shadcn UI + Radix UI
+- **Base de Datos**: PostgreSQL con Prisma (migración completada)
+- **ORM**: Prisma 7.0.1 con adapter PostgreSQL (@prisma/adapter-pg)
+- **Autenticación**: Sistema personalizado con APIs REST (NextAuth 5.0.0-beta.30 instalado pero no implementado aún)
+- **React**: 19.2.1
+- **Cliente API**: Funciones en `lib/api/` con soporte para `NEXT_PUBLIC_API_URL` y fallback a rutas relativas
+- **Sistema de Roles**: Implementado con funciones de autorización (`lib/auth/authorization`)
+- **Rate Limiting**: Sistema implementado en memoria (`lib/rate-limit/rate-limit`) con configuraciones por tipo de endpoint
+- **Logging**: Sistema de logging estructurado (`lib/logging/logger`) para tracking de operaciones y errores
+- **Analytics**: Google Analytics 4 (GA4) con `@next/third-parties` y Vercel Analytics (`@vercel/analytics`, `@vercel/speed-insights`)
+- **Monetización**: Google AdSense implementado con sistema de anuncios en múltiples posiciones
+- **Onboarding**: Sistema de tour de bienvenida (`components/onboarding/welcome-tour`) para nuevos usuarios
+- **UI Components**: Radix UI primitives, Shadcn UI components, Lucide React icons, Sonner para toasts
+- **Estado**: React hooks nativos (useState, useEffect, useMemo, useCallback), Context API para autenticación
+- **Gestión de Estado URL**: No se usa `nuqs` actualmente (no instalado en package.json)
+- **Data Fetching**: `@tanstack/react-query` v5.90.12 para gestión de estado del servidor y caché (✅ IMPLEMENTADO Y EN USO - QueryProvider configurado en `components/providers/query-provider.tsx`, hooks disponibles: `useCardsQuery`, `usePublicDecksQuery`, `useUserDecksQuery`, `useDeckQuery`, `useInvalidateDecks`)
+- **Virtualización**: `@tanstack/react-virtual` v3.13.13 para renderizado eficiente de listas largas (✅ IMPLEMENTADO - Componentes VirtualizedCardGrid y VirtualizedEditionGrid disponibles en `components/galeria/`, pueden usarse cuando sea necesario para listas muy largas)
+- **Manejo de Errores**: React Error Boundary (`react-error-boundary`) para captura de errores en componentes
+- **Drag & Drop**: Implementado con `@dnd-kit` para gestión fluida de cartas en el Deck Builder
+
+### Estado de Migración a Base de Datos
+
+#### ✅ Completado
+- **Infraestructura**: Esquema de Prisma completo con modelos: User, Deck, DeckVersion, FavoriteDeck, DeckLike, Vote, UserCollection, Comment, Notification, Card, CardMetadata, ShareCode, DeckPanelBannerSettings, Follow
+- **APIs Públicas Implementadas**:
+ - ✅ `/api/auth/register` - Registro de usuarios con validación de edad
+ - ✅ `/api/auth/login` - Inicio de sesión con bcrypt
+ - ✅ `/api/decks` - CRUD completo de mazos (GET con soporte para `publicOnly=true`, POST con validación de ID duplicado)
+ - ✅ `/api/decks/[id]` - Operaciones individuales (GET con incremento de viewCount, PUT con validación de permisos, DELETE)
+ - ✅ `/api/decks/[id]/versions` - Historial de versiones (GET)
+ - ✅ `/api/decks/[id]/comments` - Sistema de comentarios (GET con respuestas anidadas, POST con validaciones)
+ - ✅ `/api/decks/[id]/comments/[commentId]` - Editar/eliminar comentarios (PUT, DELETE)
+ - ✅ `/api/favorites` - Gestión de favoritos (GET, POST, DELETE)
+ - ✅ `/api/favorites/toggle` - Alternar favoritos
+ - ✅ `/api/likes` - Sistema de likes (GET con filtros)
+ - ✅ `/api/likes/toggle` - Alternar likes
+ - ✅ `/api/votes` - Sistema de votación de comunidad (GET, POST con validación de raza única)
+ - ✅ `/api/collection` - Colección de cartas del usuario (GET, POST, PUT)
+ - ✅ `/api/notifications` - Sistema de notificaciones (GET con manejo de errores opcionales, PUT para marcar como leídas)
+ - ✅ `/api/users/[username]` - Perfil de usuario con estadísticas (GET con agregaciones, incluye campos de perfil y configuración de privacidad)
+ - ✅ `/api/users/me` - Perfil privado del usuario actual (GET, PUT con todos los campos de perfil y privacidad)
+ - ✅ `/api/users/[username]/follow` - Sistema de seguimiento (POST, DELETE)
+ - ✅ `/api/users/[username]/followers` - Lista de seguidores (GET)
+ - ✅ `/api/users/[username]/following` - Lista de usuarios seguidos (GET)
+ - ✅ `/api/users/[username]/follow-status` - Estado de seguimiento (GET)
+ - ✅ `/api/cards` - Obtener todas las cartas (GET con soporte para `includeAlternatives` y `format`)
+ - ✅ `/api/cards/[cardId]` - Obtener carta específica (GET)
+ - ✅ `/api/cards/metadata` - Obtener metadata de cartas (GET)
+ - ✅ `/api/cards/[cardId]/metadata` - Gestión de metadata de carta (GET, PUT, DELETE)
+ - ✅ `/api/banner-settings` - Obtener ajustes de banners (GET público)
+ - ✅ `/api/decks/[id]/share` - Gestión de códigos de compartir (GET, POST)
+ - ✅ `/api/share/[code]` - Redirigir desde código corto (GET)
+ - ✅ `/api/og/deck/[id]` - Generar imagen OG para mazos (GET)
+- **APIs de Administración Implementadas**:
+ - ✅ `/api/admin/stats` - Estadísticas del dashboard (GET, requiere MODERATOR o ADMIN)
+ - ✅ `/api/admin/users` - Lista de usuarios con búsqueda (GET, requiere ADMIN)
+ - ✅ `/api/admin/users/[userId]` - Actualizar rol de usuario (PUT, requiere ADMIN)
+ - ✅ `/api/admin/cards` - Crear cartas en base de datos (POST, requiere ADMIN)
+ - ✅ `/api/admin/ban-list` - Gestión de ban list (GET, PUT, requiere ADMIN)
+ - ✅ `/api/admin/ban-list/batch` - Actualización masiva de ban list (PUT, requiere ADMIN)
+ - ✅ `/api/admin/comments` - Moderación de comentarios (GET, requiere MODERATOR o ADMIN)
+ - ✅ `/api/admin/comments/[commentId]` - Eliminar comentarios (DELETE, requiere MODERATOR o ADMIN)
+ - ✅ `/api/admin/banner-settings` - Gestión de ajustes de banners (GET, PUT, DELETE, requiere ADMIN)
+ - ✅ `/api/admin/upload-banner-image` - Subir imágenes de banner a Cloudinary (POST, requiere ADMIN)
+- **Funcionalidades Migradas**:
+ - ✅ Mazos (Decks) - Con fallback a localStorage, creación automática de versiones
+ - ✅ Favoritos - Con fallback a localStorage
+ - ✅ Likes de mazos - Con fallback a localStorage
+ - ✅ Vistas de mazos (viewCount) - Incremento automático al ver mazos públicos
+ - ✅ Votos de comunidad - Con fallback a localStorage, validación de raza única por usuario
+ - ✅ Colección de cartas - Con fallback a localStorage, sincronización completa
+ - ✅ Comentarios en mazos - Sistema completo con respuestas anidadas, validaciones robustas
+ - ✅ Notificaciones - Sistema de notificaciones para interacciones, manejo silencioso de errores
+ - ✅ Perfiles de usuario - Visualización de perfiles públicos con estadísticas agregadas y contadores de seguimiento
+ - ✅ Sistema de Seguimiento - Seguir/dejar de seguir usuarios con notificaciones
+ - ✅ Cartas en base de datos - Sistema completo de cartas con soporte para cartas alternativas y ban list
+ - ✅ Metadata de cartas - Sistema para almacenar posiciones personalizadas y otros metadatos
+ - ✅ Panel de administración - Dashboard completo con estadísticas, gestión de usuarios, cartas y moderación
+ - ✅ Sistema de compartir - Códigos cortos para compartir mazos con analytics de clics
+ - ✅ Sistema de banners - Ajustes personalizados de visualización de banners por contexto y dispositivo
+ - ✅ Open Graph Images - Generación dinámica de imágenes OG para previews en redes sociales
+ - ✅ Perfiles Personalizados - Banners personalizados para perfiles, campos adicionales (país, región, ciudad, razas favoritas, formato favorito, team, tienda TCG), configuración de privacidad por campo
+ - ✅ Vista Pública Integrada - Vista pública del perfil accesible desde perfil privado mediante botón "Vista Público", cambios reflejados inmediatamente
+- **Seguridad**: Contraseñas hasheadas con bcrypt (12 rounds), validaciones en cliente y servidor, verificación de permisos en todas las operaciones de escritura, sistema de roles (USER, MODERATOR, ADMIN), rate limiting en APIs críticas, headers de seguridad en `next.config.ts` (X-Content-Type-Options, X-Frame-Options)
+
+#### 🔄 Pendiente / Mejoras Futuras
+- **Autenticación**: NextAuth está instalado pero no implementado (actualmente usa sistema personalizado)
+- **Componentes**: Algunos componentes aún usan funciones de localStorage directamente, pero tienen fallback automático
+- **Optimizaciones de Rendimiento**:
+ - ✅ React Query implementado y en uso (cartas, mazos públicos, mazos de usuario)
+ - ✅ Virtualización implementada (componentes VirtualizedCardGrid y VirtualizedEditionGrid disponibles)
+ - ✅ Lazy loading de componentes pesados (WelcomeTour, Analytics, SpeedInsights, CardsPanel, DeckManagementPanel)
+ - ✅ Memoización de cálculos costosos (totalCards, decksWithComputedValues)
+ - ✅ Paginación implementada en listas grandes (mazos públicos, comentarios, panel de administración)
+ - ✅ SEO y metadatos dinámicos implementados (metadata exports en páginas, Schema.org JSON-LD para mazos, usuarios, listas y breadcrumbs)
+ - ✅ Eventos de Analytics implementados (todos los eventos críticos trackeados: crear mazo, publicar, favoritar, comentar, buscar cartas, exportar, compartir)
+ - ✅ Code splitting completado (deck-management-panel refactorizado, reducido de ~1826 a 691 líneas, ~62% de reducción)
+ - ✅ Sistema de compartir mejorado (códigos cortos, previews OG mejorados, botones de redes sociales, Web Share API)
+ - ✅ Exportación de alta calidad (super-sampling 2x para imágenes nítidas)
+ - ⏳ Caché adicional de metadata de cartas con React Query - Pendiente
+ - ✅ Optimización de imágenes con Cloudinary: Todos los componentes Image configurados con `unoptimized` para evitar transformaciones de Vercel
+- ⏳ Optimización de imágenes adicionales (blur placeholders) - Pendiente
+- **Funcionalidades Adicionales**:
+ - Exportación de mazos en formatos PDF o especializados
+ - Búsqueda avanzada con filtros múltiples en comunidad
+ - Historial de búsquedas recientes
+- **Testing**:
+ - Unit tests para funciones utilitarias
+ - Integration tests para APIs
+ - E2E tests para flujos críticos
+- **PWA**: Implementar Progressive Web App con service worker y manifest
+
+### Arquitectura de Datos
+- **Base de Datos**: PostgreSQL (Vercel Postgres recomendado)
+- **ORM**: Prisma con adapter PostgreSQL
+- **Fallback**: Sistema híbrido que usa base de datos cuando el usuario está autenticado, localStorage para usuarios no autenticados
+- **Sesión**: Usuario guardado en localStorage solo para mantener sesión, todos los datos persistentes en base de datos
+- **Modelos Principales**:
+ - `User`: Usuarios con roles (USER, MODERATOR, ADMIN), campos de perfil (avatar, bio, banner, ubicación, preferencias, configuración de privacidad)
+ - `Deck`: Mazos con versionado automático y soporte para imágenes de fondo personalizadas
+ - `Card`: Cartas del juego almacenadas en BD con soporte para alternativas
+ - `CardMetadata`: Metadatos personalizados de cartas (posiciones, etc.)
+ - `Comment`: Sistema de comentarios con respuestas anidadas
+ - `Notification`: Sistema de notificaciones para interacciones
+ - `ShareCode`: Códigos cortos para compartir mazos con analytics
+ - `DeckPanelBannerSettings`: Ajustes de visualización de banners por contexto, vista y dispositivo
+ - `Follow`: Modelo para sistema de seguidores entre usuarios
+ - `FavoriteDeck`, `DeckLike`, `Vote`, `UserCollection`: Interacciones del usuario
+- **Campos de Perfil de Usuario**:
+ - `avatarCardId`, `avatarZoom`, `avatarPositionX`, `avatarPositionY`: Personalización de avatar
+ - `bio`: Biografía del usuario
+ - `profileBannerImage`: URL de imagen de fondo del banner del perfil (opacidad 70% aplicada automáticamente)
+ - `country`, `region`, `city`: Ubicación del usuario (con base de datos completa de países latinoamericanos)
+ - `favoriteRaces`: Array de razas favoritas (máx 3) almacenado como JSON
+ - `favoriteFormat`: Formato favorito (RE, RL, LI)
+ - `team`: Team al que pertenece (texto libre)
+ - `preferredStore`: Tienda TCG preferida (texto libre)
+ - `showLocation`, `showFavoriteRaces`, `showFavoriteFormat`, `showTeam`, `showPreferredStore`: Configuración de privacidad (boolean, default: true)
+
+### Consideraciones Importantes
+- **Cualquier cambio en el código se desplegará automáticamente a producción** cuando se haga push a la rama `main` en GitHub
+- **Siempre verificar que los cambios funcionen localmente** antes de hacer commit y push
+- **El sitio está en uso real por usuarios**, por lo que los cambios deben ser cuidadosos y probados
+- **Las variables de entorno de producción** están configuradas en Vercel (incluyendo `DATABASE_URL`)
+- **El dominio personalizado** (cartatech.cl) está configurado y funcionando
+- **Compatibilidad**: Las funciones antiguas de localStorage siguen funcionando gracias al sistema de fallback
+- **Migración gradual**: Los componentes pueden actualizarse uno por uno sin romper funcionalidad
+
+### Flujo de Trabajo
+
+**Desarrollo Local:**
+1. Instalar dependencias: `npm install`
+2. Configurar variables de entorno en `.env.local` (copiar de `.env.example` si existe)
+3. Generar cliente de Prisma: `npx prisma generate`
+4. Sincronizar schema con BD (desarrollo): `npx prisma db push`
+5. Ejecutar servidor de desarrollo: `npm run dev`
+6. Abrir Prisma Studio (opcional): `npm run db:studio`
+
+**Despliegue a Producción:**
+1. Desarrollo local → Pruebas locales → `npm run build` para verificar errores
+2. Commit → Push a GitHub (rama `main`)
+3. Despliegue automático en Vercel (1-3 minutos)
+4. Live en https://www.cartatech.cl/
+
+**Comandos Importantes:**
+- `npm run dev`: Servidor de desarrollo
+- `npm run build`: Build de producción (verificar antes de deploy)
+- `npm run start`: Servidor de producción (local)
+- `npm run lint`: Ejecutar ESLint
+- `npm run analyze`: Bundle analyzer (requiere `ANALYZE=true`)
+- `npx prisma generate`: Generar cliente de Prisma después de cambios en schema
+- `npx prisma db push`: Sincronizar schema con BD (solo desarrollo, usar migraciones en producción)
+- `npx prisma migrate dev`: Crear migración en desarrollo
+- `npx prisma migrate deploy`: Aplicar migraciones en producción
+
+### Recordatorios
+- Nunca romper funcionalidades existentes que los usuarios están usando
+- Probar cambios localmente con `npm run build` antes de subir
+- Considerar el impacto en SEO y rendimiento
+- Mantener la compatibilidad con dispositivos móviles y tablets
+- Verificar que las variables de entorno estén configuradas (especialmente `DATABASE_URL`)
+- Las nuevas funciones deben incluir fallback a localStorage para usuarios no autenticados
+- Las notificaciones y comentarios deben manejar errores silenciosamente (no romper UX)
+- Validar permisos en todas las operaciones de escritura (PUT, DELETE, POST)
+- Validar roles en todas las APIs de administración antes de proceder
+- Incluir detalles de errores solo en desarrollo (`NODE_ENV === "development"`)
+- Usar timestamps (números) en lugar de objetos Date en las respuestas API
+- Las APIs de administración requieren verificación de rol explícita usando `hasAdminAccess` o `hasModeratorAccess`
+- El sistema de cartas soporta cartas alternativas mediante `baseCardId` y `isCosmetic`
+- Las cartas tienen ban list por formato (RE, RL, LI) con valores 0-3 (0=BAN, 1=Max 1, 2=Max 2, 3=Libre)
+- El sistema de compartir genera códigos cortos únicos de 6 caracteres para mazos públicos
+- Los códigos de compartir tienen contador de clics y soporte para expiración opcional
+- El sistema de banners permite ajustes personalizados por contexto (mis-mazos, mazos-comunidad, favoritos, deck-builder, mazo-individual), modo de vista (grid, list) y dispositivo (desktop, tablet, mobile)
+- Las imágenes de banner se almacenan en Cloudinary con upload preset configurado
+- Las imágenes OG se generan dinámicamente como SVG con información del mazo para previews en redes sociales
+- **Optimización de Imágenes Vercel**: Para evitar exceder el límite gratuito de transformaciones de Vercel (5,000/mes), todas las imágenes de Cloudinary usan `unoptimized={true}` o `unoptimized={isCloudinaryOptimized}`. Esto evita que Vercel procese imágenes que ya están optimizadas por Cloudinary.
+- **Sistema de Perfiles Personalizados**: 
+  - Banners personalizados con opacidad 70% aplicada automáticamente
+  - Vista pública accesible desde perfil privado mediante botón "Vista Público" (modal), no accesible directamente desde `/perfil/[username]`
+  - Información adicional en Card separado (fuera del header del banner)
+  - Configuración de privacidad colapsable (componente `PrivacySettings` con `Collapsible` de Radix UI)
+  - Base de datos completa de ubicaciones en `lib/data/locations.ts` (países latinoamericanos y principales con todas sus regiones y ciudades/comunas)
+  - Componentes: `PublicProfileView`, `ProfileBannerSelector`, `LocationSelector`, `FavoriteRacesSelector`, `FavoriteFormatSelector`, `PrivacySettings`
+  - Campos de privacidad: `showLocation`, `showFavoriteRaces`, `showFavoriteFormat`, `showTeam`, `showPreferredStore` (default: true)
+  - La vista pública respeta las preferencias de privacidad del usuario
+  - Avatar agrandado 20% (168px) en perfiles
+  - Panel principal sin contornos (border removido)
+
+### Sistema de Rate Limiting
+- Sistema implementado en `lib/rate-limit/rate-limit.ts` con almacenamiento en memoria
+- Configuraciones por tipo de endpoint:
+ - **Autenticación**: 5 requests / 15 minutos (más restrictivo)
+ - **Escritura** (POST, PUT, DELETE): 30 requests / 1 minuto
+ - **Lectura** (GET): 100 requests / 1 minuto
+ - **Administración**: 50 requests / 1 minuto
+ - **Default**: 60 requests / 1 minuto
+- Retorna código 429 (Too Many Requests) cuando se excede el límite
+- Headers de respuesta: `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After`
+- Identificación por IP o userId (si está disponible en headers)
+- En desarrollo, puede deshabilitarse con `DISABLE_RATE_LIMIT=true`
+- **Nota**: Para producción a escala, considerar migrar a Redis o @upstash/ratelimit
+
+### Sistema de Logging
+- Sistema estructurado en `lib/logging/logger` para tracking de operaciones
+- Logs de errores con contexto detallado en desarrollo
+- Tracking de tiempo de ejecución en APIs críticas
+- Logging de rate limit exceeded para análisis de seguridad
+
+### Sistema de Analytics y Monitoreo
+- **Google Analytics 4 (GA4)**: Implementado con `@next/third-parties/google`
+ - Variable de entorno: `NEXT_PUBLIC_GA_ID` (formato: `G-XXXXXXXXXX`)
+ - Tracking automático de pageviews mediante `GoogleAnalyticsProvider`
+ - Eventos personalizados disponibles en `lib/analytics/events`
+- **Vercel Analytics**: Implementado con `@vercel/analytics` y `@vercel/speed-insights`
+ - Analytics de visitas, páginas más visitadas, referrers
+ - Speed Insights para métricas de rendimiento (LCP, FID, CLS, FCP, TTFB)
+
+### Sistema de Monetización (Google AdSense)
+- Implementado con sistema de anuncios en múltiples posiciones
+- Variable de entorno: `NEXT_PUBLIC_ADSENSE_ID` (formato: `ca-pub-XXXXXXXXXXXXXXXX`)
+- Posiciones disponibles:
+ - **Top Banner**: Banner superior (728x90px desktop, 320x50px móvil) - Actualmente desactivado temporalmente
+ - **Sidebar**: Lateral derecho fijo (300px) - Solo desktop, solo en `/mazos-comunidad`
+ - **Inline**: Entre contenido (cada 6 mazos en listados) - Solo en `/mazos-comunidad` vista grid
+ - **Footer**: Pie de página (728x90px)
+- Componentes: `AdBanner`, `AdContainer`, `AdSidebar`, `AdInline`, `AdSenseScript`
+- Manejo silencioso de errores cuando hay bloqueadores de anuncios
+- Meta tag de verificación automático en `app/layout.tsx`
+
+### Sistema de Onboarding
+- Tour de bienvenida implementado en `components/onboarding/welcome-tour`
+- Diferentes tours para visitantes no registrados y usuarios registrados
+- Guía interactiva con pasos personalizados por funcionalidad
+- Persistencia de estado (no mostrar nuevamente si el usuario ya lo vio)
+- Tours personalizados con fondos de banners según la raza de las cartas
+
+### Configuración de Next.js
+- **Optimización de imágenes**: 
+ - Soporte para Cloudinary (`res.cloudinary.com`)
+ - Formatos: WebP y AVIF
+ - Caché mínimo de 1 hora (3600 segundos)
+ - **IMPORTANTE**: Todas las imágenes que usan Cloudinary deben tener `unoptimized={true}` o `unoptimized={isCloudinaryOptimized}` para evitar consumir transformaciones de Vercel (límite gratuito: 5,000/mes)
+ - Utilidades disponibles en `lib/deck-builder/cloudinary-utils.ts`: `optimizeCloudinaryUrl()`, `isCloudinaryOptimized()`, `getOptimizedImageProps()`
+ - Todos los componentes Image del proyecto están configurados correctamente con `unoptimized` cuando usan URLs de Cloudinary
+- **Headers de seguridad**:
+ - `X-Content-Type-Options: nosniff`
+ - `X-Frame-Options: SAMEORIGIN`
+ - `Cache-Control` personalizado por tipo de recurso
+- **Bundle Analyzer**: Disponible con `ANALYZE=true npm run build`
+
+### Variables de Entorno
+**Requeridas:**
+- `DATABASE_URL`: URL de conexión a PostgreSQL (requerida para producción)
+
+**Opcionales (con valores por defecto):**
+- `NEXT_PUBLIC_SITE_URL`: URL base del sitio (default: `https://www.cartatech.cl`)
+- `NEXT_PUBLIC_API_URL`: URL base para APIs externas (opcional, fallback a rutas relativas `/api/...`)
+- `NEXT_PUBLIC_GA_ID`: ID de Google Analytics 4 (formato: `G-XXXXXXXXXX`, opcional)
+- `NEXT_PUBLIC_ADSENSE_ID`: ID de Google AdSense (formato: `ca-pub-XXXXXXXXXXXXXXXX`, opcional)
+- `DISABLE_RATE_LIMIT`: Deshabilitar rate limiting en desarrollo (opcional, `true` para deshabilitar)
+
+**Cloudinary (para subida de imágenes de banner):**
+- Variables configuradas en Vercel para producción
+- Requeridas para `/api/admin/upload-banner-image`: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_UPLOAD_PRESET`
+
+**Nota:** Todas las variables `NEXT_PUBLIC_*` son accesibles en el cliente. Las demás son solo del servidor.
+
+---
+
+## 🎯 Próximos Pasos Recomendados
+
+### Prioridad Alta (Impacto Inmediato)
+
+1. **Filtros Avanzados en Comunidad**
+ - Implementar filtros por formato (RE, RL, LI)
+ - Filtros por raza, fecha de creación, popularidad
+ - Combinación de múltiples filtros
+ - **Impacto**: Mejor descubrimiento de contenido y UX
+
+2. **Mejoras en Deck Builder (Fase 2)**
+ - Exportación avanzada (PDF, formatos especializados)
+ - Historial de cambios más granular
+ - **Impacto**: Mejor UX en la funcionalidad principal
+
+### Prioridad Media (Mejoras Incrementales)
+
+3. **Migrar Más Componentes a React Query**
+ - Migrar metadata de cartas a React Query con caché
+ - Migrar favoritos y likes a React Query para sincronización automática
+ - **Impacto**: Mejor sincronización de estado y menos requests innecesarios
+
+4. **Sistema de Búsqueda Global**
+ - Búsqueda unificada en mazos, cartas y usuarios
+ - Autocompletado inteligente
+ - Historial de búsquedas recientes
+ - **Impacto**: Facilita descubrimiento de contenido
+
+### Prioridad Baja (Funcionalidades Avanzadas)
+
+7. **PWA (Progressive Web App)**
+ - Crear `manifest.json` y service worker
+ - Implementar caché offline para cartas
+ - **Impacto**: Experiencia tipo app nativa, funciona offline
+
+8. **Sistema de Seguimiento (Fase 2)**
+ - Feed de actividad de usuarios seguidos en el Dashboard
+ - Recomendaciones basadas en usuarios seguidos
+ - **Impacto**: Mayor engagement y comunidad
+
+9. **Testing**
+ - Unit tests para funciones utilitarias
+ - Integration tests para APIs principales
+ - E2E tests para flujos críticos (crear mazo, publicar)
+ - **Impacto**: Mayor confiabilidad y menos bugs en producción
+
+### Optimizaciones Técnicas Pendientes
+
+- **Optimización de Imágenes**: Agregar blur placeholders y `sizes` attribute más preciso
+- **Service Worker**: Implementar caché offline con Workbox
+- **Rate Limiting**: Considerar migrar a Redis/@upstash/ratelimit para producción a escala (actualmente en memoria)
+- **Virtualización**: Activar componentes virtualizados en galería si el rendimiento lo requiere
+
+### Documentación de Referencia
+- Ver `MEJORAS_PENDIENTES.md` para plan detallado de mejoras
+- Ver `OPTIMIZACIONES_ADICIONALES.md` para optimizaciones de rendimiento
+- Ver `PLAN_MEJORAS.md` para roadmap completo
+
+### Métricas de Éxito
+Monitorear después de cada mejora:
+- **Performance**: Lighthouse Score > 90, LCP < 2.5s, FID < 100ms, CLS < 0.1
+- **SEO**: Mejora en rankings, aumento de tráfico orgánico
+- **UX**: Tasa de rebote < 50%, tiempo en sitio > 2 minutos
+- **Analytics**: Todos los eventos críticos trackeados

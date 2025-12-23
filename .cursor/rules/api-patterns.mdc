@@ -1,0 +1,377 @@
+---
+alwaysApply: true
+---
+
+# Patrones de API y Arquitectura - CartaTech
+
+## Patrones de API Routes
+
+### Estructura de API Routes
+- Todas las rutas API están en `app/api/`
+- Usar `NextRequest` y `NextResponse` de Next.js
+- Siempre envolver la lógica en try-catch
+- Retornar errores con códigos de estado HTTP apropiados
+- **Rate Limiting**: Implementar rate limiting en APIs críticas (autenticación, escritura) usando `checkRateLimit` de `lib/rate-limit/rate-limit`
+- **Logging**: Usar `log` de `lib/logging/logger` para tracking de operaciones y errores
+- **Parámetros dinámicos**: En Next.js 16, los parámetros son una Promise que debe ser await:
+```typescript
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  // ...
+}
+```
+
+### Formato de Respuestas API
+
+**Éxito (sin paginación):**
+```typescript
+return NextResponse.json({
+  deck: { ... }, // o decks: [...], comments: [...], notifications: [...], etc.
+});
+```
+
+**Éxito (con paginación):**
+```typescript
+return NextResponse.json({
+  decks: [...], // o comments: [...], users: [...], etc.
+  pagination: {
+    page: number,
+    limit: number,
+    total: number,
+    totalPages: number
+  }
+});
+```
+
+**Error:**
+```typescript
+return NextResponse.json(
+  { 
+    error: "Mensaje de error descriptivo",
+    ...(process.env.NODE_ENV === "development" && { details: errorMessage })
+  },
+  { 
+    status: 400 | 401 | 403 | 404 | 500 | 503,
+    headers: { "Content-Type": "application/json" }
+  }
+);
+```
+
+**Nota:** Incluir detalles del error solo en desarrollo para no exponer información sensible en producción.
+
+### Manejo de Errores en API Routes
+
+1. **Siempre loggear errores detallados:**
+```typescript
+import { log } from "@/lib/logging/logger";
+
+catch (error) {
+  // Usar el logger estructurado
+  log.error("Error descriptivo", {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    // ... contexto adicional
+  });
+  
+  // Log detallado para debugging
+  if (error instanceof Error) {
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+  }
+  
+  // Log de errores de Prisma
+  if (error && typeof error === 'object' && 'code' in error) {
+    console.error("Prisma error code:", error.code);
+  }
+  
+  // Retornar error apropiado
+  return NextResponse.json(
+    { 
+      error: "Mensaje de error para el usuario",
+      ...(process.env.NODE_ENV === "development" && { details: errorMessage })
+    },
+    { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
+}
+```
+
+2. **Validaciones:**
+- Validar parámetros requeridos al inicio
+- Retornar 400 para errores de validación
+- Retornar 401 para no autenticado
+- Retornar 403 para no autorizado
+- Retornar 404 para recursos no encontrados
+- Retornar 429 para rate limit exceeded (Too Many Requests)
+- Retornar 500 para errores del servidor
+- Retornar 503 para servicios no disponibles (ej: tabla no existe en base de datos)
+
+3. **Manejo de errores para funcionalidades opcionales:**
+- **Comentarios y Notificaciones**: Si la tabla no existe (migración pendiente), retornar array vacío en lugar de error 500
+- Detectar errores de Prisma:
+  - `P2001`: Record not found
+  - `P2002`: Unique constraint violation
+  - `P2003`: Foreign key constraint violation
+  - `P2021`: Table does not exist
+  - `P2025`: Record not found (alternativa)
+  - Mensajes que contengan: "does not exist", "not found", "relation" junto con "does not exist"
+- Para GET de comentarios/notificaciones: Retornar array vacío si la tabla no existe
+- Para POST de comentarios: Retornar 503 (Service Unavailable) con mensaje descriptivo si la tabla no existe
+- Loggear errores solo en desarrollo (`NODE_ENV === "development"`) para no saturar logs de producción
+- Las funcionalidades opcionales no deben romper la UX si fallan
+- Las notificaciones deben manejarse silenciosamente - nunca retornar error 500, siempre retornar éxito o array vacío
+- Ejemplo de detección de tabla no existente:
+```typescript
+catch (error: any) {
+  const isTableMissing = 
+    error?.code === 'P2021' || 
+    error?.code === 'P2025' ||
+    (error?.message && (
+      error.message.includes('does not exist') ||
+      error.message.includes('not found') ||
+      (error.message.includes('relation') && error.message.includes('does not exist'))
+    ));
+  
+  if (isTableMissing) {
+    // Retornar array vacío o 503 según el caso
+    return NextResponse.json({ comments: [] }, { status: 200 });
+  }
+  // Manejar otros errores...
+}
+```
+
+### Conversión de Fechas
+
+- **Prisma → API**: Convertir `DateTime` a timestamp (`.getTime()`)
+- **API → Cliente**: Usar timestamps (números)
+- **Ejemplo:**
+```typescript
+createdAt: deck.createdAt.getTime(),
+publishedAt: deck.publishedAt?.getTime(),
+```
+
+## Patrones de Cliente API
+
+### Funciones en `lib/api/`
+
+1. **Estructura estándar:**
+```typescript
+// Definir API_BASE_URL al inicio del archivo
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
+export async function functionName(params): Promise<ReturnType> {
+  try {
+    const url = API_BASE_URL 
+      ? `${API_BASE_URL}/api/endpoint`
+      : `/api/endpoint`;
+    
+    const response = await fetch(url, {
+      method: "GET" | "POST" | "PUT" | "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data), // si aplica
+    });
+    
+    if (!response.ok) {
+      throw new Error("Error descriptivo");
+    }
+    
+    const data = await response.json();
+    return data.result || data.deck || data.decks || data.comments || data.notifications || null;
+  } catch (error) {
+    console.error("Error descriptivo:", error);
+    return null; // o throw error según el caso
+  }
+}
+```
+
+2. **Manejo de errores:**
+- Retornar `null` para errores no críticos (get)
+- Lanzar error (`throw`) para operaciones críticas (save, delete)
+- Siempre loggear errores en consola
+
+3. **React Query (✅ IMPLEMENTADO Y EN USO):**
+- `@tanstack/react-query` v5.90.12 está implementado y en uso activo en el proyecto
+- QueryProvider configurado en `components/providers/query-provider.tsx` y usado en `app/layout.tsx`
+- Configuración de caché: staleTime: 5min, gcTime: 10min (configuración global)
+- Hooks disponibles en `hooks/`:
+  - `useCardsQuery` - Para obtener cartas con caché (incluye fallback a archivos JS, staleTime: 10min, gcTime: 30min)
+  - `usePublicDecksQuery` - Para mazos públicos con caché y paginación (staleTime: 2min, gcTime: 5min, acepta `page` y `limit`)
+  - `useUserDecksQuery` - Para mazos del usuario con caché y paginación (staleTime: 1min, gcTime: 5min, requiere userId, acepta `page` y `limit`)
+  - `useDeckQuery` - Para mazo individual con caché (staleTime: 5min, gcTime: 10min)
+  - `useInvalidateDecks` - Para invalidar caché manualmente (invalidatePublic, invalidateUser, invalidateDeck, invalidateAll)
+  - `useCards` - Hook legacy que usa React Query internamente (mantiene compatibilidad)
+- **Nota**: `useBannerSettings` en `hooks/use-banner-settings.ts` NO usa React Query, usa `useState` y `useEffect` directamente (por diseño, ya que los ajustes de banners son configuración de UI, no datos de servidor que requieren caché complejo)
+- **Versión**: `@tanstack/react-query` v5.90.12 (verificado en package.json)
+- Ejemplo de uso con hooks personalizados:
+```typescript
+// Usar hooks personalizados (recomendado)
+import { useCardsQuery } from '@/hooks/use-cards-query';
+import { usePublicDecksQuery, useInvalidateDecks } from '@/hooks/use-decks-query';
+
+// Para obtener cartas
+const { cards, isLoading, error } = useCardsQuery(includeAlternatives);
+
+// Para obtener mazos públicos con paginación
+const { data, isLoading } = usePublicDecksQuery(page, limit);
+// data incluye: { decks: SavedDeck[], pagination?: { page, limit, total, totalPages } }
+
+// Para invalidar caché después de mutaciones
+const { invalidateAll } = useInvalidateDecks();
+// ... después de guardar/eliminar mazo
+invalidateAll();
+```
+
+### Fallback a localStorage
+- **Todas las funciones de almacenamiento deben tener fallback:**
+```typescript
+export async function getDataFromStorage(userId?: string): Promise<Data[]> {
+  // Si hay usuario, intentar API primero
+  if (userId) {
+    try {
+      const data = await getDataFromAPI(userId);
+      return data;
+    } catch (error) {
+      console.warn("Error al obtener de API, usando localStorage:", error);
+      // Fallback a localStorage
+    }
+  }
+  
+  // Fallback a localStorage
+  return getDataFromLocalStorage(userId);
+}
+```
+
+## Tipos y Interfaces
+
+### Convenciones de Tipos
+1. **Usar interfaces, no types** (excepto para unions/intersections)
+2. **Nombres descriptivos con mayúscula inicial:**
+   - `SavedDeck`, `DeckCard`, `User`, `Vote`, `Follow`
+3. **Timestamps como números:**
+   - `createdAt: number` (no `Date`)
+4. **IDs opcionales para nuevos recursos:**
+   - `id?: string` (generado por la base de datos)
+
+### Tipos Importantes
+- `DeckFormat`: `"RE" | "RL" | "LI"`
+- `SavedDeck`: Mazo guardado con todos sus campos
+- `DeckCard`: `{ cardId: string; quantity: number }`
+- `Card`: Carta completa del juego (almacenada en base de datos)
+- `CardMetadata`: Metadatos de cartas (posiciones personalizadas, etc.)
+- `Comment`: Comentario con soporte para respuestas anidadas (`parentId`)
+- `Notification`: Notificación del sistema con tipos: "like", "comment", "comment_reply", "follow", "featured"
+  - Tipos disponibles: "like" (like en mazo), "comment" (comentario en mazo), "comment_reply" (respuesta a comentario), "follow" (usuario te sigue), "featured" (mazo destacado)
+- `UserRole`: `"USER" | "MODERATOR" | "ADMIN"`
+- `ShareCode`: Código corto para compartir mazos con contador de clics y expiración opcional
+- `BannerSetting`: Ajustes de visualización de banners por contexto, modo de vista y dispositivo
+- `Follow`: Relación de seguimiento entre usuarios (`followerId`, `followingId`)
+- `UserProfile`: Perfil público de usuario (definido en `lib/api/users.ts`)
+  - Incluye: `user` (id, username, avatar, bio, banner, ubicación, preferencias, configuración de privacidad), `stats`, `publicDecks`
+- `MyProfile`: Perfil privado del usuario actual (definido en `lib/api/users.ts`)
+  - Incluye: `user` (todos los campos del perfil + email, role), `stats` (estadísticas detalladas), `recentDecks`, `recentFavorites`
+- **Campos de Perfil de Usuario**:
+  - `avatarCardId`, `avatarZoom`, `avatarPositionX`, `avatarPositionY`: Personalización de avatar
+  - `bio`: Biografía del usuario
+  - `profileBannerImage`: URL de imagen de fondo del banner (opacidad 70% aplicada automáticamente)
+  - `country`, `region`, `city`: Ubicación (base de datos completa en `lib/data/locations.ts`)
+  - `favoriteRaces`: Array de razas favoritas (máx 3) almacenado como JSON
+  - `favoriteFormat`: Formato favorito (`DeckFormat`)
+  - `team`: Team al que pertenece (texto libre)
+  - `preferredStore`: Tienda TCG preferida (texto libre)
+  - `showLocation`, `showFavoriteRaces`, `showFavoriteFormat`, `showTeam`, `showPreferredStore`: Configuración de privacidad (boolean, default: true)
+
+## Autenticación y Autorización
+
+### Verificación de Usuario
+1. **En API Routes:**
+```typescript
+// Obtener userId del query param o body
+const userId = searchParams.get("userId") || body.userId;
+
+if (!userId) {
+  return NextResponse.json(
+    { error: "userId es requerido" },
+    { status: 400 }
+  );
+}
+
+// Verificar que el usuario existe
+const user = await prisma.user.findUnique({ where: { id: userId } });
+if (!user) {
+  return NextResponse.json(
+    { error: "Usuario no encontrado" },
+    { status: 404 }
+  );
+}
+```
+
+2. **Autorización:**
+- Verificar que el usuario es dueño del recurso antes de modificar/eliminar
+- Retornar 403 si no tiene permisos
+- Mensaje de error estándar: "No tienes permiso para [editar/eliminar] este [recurso]"
+
+## Prisma y Base de Datos
+
+### Manejo de Errores de Prisma
+**Códigos de Error Comunes:**
+- `P2001`: Record not found
+- `P2002`: Unique constraint violation
+- `P2003`: Foreign key constraint violation
+- `P2021`: Table does not exist
+- `P2025`: Record not found (alternativa)
+
+### Sistema de Comentarios
+- Los comentarios soportan respuestas anidadas mediante `parentId`
+- Solo se pueden comentar mazos públicos (`isPublic: true`)
+- Crear notificaciones automáticamente (excepto si es el mismo usuario)
+
+### Sistema de Notificaciones
+- Tipos de notificaciones: `"like"`, `"comment"`, `"comment_reply"`, `"follow"`, `"featured"`
+- NUNCA retornar error 500 - siempre retornar array vacío o éxito
+
+### Sistema de Seguimiento (Follow)
+- API `/api/users/[username]/follow`: Seguir/dejar de seguir usuario
+- API `/api/users/[username]/followers`: Lista de seguidores
+- API `/api/users/[username]/following`: Lista de usuarios seguidos
+- API `/api/users/me`: Perfil privado del usuario actual (GET, PUT) - Incluye todos los campos de perfil y configuración de privacidad
+- Notificación automática de tipo `"follow"` al seguir a alguien
+
+### Sistema de Perfiles de Usuario
+- **Vista Pública**: Accesible desde perfil privado mediante botón "Vista Público" (modal), no accesible directamente desde `/perfil/[username]`
+- **Banners Personalizados**: Los usuarios pueden seleccionar banner de fondo para su perfil (opacidad 70% aplicada automáticamente)
+- **Campos Adicionales**: Ubicación (país, región, ciudad), razas favoritas (máx 3), formato favorito, team, tienda TCG preferida
+- **Configuración de Privacidad**: Control granular sobre qué información mostrar públicamente (colapsable, no siempre visible)
+- **LocationSelector**: Componente con base de datos completa de países latinoamericanos y principales, incluye todas las comunas de Chile
+- **Componentes**: `PublicProfileView`, `ProfileBannerSelector`, `LocationSelector`, `FavoriteRacesSelector`, `FavoriteFormatSelector`, `PrivacySettings`
+- **APIs**: `/api/users/me` (GET, PUT) para perfil privado, `/api/users/[username]` (GET) para perfil público
+- **Privacidad**: La vista pública respeta las preferencias de privacidad del usuario (solo muestra información con `show*: true`)
+- **Manejo de JSON en Prisma**: Para campos JSON como `favoriteRaces`, usar `Prisma.JsonNull` en lugar de `null` cuando se quiere establecer como null
+
+### Exportación de Mazos
+- **Imagen**: Generada con `lib/deck-builder/export-image-utils.ts`
+  - Usa super-sampling 2x para máxima calidad
+  - Formatos: Horizontal (1920x1080) y Vertical (1080x1080)
+- **Lista (Texto)**: Lista formateada de cartas
+- **TTS Code**: Código para Tabletop Simulator
+
+## APIs de Administración
+- Rutas disponibles: `/api/admin/stats`, `/api/admin/users`, `/api/admin/cards`, `/api/admin/ban-list`, `/api/admin/comments`, `/api/admin/banner-settings`, `/api/admin/upload-banner-image`
+- Siempre verificar rol del usuario (`isAdmin` o `isModerator`)
+
+## Rate Limiting
+- **Autenticación**: 5 requests / 15 minutos
+- **Escritura**: 30 requests / 1 minuto
+- **Lectura**: 100 requests / 1 minuto
+- **Administración**: 50 requests / 1 minuto
+- **Default**: 60 requests / 1 minuto
+
+## Consideraciones de Producción
+- **Paginación**: Obligatoria en listas grandes (`page`, `limit`)
+- **Logging**: Usar `lib/logging/logger` estructurado
+- **Seguridad**: Validar permisos en todas las operaciones de escritura
+- **Performance**: Usar React Query para caché y sincronización automática

@@ -1,0 +1,93 @@
+---
+alwaysApply: true
+---
+
+You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Radix UI and Tailwind CSS 4.
+
+## Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples.
+- Use functional and declarative programming patterns; avoid classes.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`, `shouldUpdate`).
+- Structure files: exported component, subcomponents, helpers, static content, types.
+- Group related functionality together (hooks, utilities, types).
+
+## Naming Conventions
+- Use lowercase with dashes for directories (e.g., `components/auth-wizard`, `lib/deck-builder`).
+- Use PascalCase for components and interfaces/types.
+- Use camelCase for functions, variables, and hooks.
+- Use UPPER_SNAKE_CASE for constants.
+- Favor named exports for components and utilities.
+- Use descriptive names: `getUserDecks` instead of `getDecks`, `handleSaveDeck` instead of `handleSave`.
+
+## TypeScript Usage
+- Use TypeScript for all code; prefer `interface` over `type` (except for unions/intersections).
+- Avoid enums; use const objects or string literal unions instead.
+- Use functional components with TypeScript interfaces.
+- Define types/interfaces close to where they're used, or in dedicated `types.ts` files.
+- Use type inference when types are obvious, but be explicit for function parameters and return types.
+- Prefer `const` assertions for readonly data structures.
+
+## Syntax and Formatting
+- Use the `function` keyword for pure functions and component definitions.
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
+- Use declarative JSX with proper semantic HTML.
+- Prefer template literals over string concatenation.
+- Use optional chaining (`?.`) and nullish coalescing (`??`) when appropriate.
+
+## UI and Styling
+- Use Shadcn UI, Radix UI primitives, and Tailwind CSS 4 for components and styling.
+- Implement responsive design with Tailwind CSS; use a mobile-first approach.
+- Tailwind CSS 4 uses PostCSS 4 (`@tailwindcss/postcss`) - configuration in `postcss.config.mjs`.
+- Use Tailwind utility classes directly; avoid inline styles when possible.
+- Create reusable component variants using `class-variance-authority` (CVA) when needed.
+- Use semantic HTML elements (`<nav>`, `<main>`, `<article>`, `<section>`, etc.).
+- Ensure proper ARIA labels and roles for accessibility.
+
+## Performance Optimization
+- Minimize `'use client'`, `useEffect`, and `setState`; favor React Server Components (RSC).
+- Wrap client components in `Suspense` with appropriate fallbacks.
+- Use dynamic loading (`next/dynamic`) for non-critical components.
+- Optimize images: use WebP/AVIF format, include size data, implement lazy loading.
+- **IMPORTANTE - Optimización de Imágenes Cloudinary**: Todas las imágenes que usan URLs de Cloudinary (`res.cloudinary.com`) DEBEN tener `unoptimized={true}` o `unoptimized={isCloudinaryOptimized}` para evitar consumir transformaciones de Vercel. Usar funciones de `lib/deck-builder/cloudinary-utils.ts` para detectar y optimizar URLs de Cloudinary.
+- Use `useMemo` and `useCallback` judiciously (only when there's a measurable performance benefit).
+- Prefer server-side data fetching over client-side when possible.
+
+## Key Conventions
+- **URL State Management**: No se usa `nuqs` actualmente (no instalado). Para gestión de estado en URL, usar `useSearchParams` de Next.js o implementar solución personalizada.
+- Optimize Web Vitals (LCP, CLS, FID, FCP, TTFB).
+- Limit `'use client'`:
+  - Favor server components and Next.js SSR.
+  - Use only for Web API access (localStorage, window, etc.) in small components.
+  - Avoid for data fetching or state management (use Server Components or API routes).
+- Use Error Boundaries (`react-error-boundary`) for graceful error handling.
+- Use toast notifications (`sonner`) for user feedback (success, error, info).
+- **React Query** (`@tanstack/react-query` v5.90.12): ✅ IMPLEMENTADO Y EN USO. QueryProvider configurado en `components/providers/query-provider.tsx`, hooks disponibles: `useCardsQuery`, `usePublicDecksQuery`, `useUserDecksQuery`, `useDeckQuery`, `useInvalidateDecks`.
+- **React Virtual** (`@tanstack/react-virtual` v3.13.13): ✅ IMPLEMENTADO. Componentes VirtualizedCardGrid y VirtualizedEditionGrid disponibles en `components/galeria/`. Usar para listas largas (100+ elementos).
+- **Paginación**: ✅ IMPLEMENTADA. Todas las listas grandes tienen paginación del servidor (mazos públicos, comentarios, panel de administración).
+- **SEO y Metadatos**: ✅ IMPLEMENTADO. Metadatos dinámicos en todas las páginas principales, Schema.org JSON-LD implementado.
+- **Analytics**: ✅ IMPLEMENTADO. Todos los eventos críticos trackeados (crear mazo, publicar, favoritar, comentar, buscar cartas, exportar, compartir).
+- **Drag & Drop**: ✅ IMPLEMENTADO. Uso de `@dnd-kit` en el Deck Builder para una experiencia fluida.
+- **Exportación de Mazos**: ✅ IMPLEMENTADO. Modal unificado con exportación de imagen de alta calidad (super-sampling 2x), listas de texto y códigos TTS.
+- **Sistema de Seguimiento**: ✅ IMPLEMENTADO. Sistema completo de seguidores y seguidos con notificaciones.
+- **Optimización de Imágenes Cloudinary**: ✅ IMPLEMENTADO. Todos los componentes Image que usan Cloudinary tienen `unoptimized` configurado para evitar transformaciones de Vercel.
+- **Sistema de Perfiles Mejorado**: ✅ IMPLEMENTADO. Banners personalizados, campos adicionales (ubicación, razas favoritas, formato favorito, team, tienda TCG), configuración de privacidad colapsable, vista pública integrada en perfil privado.
+- **LocationSelector**: ✅ IMPLEMENTADO. Base de datos completa de países latinoamericanos y principales con todas sus regiones y ciudades/comunas (más de 300 comunas para Chile) en `lib/data/locations.ts`.
+
+## SEO and Accessibility
+- **SEO is very important for this project**: Use proper meta tags, structured data, semantic HTML.
+- **Accessibility is important**: Consider screen readers, keyboard navigation, ARIA labels.
+- Responsive design: Support 1920x1080px (desktop), notebooks, tablets, and mobile phones.
+- Use proper heading hierarchy (`h1` → `h2` → `h3`).
+- Ensure sufficient color contrast (WCAG AA minimum).
+- Provide alt text for all images.
+
+## Project-Specific Patterns
+- Follow Next.js 16 App Router conventions (Data Fetching, Rendering, Routing).
+- Use the established API patterns from `api-patterns.mdc`.
+- Implement fallback to localStorage for users not authenticated.
+- Handle errors gracefully - never break UX for optional features (notifications, comments).
+- Always validate user permissions before write operations (PUT, DELETE, POST).
+- Use the logging system (`lib/logging/logger`) for tracking operations and errors.
+- Implement rate limiting for critical APIs (autenticación, escritura).
+- **Optimización de Imágenes**: Siempre usar `unoptimized={true}` o `unoptimized={isCloudinaryOptimized}` en componentes Image cuando la imagen viene de Cloudinary para evitar consumir transformaciones de Vercel. Usar funciones de `lib/deck-builder/cloudinary-utils.ts` para detectar URLs de Cloudinary.
