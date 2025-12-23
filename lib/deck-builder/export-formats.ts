@@ -70,7 +70,6 @@ export function exportDeckToText(
     lines.push("ESTADÍSTICAS:")
     lines.push(`  Total de cartas: ${stats.totalCards}/50`)
     lines.push(`  Coste promedio: ${stats.averageCost.toFixed(2)}`)
-    lines.push(`  Poder promedio: ${stats.averagePower.toFixed(2)}`)
     lines.push("")
   }
 
