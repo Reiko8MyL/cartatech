@@ -4,66 +4,8 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { MapPin, ChevronDown } from "lucide-react"
-import { cn } from "@/lib/utils"
-
-// Datos simplificados de países, regiones y ciudades
-// En producción, esto podría venir de una API o base de datos
-const LOCATION_DATA: Record<string, Record<string, string[]>> = {
-  "Chile": {
-    "Arica y Parinacota": ["Arica", "Putre"],
-    "Tarapacá": ["Iquique", "Alto Hospicio", "Pozo Almonte"],
-    "Antofagasta": ["Antofagasta", "Calama", "Tocopilla", "Mejillones"],
-    "Atacama": ["Copiapó", "Vallenar", "Caldera", "Chañaral"],
-    "Coquimbo": ["La Serena", "Coquimbo", "Ovalle", "Illapel"],
-    "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana", "Quillota", "San Antonio"],
-    "Región Metropolitana": ["Santiago", "Puente Alto", "Maipú", "La Florida", "San Bernardo", "Las Condes", "Providencia"],
-    "O'Higgins": ["Rancagua", "San Fernando", "Pichilemu", "Rengo"],
-    "Maule": ["Talca", "Curicó", "Linares", "Constitución"],
-    "Ñuble": ["Chillán", "Bulnes", "San Carlos"],
-    "Bío Bío": ["Concepción", "Talcahuano", "Los Ángeles", "Coronel", "Lota"],
-    "Araucanía": ["Temuco", "Villarrica", "Pucón", "Angol", "Lautaro"],
-    "Los Ríos": ["Valdivia", "La Unión", "Río Bueno"],
-    "Los Lagos": ["Puerto Montt", "Osorno", "Castro", "Ancud"],
-    "Aysén": ["Coyhaique", "Puerto Aysén"],
-    "Magallanes": ["Punta Arenas", "Puerto Natales"],
-  },
-  "Argentina": {
-    "Buenos Aires": ["Buenos Aires", "La Plata", "Mar del Plata", "Bahía Blanca", "Quilmes", "Lanús", "Morón"],
-    "Córdoba": ["Córdoba", "Villa María", "Río Cuarto", "Villa Carlos Paz", "San Francisco"],
-    "Santa Fe": ["Rosario", "Santa Fe", "Rafaela", "Venado Tuerto", "Reconquista"],
-    "Mendoza": ["Mendoza", "San Rafael", "Godoy Cruz"],
-    "Tucumán": ["San Miguel de Tucumán", "Yerba Buena"],
-    "Salta": ["Salta", "San Salvador de Jujuy"],
-  },
-  "México": {
-    "Ciudad de México": ["Ciudad de México", "Iztapalapa", "Gustavo A. Madero", "Álvaro Obregón", "Benito Juárez"],
-    "Jalisco": ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá", "Puerto Vallarta"],
-    "Nuevo León": ["Monterrey", "San Pedro Garza García", "Guadalupe", "Apodaca", "San Nicolás de los Garza"],
-    "Puebla": ["Puebla", "Cholula"],
-    "Yucatán": ["Mérida", "Valladolid"],
-  },
-  "España": {
-    "Madrid": ["Madrid", "Móstoles", "Alcalá de Henares", "Fuenlabrada", "Leganés"],
-    "Cataluña": ["Barcelona", "Badalona", "Sabadell", "Terrassa", "L'Hospitalet de Llobregat"],
-    "Andalucía": ["Sevilla", "Málaga", "Córdoba", "Granada", "Jerez de la Frontera"],
-    "Valencia": ["Valencia", "Alicante", "Elche"],
-    "País Vasco": ["Bilbao", "Vitoria-Gasteiz", "San Sebastián"],
-  },
-  "Colombia": {
-    "Cundinamarca": ["Bogotá", "Soacha", "Chía", "Zipaquirá", "Facatativá"],
-    "Antioquia": ["Medellín", "Bello", "Itagüí", "Envigado", "Rionegro"],
-    "Valle del Cauca": ["Cali", "Palmira", "Buenaventura", "Tuluá", "Cartago"],
-    "Atlántico": ["Barranquilla", "Soledad"],
-    "Santander": ["Bucaramanga", "Floridablanca"],
-  },
-  "Perú": {
-    "Lima": ["Lima", "Callao", "San Juan de Lurigancho", "Comas", "Villa El Salvador"],
-    "Arequipa": ["Arequipa", "Cerro Colorado", "Yanahuara", "Cayma", "Sachaca"],
-    "Cusco": ["Cusco", "Sicuani"],
-    "La Libertad": ["Trujillo", "Chimbote"],
-  },
-}
+import { MapPin, X } from "lucide-react"
+import { LOCATION_DATA, COUNTRIES } from "@/lib/data/locations"
 
 
 interface LocationSelectorProps {
