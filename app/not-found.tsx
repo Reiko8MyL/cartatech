@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Home, Search, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -30,11 +32,16 @@ export default function NotFound() {
                 Explorar mazos
               </Link>
             </Button>
-            <Button asChild variant="outline" onClick={() => window.history.back()}>
-              <span>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver atrás
-              </span>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.history.back()
+                }
+              }}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver atrás
             </Button>
           </div>
           <div className="pt-4 border-t">
