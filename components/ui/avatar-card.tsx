@@ -3,6 +3,7 @@
 import Image from "next/image"
 import type { Card } from "@/lib/deck-builder/types"
 import { optimizeCloudinaryUrl } from "@/lib/deck-builder/cloudinary-utils"
+import { AVATAR_BLUR_PLACEHOLDER } from "@/lib/utils/image-blur"
 
 interface AvatarCardProps {
   card: Card | null
@@ -110,6 +111,9 @@ export function AvatarCard({
             height={imageHeight}
             className="object-contain"
             unoptimized={optimizedImageUrl.includes('res.cloudinary.com')}
+            placeholder="blur"
+            blurDataURL={AVATAR_BLUR_PLACEHOLDER}
+            sizes={`${size}px`}
           />
         </div>
       </div>

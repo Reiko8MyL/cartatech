@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
+import { LOGO_BLUR_PLACEHOLDER } from "@/lib/utils/image-blur"
 
 interface LogoProps {
   width?: number
@@ -57,6 +58,9 @@ export function Logo({
       fetchPriority={priority ? "high" : "auto"}
       loading={priority ? "eager" : "lazy"}
       unoptimized={isOptimized}
+      placeholder="blur"
+      blurDataURL={LOGO_BLUR_PLACEHOLDER}
+      sizes="(max-width: 768px) 120px, 150px"
     />
   )
 }

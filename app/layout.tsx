@@ -155,6 +155,22 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <head>
         {/* Preload de recursos críticos para mejorar LCP */}
+        {/* Logo principal - usado en hero de página principal */}
+        <link
+          rel="preload"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1764480944/noseaun_jll4ef.webp"
+          as="image"
+          type="image/webp"
+          fetchPriority="high"
+        />
+        <link
+          rel="preload"
+          href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/logoxdd_nh6iqf.webp"
+          as="image"
+          type="image/webp"
+          fetchPriority="high"
+        />
+        {/* Imagen OG para redes sociales */}
         <link
           rel="preload"
           href="https://res.cloudinary.com/dpbmbrekj/image/upload/v1765333391/minilogo2_kwjkwt.webp"
