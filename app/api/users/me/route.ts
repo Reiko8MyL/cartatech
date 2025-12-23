@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { Prisma } from "@prisma/client";
 import { log } from "@/lib/logging/logger";
 import { checkRateLimit } from "@/lib/rate-limit/rate-limit";
 
@@ -473,7 +474,11 @@ export async function PUT(request: NextRequest) {
         ...(country !== undefined && { country: country || null }),
         ...(region !== undefined && { region: region || null }),
         ...(city !== undefined && { city: city || null }),
-        ...(favoriteRaces !== undefined && { favoriteRaces: favoriteRaces && Array.isArray(favoriteRaces) ? favoriteRaces : null }),
+        ...(favoriteRaces !== undefined && { 
+          favoriteRaces: favoriteRaces && Array.isArray(favoriteRaces) && favoriteRaces.length > 0 
+            ? favoriteRaces 
+            : Prisma.JsonNull 
+        }),
         ...(favoriteFormat !== undefined && { favoriteFormat: favoriteFormat || null }),
         ...(team !== undefined && { team: team || null }),
         ...(preferredStore !== undefined && { preferredStore: preferredStore || null }),
