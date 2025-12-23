@@ -37,6 +37,11 @@ export async function GET(
         favoriteFormat: true,
         team: true,
         preferredStore: true,
+        showLocation: true,
+        showFavoriteRaces: true,
+        showFavoriteFormat: true,
+        showTeam: true,
+        showPreferredStore: true,
         createdAt: true,
       },
     })

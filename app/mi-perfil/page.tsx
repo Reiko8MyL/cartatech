@@ -24,6 +24,7 @@ import { PublicProfileView } from "@/components/profile/public-profile-view"
 import { LocationSelector } from "@/components/profile/location-selector"
 import { FavoriteRacesSelector } from "@/components/profile/favorite-races-selector"
 import { FavoriteFormatSelector } from "@/components/profile/favorite-format-selector"
+import { PrivacySettings } from "@/components/profile/privacy-settings"
 import { getUserProfile, type UserProfile } from "@/lib/api/users"
 import {
   Dialog,
@@ -62,6 +63,11 @@ export default function MiPerfilPage() {
   const [editedFavoriteFormat, setEditedFavoriteFormat] = useState<string | null>(null)
   const [editedTeam, setEditedTeam] = useState("")
   const [editedPreferredStore, setEditedPreferredStore] = useState("")
+  const [editedShowLocation, setEditedShowLocation] = useState(true)
+  const [editedShowFavoriteRaces, setEditedShowFavoriteRaces] = useState(true)
+  const [editedShowFavoriteFormat, setEditedShowFavoriteFormat] = useState(true)
+  const [editedShowTeam, setEditedShowTeam] = useState(true)
+  const [editedShowPreferredStore, setEditedShowPreferredStore] = useState(true)
   const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false)
   const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false)
   const [editingCardId, setEditingCardId] = useState<string | null>(null)
@@ -168,6 +174,11 @@ export default function MiPerfilPage() {
         favoriteFormat: editedFavoriteFormat,
         team: editedTeam || null,
         preferredStore: editedPreferredStore || null,
+        showLocation: editedShowLocation,
+        showFavoriteRaces: editedShowFavoriteRaces,
+        showFavoriteFormat: editedShowFavoriteFormat,
+        showTeam: editedShowTeam,
+        showPreferredStore: editedShowPreferredStore,
       })
 
       if (result.success && result.user) {
@@ -577,168 +588,6 @@ export default function MiPerfilPage() {
                     </div>
                   )}
                 </div>
-                
-                {/* Información adicional del usuario */}
-                {isEditing ? (
-                  <div className="mt-4 space-y-4 p-4 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-semibold">Información Adicional</Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setIsEditing(false)
-                          setEditedBio(profile.user.bio || "")
-                          setEditedCountry(profile.user.country || null)
-                          setEditedRegion(profile.user.region || null)
-                          setEditedCity(profile.user.city || null)
-                          setEditedFavoriteRaces(Array.isArray(profile.user.favoriteRaces) ? profile.user.favoriteRaces : [])
-                          setEditedFavoriteFormat(profile.user.favoriteFormat || null)
-                          setEditedTeam(profile.user.team || "")
-                          setEditedPreferredStore(profile.user.preferredStore || "")
-                        }}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                    
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <LocationSelector
-                        country={editedCountry}
-                        region={editedRegion}
-                        city={editedCity}
-                        onCountryChange={setEditedCountry}
-                        onRegionChange={setEditedRegion}
-                        onCityChange={setEditedCity}
-                      />
-                      
-                      <div className="space-y-4">
-                        <FavoriteRacesSelector
-                          favoriteRaces={editedFavoriteRaces}
-                          onChange={setEditedFavoriteRaces}
-                        />
-                        
-                        <FavoriteFormatSelector
-                          favoriteFormat={editedFavoriteFormat as DeckFormat | null}
-                          onChange={(format) => setEditedFavoriteFormat(format)}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="team">Team</Label>
-                        <Input
-                          id="team"
-                          type="text"
-                          placeholder="Nombre de tu team (opcional)"
-                          value={editedTeam}
-                          onChange={(e) => setEditedTeam(e.target.value)}
-                          maxLength={100}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="preferredStore">Tienda TCG Preferida</Label>
-                        <Input
-                          id="preferredStore"
-                          type="text"
-                          placeholder="Nombre de tu tienda TCG preferida (opcional)"
-                          value={editedPreferredStore}
-                          onChange={(e) => setEditedPreferredStore(e.target.value)}
-                          maxLength={100}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={handleSaveProfile}
-                        disabled={isSaving}
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Guardando...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Guardar Cambios
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 p-4 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
-                    <div className="flex items-center justify-between mb-4">
-                      <Label className="text-sm font-semibold">Información Adicional</Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsEditing(true)}
-                      >
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                    </div>
-                    
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {(profile.user.country || profile.user.region || profile.user.city) && (
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Ubicación</Label>
-                          <p className="text-sm">
-                            {[profile.user.city, profile.user.region, profile.user.country]
-                              .filter(Boolean)
-                              .join(", ") || "No especificada"}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0 && (
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Razas Favoritas</Label>
-                          <div className="flex flex-wrap gap-2">
-                            {profile.user.favoriteRaces.map((race) => (
-                              <Badge key={race} variant="secondary">{race}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {profile.user.favoriteFormat && (
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Formato Favorito</Label>
-                          <p className="text-sm">{getDeckFormatName(profile.user.favoriteFormat as DeckFormat)}</p>
-                        </div>
-                      )}
-                      
-                      {profile.user.team && (
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Team</Label>
-                          <p className="text-sm">{profile.user.team}</p>
-                        </div>
-                      )}
-                      
-                      {profile.user.preferredStore && (
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Tienda TCG Preferida</Label>
-                          <p className="text-sm">{profile.user.preferredStore}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {!profile.user.country && !profile.user.region && !profile.user.city && 
-                     (!Array.isArray(profile.user.favoriteRaces) || profile.user.favoriteRaces.length === 0) &&
-                     !profile.user.favoriteFormat && !profile.user.team && !profile.user.preferredStore && (
-                      <p className="text-sm text-muted-foreground">
-                        No has agregado información adicional. Haz clic en Editar para agregar.
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -801,6 +650,198 @@ export default function MiPerfilPage() {
                 <p className="text-xs sm:text-sm text-muted-foreground font-medium">Vistas Totales</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Información Adicional del Usuario */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Información Adicional</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+              >
+                {isEditing ? (
+                  <>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Editar
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isEditing ? (
+              <div className="space-y-6">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <LocationSelector
+                    country={editedCountry}
+                    region={editedRegion}
+                    city={editedCity}
+                    onCountryChange={setEditedCountry}
+                    onRegionChange={setEditedRegion}
+                    onCityChange={setEditedCity}
+                  />
+                  
+                  <div className="space-y-4">
+                    <FavoriteRacesSelector
+                      favoriteRaces={editedFavoriteRaces}
+                      onChange={setEditedFavoriteRaces}
+                    />
+                    
+                    <FavoriteFormatSelector
+                      favoriteFormat={editedFavoriteFormat as DeckFormat | null}
+                      onChange={(format) => setEditedFavoriteFormat(format)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="team">Team</Label>
+                    <Input
+                      id="team"
+                      type="text"
+                      placeholder="Nombre de tu team (opcional)"
+                      value={editedTeam}
+                      onChange={(e) => setEditedTeam(e.target.value)}
+                      maxLength={100}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="preferredStore">Tienda TCG Preferida</Label>
+                    <Input
+                      id="preferredStore"
+                      type="text"
+                      placeholder="Nombre de tu tienda TCG preferida (opcional)"
+                      value={editedPreferredStore}
+                      onChange={(e) => setEditedPreferredStore(e.target.value)}
+                      maxLength={100}
+                    />
+                  </div>
+                </div>
+                
+                <PrivacySettings
+                  showLocation={editedShowLocation}
+                  showFavoriteRaces={editedShowFavoriteRaces}
+                  showFavoriteFormat={editedShowFavoriteFormat}
+                  showTeam={editedShowTeam}
+                  showPreferredStore={editedShowPreferredStore}
+                  onShowLocationChange={setEditedShowLocation}
+                  onShowFavoriteRacesChange={setEditedShowFavoriteRaces}
+                  onShowFavoriteFormatChange={setEditedShowFavoriteFormat}
+                  onShowTeamChange={setEditedShowTeam}
+                  onShowPreferredStoreChange={setEditedShowPreferredStore}
+                />
+                
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false)
+                      setEditedBio(profile.user.bio || "")
+                      setEditedCountry(profile.user.country || null)
+                      setEditedRegion(profile.user.region || null)
+                      setEditedCity(profile.user.city || null)
+                      setEditedFavoriteRaces(Array.isArray(profile.user.favoriteRaces) ? profile.user.favoriteRaces : [])
+                      setEditedFavoriteFormat(profile.user.favoriteFormat || null)
+                      setEditedTeam(profile.user.team || "")
+                      setEditedPreferredStore(profile.user.preferredStore || "")
+                      setEditedShowLocation(profile.user.showLocation ?? true)
+                      setEditedShowFavoriteRaces(profile.user.showFavoriteRaces ?? true)
+                      setEditedShowFavoriteFormat(profile.user.showFavoriteFormat ?? true)
+                      setEditedShowTeam(profile.user.showTeam ?? true)
+                      setEditedShowPreferredStore(profile.user.showPreferredStore ?? true)
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Guardar Cambios
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {(profile.user.country || profile.user.region || profile.user.city) && (profile.user.showLocation ?? true) && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-muted-foreground">Ubicación</Label>
+                    <p className="text-base">
+                      {[profile.user.city, profile.user.region, profile.user.country]
+                        .filter(Boolean)
+                        .join(", ") || "No especificada"}
+                    </p>
+                  </div>
+                )}
+                
+                {Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0 && (profile.user.showFavoriteRaces ?? true) && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-muted-foreground">Razas Favoritas</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.user.favoriteRaces.map((race) => (
+                        <Badge key={race} variant="secondary" className="text-sm">{race}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {profile.user.favoriteFormat && (profile.user.showFavoriteFormat ?? true) && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-muted-foreground">Formato Favorito</Label>
+                    <p className="text-base">{getDeckFormatName(profile.user.favoriteFormat as DeckFormat)}</p>
+                  </div>
+                )}
+                
+                {profile.user.team && (profile.user.showTeam ?? true) && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-muted-foreground">Team</Label>
+                    <p className="text-base">{profile.user.team}</p>
+                  </div>
+                )}
+                
+                {profile.user.preferredStore && (profile.user.showPreferredStore ?? true) && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-muted-foreground">Tienda TCG Preferida</Label>
+                    <p className="text-base">{profile.user.preferredStore}</p>
+                  </div>
+                )}
+                
+                {!profile.user.country && !profile.user.region && !profile.user.city && 
+                 (!Array.isArray(profile.user.favoriteRaces) || profile.user.favoriteRaces.length === 0) &&
+                 !profile.user.favoriteFormat && !profile.user.team && !profile.user.preferredStore && (
+                  <div className="col-span-2 text-center py-8">
+                    <p className="text-muted-foreground mb-4">
+                      No has agregado información adicional.
+                    </p>
+                    <Button onClick={() => setIsEditing(true)}>
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Agregar Información
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

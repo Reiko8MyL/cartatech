@@ -11,34 +11,57 @@ import { cn } from "@/lib/utils"
 // En producción, esto podría venir de una API o base de datos
 const LOCATION_DATA: Record<string, Record<string, string[]>> = {
   "Chile": {
-    "Región Metropolitana": ["Santiago", "Puente Alto", "Maipú", "La Florida", "San Bernardo"],
-    "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana", "Quillota"],
-    "Bío Bío": ["Concepción", "Talcahuano", "Los Ángeles", "Chillán", "Coronel"],
+    "Arica y Parinacota": ["Arica", "Putre"],
+    "Tarapacá": ["Iquique", "Alto Hospicio", "Pozo Almonte"],
+    "Antofagasta": ["Antofagasta", "Calama", "Tocopilla", "Mejillones"],
+    "Atacama": ["Copiapó", "Vallenar", "Caldera", "Chañaral"],
+    "Coquimbo": ["La Serena", "Coquimbo", "Ovalle", "Illapel"],
+    "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana", "Quillota", "San Antonio"],
+    "Región Metropolitana": ["Santiago", "Puente Alto", "Maipú", "La Florida", "San Bernardo", "Las Condes", "Providencia"],
+    "O'Higgins": ["Rancagua", "San Fernando", "Pichilemu", "Rengo"],
+    "Maule": ["Talca", "Curicó", "Linares", "Constitución"],
+    "Ñuble": ["Chillán", "Bulnes", "San Carlos"],
+    "Bío Bío": ["Concepción", "Talcahuano", "Los Ángeles", "Coronel", "Lota"],
     "Araucanía": ["Temuco", "Villarrica", "Pucón", "Angol", "Lautaro"],
+    "Los Ríos": ["Valdivia", "La Unión", "Río Bueno"],
+    "Los Lagos": ["Puerto Montt", "Osorno", "Castro", "Ancud"],
+    "Aysén": ["Coyhaique", "Puerto Aysén"],
+    "Magallanes": ["Punta Arenas", "Puerto Natales"],
   },
   "Argentina": {
-    "Buenos Aires": ["Buenos Aires", "La Plata", "Mar del Plata", "Bahía Blanca", "Quilmes"],
+    "Buenos Aires": ["Buenos Aires", "La Plata", "Mar del Plata", "Bahía Blanca", "Quilmes", "Lanús", "Morón"],
     "Córdoba": ["Córdoba", "Villa María", "Río Cuarto", "Villa Carlos Paz", "San Francisco"],
     "Santa Fe": ["Rosario", "Santa Fe", "Rafaela", "Venado Tuerto", "Reconquista"],
+    "Mendoza": ["Mendoza", "San Rafael", "Godoy Cruz"],
+    "Tucumán": ["San Miguel de Tucumán", "Yerba Buena"],
+    "Salta": ["Salta", "San Salvador de Jujuy"],
   },
   "México": {
     "Ciudad de México": ["Ciudad de México", "Iztapalapa", "Gustavo A. Madero", "Álvaro Obregón", "Benito Juárez"],
     "Jalisco": ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá", "Puerto Vallarta"],
     "Nuevo León": ["Monterrey", "San Pedro Garza García", "Guadalupe", "Apodaca", "San Nicolás de los Garza"],
+    "Puebla": ["Puebla", "Cholula"],
+    "Yucatán": ["Mérida", "Valladolid"],
   },
   "España": {
     "Madrid": ["Madrid", "Móstoles", "Alcalá de Henares", "Fuenlabrada", "Leganés"],
     "Cataluña": ["Barcelona", "Badalona", "Sabadell", "Terrassa", "L'Hospitalet de Llobregat"],
     "Andalucía": ["Sevilla", "Málaga", "Córdoba", "Granada", "Jerez de la Frontera"],
+    "Valencia": ["Valencia", "Alicante", "Elche"],
+    "País Vasco": ["Bilbao", "Vitoria-Gasteiz", "San Sebastián"],
   },
   "Colombia": {
     "Cundinamarca": ["Bogotá", "Soacha", "Chía", "Zipaquirá", "Facatativá"],
     "Antioquia": ["Medellín", "Bello", "Itagüí", "Envigado", "Rionegro"],
     "Valle del Cauca": ["Cali", "Palmira", "Buenaventura", "Tuluá", "Cartago"],
+    "Atlántico": ["Barranquilla", "Soledad"],
+    "Santander": ["Bucaramanga", "Floridablanca"],
   },
   "Perú": {
     "Lima": ["Lima", "Callao", "San Juan de Lurigancho", "Comas", "Villa El Salvador"],
     "Arequipa": ["Arequipa", "Cerro Colorado", "Yanahuara", "Cayma", "Sachaca"],
+    "Cusco": ["Cusco", "Sicuani"],
+    "La Libertad": ["Trujillo", "Chimbote"],
   },
 }
 
@@ -194,7 +217,7 @@ export function LocationSelector({
 
       {/* Selector de Región */}
       {country && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-location-selector>
           <Label htmlFor="region">Región</Label>
           <div className="relative">
             <Input
@@ -202,28 +225,37 @@ export function LocationSelector({
               type="text"
               placeholder="Buscar región..."
               value={regionSearch}
-              onChange={(e) => setRegionSearch(e.target.value)}
+              onChange={(e) => {
+                setRegionSearch(e.target.value)
+                setRegionOpen(true)
+              }}
               onFocus={() => setRegionOpen(true)}
               disabled={!country}
               className="pr-10"
             />
             <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            {regionOpen && filteredRegions.length > 0 && (
+            {regionOpen && availableRegions.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
-                {filteredRegions.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      onRegionChange(r)
-                      setRegionOpen(false)
-                      setRegionSearch(r)
-                    }}
-                  >
-                    {r}
-                  </button>
-                ))}
+                {filteredRegions.length > 0 ? (
+                  filteredRegions.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => {
+                        onRegionChange(r)
+                        setRegionOpen(false)
+                        setRegionSearch(r)
+                      }}
+                    >
+                      {r}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                    No se encontraron regiones que coincidan con "{regionSearch}"
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -248,7 +280,7 @@ export function LocationSelector({
 
       {/* Selector de Ciudad */}
       {country && region && (
-        <div className="space-y-2">
+        <div className="space-y-2" data-location-selector>
           <Label htmlFor="city">Ciudad</Label>
           <div className="relative">
             <Input
@@ -256,28 +288,37 @@ export function LocationSelector({
               type="text"
               placeholder="Buscar ciudad..."
               value={citySearch}
-              onChange={(e) => setCitySearch(e.target.value)}
+              onChange={(e) => {
+                setCitySearch(e.target.value)
+                setCityOpen(true)
+              }}
               onFocus={() => setCityOpen(true)}
               disabled={!region}
               className="pr-10"
             />
             <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            {cityOpen && filteredCities.length > 0 && (
+            {cityOpen && availableCities.length > 0 && (
               <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
-                {filteredCities.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      onCityChange(c)
-                      setCityOpen(false)
-                      setCitySearch(c)
-                    }}
-                  >
-                    {c}
-                  </button>
-                ))}
+                {filteredCities.length > 0 ? (
+                  filteredCities.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => {
+                        onCityChange(c)
+                        setCityOpen(false)
+                        setCitySearch(c)
+                      }}
+                    >
+                      {c}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                    No se encontraron ciudades que coincidan con "{citySearch}"
+                  </div>
+                )}
               </div>
             )}
           </div>

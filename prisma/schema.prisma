@@ -28,6 +28,12 @@ model User {
   favoriteFormat String?  // Formato favorito: "RE", "RL", "LI"
   team      String?  // Team al que pertenece
   preferredStore String?  // Tienda TCG preferida
+  // Configuración de privacidad (true = mostrar públicamente, false = ocultar)
+  showLocation Boolean @default(true)  // Mostrar ubicación (país, región, ciudad)
+  showFavoriteRaces Boolean @default(true)  // Mostrar razas favoritas
+  showFavoriteFormat Boolean @default(true)  // Mostrar formato favorito
+  showTeam Boolean @default(true)  // Mostrar team
+  showPreferredStore Boolean @default(true)  // Mostrar tienda TCG preferida
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

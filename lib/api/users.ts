@@ -17,6 +17,11 @@ export interface UserProfile {
     favoriteFormat: string | null
     team: string | null
     preferredStore: string | null
+    showLocation: boolean
+    showFavoriteRaces: boolean
+    showFavoriteFormat: boolean
+    showTeam: boolean
+    showPreferredStore: boolean
     createdAt: number
   }
   stats: {
@@ -59,6 +64,11 @@ export interface MyProfile {
     favoriteFormat: string | null
     team: string | null
     preferredStore: string | null
+    showLocation: boolean
+    showFavoriteRaces: boolean
+    showFavoriteFormat: boolean
+    showTeam: boolean
+    showPreferredStore: boolean
     createdAt: number
     updatedAt: number
   }
@@ -231,6 +241,11 @@ export async function updateMyProfile(
     favoriteFormat?: string | null
     team?: string | null
     preferredStore?: string | null
+    showLocation?: boolean
+    showFavoriteRaces?: boolean
+    showFavoriteFormat?: boolean
+    showTeam?: boolean
+    showPreferredStore?: boolean
   }
 ): Promise<{ success: boolean; user?: MyProfile['user']; error?: string }> {
   try {

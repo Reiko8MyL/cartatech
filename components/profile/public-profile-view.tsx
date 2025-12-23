@@ -127,12 +127,14 @@ export function PublicProfileView({ profile, currentUserId, onFollowChange }: Pu
               )}
               
               {/* Información adicional */}
-              {(profile.user.country || profile.user.region || profile.user.city || 
-                (Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0) ||
-                profile.user.favoriteFormat || profile.user.team || profile.user.preferredStore) && (
+              {((profile.user.country || profile.user.region || profile.user.city) && (profile.user.showLocation ?? true) ||
+                (Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0 && (profile.user.showFavoriteRaces ?? true)) ||
+                (profile.user.favoriteFormat && (profile.user.showFavoriteFormat ?? true)) ||
+                (profile.user.team && (profile.user.showTeam ?? true)) ||
+                (profile.user.preferredStore && (profile.user.showPreferredStore ?? true))) && (
                 <div className="mt-4 p-4 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    {(profile.user.country || profile.user.region || profile.user.city) && (
+                    {(profile.user.country || profile.user.region || profile.user.city) && (profile.user.showLocation ?? true) && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground font-semibold">Ubicación</p>
                         <p className="text-sm">
@@ -143,7 +145,7 @@ export function PublicProfileView({ profile, currentUserId, onFollowChange }: Pu
                       </div>
                     )}
                     
-                    {Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0 && (
+                    {Array.isArray(profile.user.favoriteRaces) && profile.user.favoriteRaces.length > 0 && (profile.user.showFavoriteRaces ?? true) && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground font-semibold">Razas Favoritas</p>
                         <div className="flex flex-wrap gap-2">
@@ -156,21 +158,21 @@ export function PublicProfileView({ profile, currentUserId, onFollowChange }: Pu
                       </div>
                     )}
                     
-                    {profile.user.favoriteFormat && (
+                    {profile.user.favoriteFormat && (profile.user.showFavoriteFormat ?? true) && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground font-semibold">Formato Favorito</p>
                         <p className="text-sm">{getDeckFormatName(profile.user.favoriteFormat as DeckFormat)}</p>
                       </div>
                     )}
                     
-                    {profile.user.team && (
+                    {profile.user.team && (profile.user.showTeam ?? true) && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground font-semibold">Team</p>
                         <p className="text-sm">{profile.user.team}</p>
                       </div>
                     )}
                     
-                    {profile.user.preferredStore && (
+                    {profile.user.preferredStore && (profile.user.showPreferredStore ?? true) && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground font-semibold">Tienda TCG Preferida</p>
                         <p className="text-sm">{profile.user.preferredStore}</p>
