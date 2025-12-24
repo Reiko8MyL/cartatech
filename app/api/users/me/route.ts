@@ -203,6 +203,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener favoritos recientes (últimos 5) con todos los datos necesarios para mostrar banners
+    // Incluir mazos públicos y mazos privados que pertenecen al usuario actual
     let recentFavorites: Array<{
       id: string;
       createdAt: Date;
@@ -224,7 +225,16 @@ export async function GET(request: NextRequest) {
     }> = [];
     try {
       recentFavorites = await prisma.favoriteDeck.findMany({
-        where: { userId: user.id },
+        where: { 
+          userId: user.id,
+          // Incluir mazos públicos O mazos privados que pertenecen al usuario actual
+          deck: {
+            OR: [
+              { isPublic: true },
+              { userId: user.id }, // Mazos privados del usuario actual
+            ],
+          },
+        },
         orderBy: { createdAt: "desc" },
         take: 5,
         include: {
