@@ -34,7 +34,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
             {/* Avatar */}
             <Link href={`/perfil/${user.username}`}>
               <AvatarCard
-                card={card || undefined}
+                card={card ?? null}
                 size={48}
                 username={user.username}
                 zoom={user.avatarZoom || 1.0}
@@ -112,7 +112,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
             {/* Avatar */}
             <Link href={`/perfil/${user.username}`}>
               <AvatarCard
-                card={card || undefined}
+                card={card ?? null}
                 size={48}
                 username={user.username}
                 zoom={user.avatarZoom || 1.0}
@@ -171,7 +171,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
             {/* Avatar */}
             <Link href={`/perfil/${user.username}`}>
               <AvatarCard
-                card={card || undefined}
+                card={card ?? null}
                 size={48}
                 username={user.username}
                 zoom={user.avatarZoom || 1.0}
