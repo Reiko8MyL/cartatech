@@ -276,12 +276,6 @@ export const CardItem = memo(function CardItem({
           </>
         )}
 
-        {/* Tooltip con nombre - solo se muestra cuando no hay cantidad o en hover si no hay controles */}
-        {quantity === 0 && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-xs p-1 rounded-b opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out truncate text-center z-10">
-            {card.name}
-          </div>
-        )}
 
       {/* Botón de información en la esquina inferior derecha - siempre visible */}
       {onOpenCardModal && (

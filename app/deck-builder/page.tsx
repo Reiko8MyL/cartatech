@@ -112,11 +112,12 @@ function DeckBuilderContent() {
   const [deckCards, setDeckCards] = useState<DeckCard[]>([])
 
   // Cargar cartas alternativas cuando hay cartas en el mazo (para calcular estadísticas correctamente)
+  // También habilitado siempre para poder agregar cartas alternativas directamente
   const hasCardsInDeck = deckCards.length > 0
   const { data: allCardsWithAlternatives = [] } = useQuery({
     queryKey: ["cards", "with-alternatives"],
     queryFn: () => getAllCardsFromAPI(true),
-    enabled: hasCardsInDeck, // Solo cargar cuando hay cartas en el mazo
+    enabled: true, // Siempre habilitado para poder agregar cartas alternativas
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   })
@@ -197,10 +198,68 @@ function DeckBuilderContent() {
     return new Map(allCards.map((c) => [c.id, c]))
   }, [allCards])
 
+  // Mapa que incluye todas las cartas (originales + alternativas) para buscar cartas alternativas
+  const allCardsLookupMap = useMemo(() => {
+    const map = new Map(allCards.map((c) => [c.id, c]))
+    // Agregar alternativas si están disponibles
+    if (allCardsWithAlternatives.length > 0) {
+      allCardsWithAlternatives.forEach((c) => {
+        if (!map.has(c.id)) {
+          map.set(c.id, c)
+        }
+      })
+    }
+    return map
+  }, [allCards, allCardsWithAlternatives])
+
   // Funciones para gestionar el mazo - optimizadas
   const addCardToDeck = useCallback((cardId: string) => {
-    const card = cardLookupMap.get(cardId)
-    if (!card) return
+    // Buscar primero en el mapa completo (incluye alternativas)
+    const card = allCardsLookupMap.get(cardId) || cardLookupMap.get(cardId)
+    if (!card) {
+      // Si no se encuentra, intentar buscar en allCardsWithAlternatives directamente
+      const foundCard = allCardsWithAlternatives.find((c) => c.id === cardId)
+      if (!foundCard) return
+      // Usar la carta encontrada
+      const cardToAdd = foundCard
+      
+      // Calcular total de cartas actual ANTES de actualizar el estado
+      const currentTotal = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
+      
+      // Verificar límite total de 50 cartas
+      if (currentTotal >= 50) {
+        return
+      }
+
+      // Usar startTransition para actualizaciones no urgentes
+      setDeckCards((prevDeckCards) => {
+        // Búsqueda rápida con Map
+        const existingIndex = prevDeckCards.findIndex((dc) => dc.cardId === cardId)
+        const existingCard = existingIndex >= 0 ? prevDeckCards[existingIndex] : null
+        const currentQuantity = existingCard?.quantity || 0
+
+        // Verificar límites según el formato seleccionado
+        const maxQuantity = deckFormat === "RE" ? cardToAdd.banListRE : deckFormat === "RL" ? cardToAdd.banListRL : cardToAdd.banListLI
+        if (currentQuantity >= maxQuantity) return prevDeckCards
+        if (cardToAdd.isUnique && currentQuantity >= 1) return prevDeckCards
+
+        if (existingCard) {
+          // Actualizar existente - crear nuevo array solo con el cambio
+          const newDeckCards = [...prevDeckCards]
+          newDeckCards[existingIndex] = { cardId, quantity: currentQuantity + 1 }
+          return newDeckCards
+        } else {
+          // Agregar nuevo - tracking de analytics
+          if (typeof window !== "undefined") {
+            import("@/lib/analytics/events").then(({ trackCardAddedToDeck }) => {
+              trackCardAddedToDeck(cardId, cardToAdd.name);
+            });
+          }
+          return [...prevDeckCards, { cardId, quantity: 1 }]
+        }
+      })
+      return
+    }
 
     // Calcular total de cartas actual ANTES de actualizar el estado
     const currentTotal = deckCards.reduce((sum, dc) => sum + dc.quantity, 0)
@@ -237,7 +296,7 @@ function DeckBuilderContent() {
         return [...prevDeckCards, { cardId, quantity: 1 }]
       }
     })
-  }, [cardLookupMap, deckFormat, deckCards])
+  }, [allCardsLookupMap, cardLookupMap, allCardsWithAlternatives, deckFormat, deckCards])
 
   const removeCardFromDeck = useCallback((cardId: string) => {
     setDeckCards((prevDeckCards) =>

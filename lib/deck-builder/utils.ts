@@ -706,6 +706,34 @@ export function getDeckRace(deckCards: DeckCard[], allCards: Card[]): string | n
 }
 
 /**
+ * Obtiene el icono de raza para una carta individual
+ * @param race - Raza de la carta
+ * @returns URL del icono correspondiente a la raza
+ */
+export function getRaceIconUrl(race: string | null): string {
+  if (!race) {
+    return "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/aliado_g3lv1c.webp";
+  }
+
+  const raceIcons: Record<string, string> = {
+    Caballero: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218636/icon_caballero_edplpa.webp",
+    Dragón: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/drag_psd49t.webp",
+    Faerie: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/faerie_ddfcsx.webp",
+    Héroe: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1764396472/Aliado_icono_lvsirg.webp",
+    Olímpico: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/olimpico_nvwqv0.webp",
+    Títan: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250225/titan_wl8gxy.webp",
+    Defensor: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/defe_mztno2.webp",
+    Desafiante: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218636/icon_vikingo_sgcbh3.webp",
+    Sombra: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250225/sombra_p4u2rh.webp",
+    Eterno: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/eterno_xefcre.webp",
+    Faraón: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765218635/icon_faraon_rmz0c2.webp",
+    Sacerdote: "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250220/sacer_qidnv4.webp",
+  };
+
+  return raceIcons[race] || "https://res.cloudinary.com/dpbmbrekj/image/upload/v1765250219/aliado_g3lv1c.webp";
+}
+
+/**
  * Determina el icono dinámico para aliados basado en la raza dominante del mazo
  * @param deckCards - Array de cartas del mazo
  * @param allCards - Array de todas las cartas disponibles

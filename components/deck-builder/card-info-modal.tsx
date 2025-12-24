@@ -10,11 +10,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Plus, Minus, ChevronLeft, ChevronRight, Sword, Users, Coins, Zap, BookOpen } from "lucide-react"
+import { Plus, Minus, ChevronLeft, ChevronRight, Sword, Users, Coins, Zap, BookOpen, Hand, Dumbbell } from "lucide-react"
 import type { Card, DeckCard } from "@/lib/deck-builder/types"
-import { EDITION_LOGOS } from "@/lib/deck-builder/utils"
+import { EDITION_LOGOS, getRaceIconUrl } from "@/lib/deck-builder/utils"
 import { toastSuccess } from "@/lib/toast"
 import { optimizeCloudinaryUrl, isCloudinaryOptimized, detectDeviceType } from "@/lib/deck-builder/cloudinary-utils"
+import { CARD_ATTRIBUTES, getAttributeLabel, type CardAttributeKey } from "@/lib/deck-builder/card-attributes"
 
 interface CardInfoModalProps {
   card: Card | null
@@ -269,6 +270,12 @@ export function CardInfoModal({
     if (!isOpen || !navigateToCard) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Solo procesar si no está escribiendo en un input o textarea
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
       if (e.key === "ArrowLeft" && navigateToCard.hasPrevious) {
         e.preventDefault()
         handlePreviousCard()
@@ -281,6 +288,16 @@ export function CardInfoModal({
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isOpen, navigateToCard, handlePreviousCard, handleNextCard])
+
+  // Ref para el contenedor del contenido del modal
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // Scroll al inicio cuando cambia la carta para mantener posición estática
+  useEffect(() => {
+    if (contentRef.current && isOpen) {
+      contentRef.current.scrollTop = 0
+    }
+  }, [card.id, isOpen])
 
   // Encontrar qué carta alternativa está siendo mostrada actualmente
   const selectedAlternativeCard = alternativeArts.find((altCard) => altCard.image === displayImage)
@@ -373,7 +390,7 @@ export function CardInfoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto [&]:!animate-none [&[data-state=open]]:!animate-none [&[data-state=closed]]:!animate-none [&]:!transition-none">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col [&]:!translate-y-0 [&]:!top-[10vh] [&]:!animate-none [&[data-state=open]]:!animate-none [&[data-state=closed]]:!animate-none [&]:!transition-none">
         {/* Imagen de fondo con 95% de transparencia */}
         <div 
           className="absolute inset-0 pointer-events-none"
@@ -404,6 +421,48 @@ export function CardInfoModal({
               <DialogTitle className="text-3xl md:text-4xl font-bold tracking-tight flex-1 min-w-0">
                 {card.name}
               </DialogTitle>
+              {/* Badges dentro del contenedor de flechas */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {card.isUnique && (
+                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs md:text-sm font-semibold whitespace-nowrap">
+                    Carta Única
+                  </span>
+                )}
+                {card.isRework && (
+                  <span className="px-3 py-1 bg-orange-500/10 text-orange-500 rounded-full text-xs md:text-sm font-semibold whitespace-nowrap">
+                    Rework
+                  </span>
+                )}
+                {/* Badge de ban list - no mostrar para cartas únicas con maxQuantity === 1 (es mecánica del juego, no ban list) */}
+                {(() => {
+                  // No mostrar si es carta única con maxQuantity === 1 (mecánica del juego)
+                  if (maxQuantity === 1 && card.isUnique) return null
+                  
+                  // Mostrar según el valor de ban list
+                  if (maxQuantity === 0) {
+                    return (
+                      <span className="px-3 py-1 bg-red-600/10 text-red-600 rounded-full text-xs md:text-sm font-semibold whitespace-nowrap">
+                        BAN
+                      </span>
+                    )
+                  }
+                  if (maxQuantity === 1 && !card.isUnique) {
+                    return (
+                      <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs md:text-sm font-semibold whitespace-nowrap">
+                        Max 1
+                      </span>
+                    )
+                  }
+                  if (maxQuantity === 2) {
+                    return (
+                      <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs md:text-sm font-semibold whitespace-nowrap">
+                        Max 2
+                      </span>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
               {/* Botón de navegación siguiente */}
               {navigateToCard && navigateToCard.hasNext && (
                 <Button
@@ -423,16 +482,6 @@ export function CardInfoModal({
                   {navigateToCard.currentIndex + 1} / {navigateToCard.total}
                 </span>
               )}
-              {card.isUnique && (
-                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs md:text-sm font-semibold">
-                  Carta Única
-                </span>
-              )}
-              {card.isRework && (
-                <span className="px-3 py-1 bg-orange-500/10 text-orange-500 rounded-full text-xs md:text-sm font-semibold">
-                  Rework
-                </span>
-              )}
             </div>
           </div>
           <DialogDescription className="sr-only">
@@ -440,7 +489,11 @@ export function CardInfoModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-6 md:gap-8 items-start">
+        <div 
+          ref={contentRef}
+          className="flex-1 overflow-y-auto min-h-0 max-h-[calc(90vh-120px)]"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-6 md:gap-8 items-start">
           {/* Columna izquierda: carta principal + controles */}
           <div className="space-y-4 flex flex-col items-center md:items-start">
             <div className="relative aspect-[63/88] w-full max-w-[280px] mx-auto">
@@ -558,8 +611,23 @@ export function CardInfoModal({
               </div>
               {card.race && (
                 <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
-                    <Users className="size-5 text-primary" />
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center relative">
+                    {(() => {
+                      const raceIconUrl = getRaceIconUrl(card.race)
+                      const optimizedRaceIconUrl = optimizeCloudinaryUrl(raceIconUrl, deviceType)
+                      const isRaceIconOptimized = isCloudinaryOptimized(optimizedRaceIconUrl)
+                      return (
+                        <Image
+                          src={optimizedRaceIconUrl}
+                          alt={`Icono de ${card.race}`}
+                          width={28}
+                          height={28}
+                          className="object-contain"
+                          sizes="40px"
+                          unoptimized={isRaceIconOptimized}
+                        />
+                      )
+                    })()}
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium text-muted-foreground">
@@ -585,7 +653,7 @@ export function CardInfoModal({
               {card.power !== null && (
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-transparent flex items-center justify-center">
-                    <Zap className="size-5 text-primary" />
+                    <Dumbbell className="size-5 text-primary" />
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium text-muted-foreground">
@@ -640,6 +708,34 @@ export function CardInfoModal({
                 {card.description}
               </p>
             </div>
+
+            {/* Atributos booleanos activos */}
+            {(() => {
+              const activeAttributes = Object.keys(CARD_ATTRIBUTES).filter(
+                (attrKey) => (card as any)[attrKey] === true
+              ) as CardAttributeKey[];
+              
+              if (activeAttributes.length === 0) return null;
+              
+              return (
+                <div className="pt-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Zap className="size-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Atributos</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pl-6">
+                    {activeAttributes.map((attrKey) => (
+                      <span
+                        key={attrKey}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                      >
+                        {getAttributeLabel(attrKey)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Arte alternativo en fila horizontal */}
             {alternativeArts.length > 0 && (
@@ -696,6 +792,7 @@ export function CardInfoModal({
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </DialogContent>
