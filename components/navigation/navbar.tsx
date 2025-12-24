@@ -183,15 +183,15 @@ export function Navbar() {
                 {mobileNavLinks
                   .filter((link) => !link.requiresAuth || user)
                   .map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setIsOpen(false)}
-                      className="px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
                 <div className="border-t pt-2 mt-2">
                   <p className="px-4 py-1.5 text-xs font-semibold text-foreground">
                     Utilidad
