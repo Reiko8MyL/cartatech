@@ -8,6 +8,7 @@ import { Eye, Heart, MessageCircle, BookOpen, Clock } from "lucide-react"
 import { useCards } from "@/hooks/use-cards"
 import { getDeckFormatName } from "@/lib/deck-builder/utils"
 import type { Activity } from "@/lib/api/feed"
+import type { DeckFormat } from "@/lib/deck-builder/types"
 import { formatDistanceToNow } from "date-fns"
 
 interface ActivityItemProps {
@@ -72,7 +73,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
                       {deck.name}
                     </h3>
                     <Badge variant="secondary" className="shrink-0">
-                      {getDeckFormatName(deck.format)}
+                      {getDeckFormatName(deck.format as DeckFormat)}
                     </Badge>
                   </div>
                   {deck.description && (
