@@ -22,8 +22,6 @@ function getActivityKey(activity: Activity): string {
       return `${activity.type}-${activity.data.like.id}`
     case 'deck_commented':
       return `${activity.type}-${activity.data.comment.id}`
-    default:
-      return `${activity.type}-${Date.now()}`
   }
 }
 
