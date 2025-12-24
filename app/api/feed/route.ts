@@ -81,6 +81,9 @@ export async function GET(request: NextRequest) {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    // Optimización: Limitar a máximo 50 resultados por tipo para evitar cargar demasiados datos
+    const maxResultsPerType = Math.min(limit * 2, 50);
+
     // 1. Mazos publicados recientemente por usuarios seguidos
     const recentDecks = await prisma.deck.findMany({
       where: {
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         publishedAt: 'desc',
       },
-      take: limit * 2, // Tomar más para tener variedad
+      take: maxResultsPerType, // Limitar para evitar cargar demasiados
     });
 
     // 2. Likes recientes en mazos (de usuarios seguidos o en mazos de usuarios seguidos)
@@ -156,7 +159,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
-      take: limit * 2,
+      take: maxResultsPerType, // Limitar para evitar cargar demasiados
     });
 
     // 3. Comentarios recientes (de usuarios seguidos o en mazos de usuarios seguidos)
@@ -205,7 +208,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
-      take: limit * 2,
+      take: maxResultsPerType, // Limitar para evitar cargar demasiados
     });
 
     // Combinar y ordenar todas las actividades por fecha

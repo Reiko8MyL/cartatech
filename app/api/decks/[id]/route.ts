@@ -33,18 +33,24 @@ export async function GET(
       );
     }
 
-    // Incrementar contador de vistas si es público
+    // Incrementar contador de vistas si es público (asíncrono, no bloquea la respuesta)
     if (deck.isPublic) {
-      await prisma.deck.update({
+      // No esperar el update - hacerlo en background para no bloquear la respuesta
+      prisma.deck.update({
         where: { id },
         data: { viewCount: { increment: 1 } },
+      }).catch((error) => {
+        // Loggear error pero no bloquear la respuesta
+        log.error("Error al incrementar viewCount", error);
       });
     }
 
     const duration = Date.now() - startTime;
     log.api('GET', `/api/decks/${id}`, 200, duration);
 
-    return NextResponse.json({
+    // Cache HTTP: Los mazos individuales cambian ocasionalmente, cachear por 1 minuto
+    return NextResponse.json(
+      {
       deck: {
         id: deck.id,
         name: deck.name,
@@ -60,6 +66,11 @@ export async function GET(
         backgroundImage: deck.backgroundImage,
         viewCount: deck.viewCount,
         tags: deck.tags,
+      },
+    },
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300', // 1 min cache, 5 min stale
       },
     });
   } catch (error) {

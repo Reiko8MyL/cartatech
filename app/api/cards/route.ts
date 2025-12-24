@@ -38,12 +38,20 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime;
     log.api('GET', '/api/cards', 200, duration);
 
-    return NextResponse.json({
-      cards: filteredCards,
-      ...(includeAlternatives && { alternativeCards: altCards }),
-      total: filteredCards.length,
-      ...(includeAlternatives && { totalAlternatives: altCards.length }),
-    });
+    // Cache HTTP: Las cartas casi nunca cambian, cachear por 30 minutos
+    return NextResponse.json(
+      {
+        cards: filteredCards,
+        ...(includeAlternatives && { alternativeCards: altCards }),
+        total: filteredCards.length,
+        ...(includeAlternatives && { totalAlternatives: altCards.length }),
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600', // 30 min cache, 1h stale
+        },
+      }
+    );
   } catch (error) {
     const duration = Date.now() - startTime;
     log.error("Error al obtener cartas", error, { duration });

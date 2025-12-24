@@ -10,76 +10,79 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  email     String   @unique
-  password  String // Hasheada con bcrypt
-  role      String   @default("USER") // "USER", "MODERATOR", "ADMIN"
-  avatarCardId String?  // ID de la carta usada como avatar (ej: "MYL-0001")
-  avatarZoom Float?  // Zoom del avatar (1.0 = sin zoom, 2.0 = 2x zoom, etc.)
-  avatarPositionX Float?  // Posición X del extracto (0-100, porcentaje)
-  avatarPositionY Float?  // Posición Y del extracto (0-100, porcentaje)
-  bio       String?  // Biografía o descripción del usuario
-  profileBannerImage String?  // URL de la imagen de fondo del banner del perfil
-  country   String?  // País del usuario
-  region    String?  // Región/estado del usuario
-  city      String?  // Ciudad del usuario
-  favoriteRaces Json?  // Array de razas favoritas (máx 3) ["Raza1", "Raza2", "Raza3"]
-  favoriteFormat String?  // Formato favorito: "RE", "RL", "LI"
-  team      String?  // Team al que pertenece
-  preferredStore String?  // Tienda TCG preferida
+  id                 String   @id @default(cuid())
+  username           String   @unique
+  email              String   @unique
+  password           String // Hasheada con bcrypt
+  role               String   @default("USER") // "USER", "MODERATOR", "ADMIN"
+  avatarCardId       String? // ID de la carta usada como avatar (ej: "MYL-0001")
+  avatarZoom         Float? // Zoom del avatar (1.0 = sin zoom, 2.0 = 2x zoom, etc.)
+  avatarPositionX    Float? // Posición X del extracto (0-100, porcentaje)
+  avatarPositionY    Float? // Posición Y del extracto (0-100, porcentaje)
+  bio                String? // Biografía o descripción del usuario
+  profileBannerImage String? // URL de la imagen de fondo del banner del perfil
+  country            String? // País del usuario
+  region             String? // Región/estado del usuario
+  city               String? // Ciudad del usuario
+  favoriteRaces      Json? // Array de razas favoritas (máx 3) ["Raza1", "Raza2", "Raza3"]
+  favoriteFormat     String? // Formato favorito: "RE", "RL", "LI"
+  team               String? // Team al que pertenece
+  preferredStore     String? // Tienda TCG preferida
   // Configuración de privacidad (true = mostrar públicamente, false = ocultar)
-  showLocation Boolean @default(true)  // Mostrar ubicación (país, región, ciudad)
-  showFavoriteRaces Boolean @default(true)  // Mostrar razas favoritas
-  showFavoriteFormat Boolean @default(true)  // Mostrar formato favorito
-  showTeam Boolean @default(true)  // Mostrar team
-  showPreferredStore Boolean @default(true)  // Mostrar tienda TCG preferida
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  showLocation       Boolean  @default(true) // Mostrar ubicación (país, región, ciudad)
+  showFavoriteRaces  Boolean  @default(true) // Mostrar razas favoritas
+  showFavoriteFormat Boolean  @default(true) // Mostrar formato favorito
+  showTeam           Boolean  @default(true) // Mostrar team
+  showPreferredStore Boolean  @default(true) // Mostrar tienda TCG preferida
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relaciones
-  decks       Deck[]
-  favorites   FavoriteDeck[]
-  deckVersions DeckVersion[]
-  deckLikes   DeckLike[]
-  votes       Vote[]
-  collection  UserCollection?
-  comments    Comment[]
+  decks         Deck[]
+  favorites     FavoriteDeck[]
+  deckVersions  DeckVersion[]
+  deckLikes     DeckLike[]
+  votes         Vote[]
+  collection    UserCollection?
+  comments      Comment[]
   notifications Notification[]
   // Relaciones de seguimiento
-  followers   Follow[] @relation("UserFollowers") // Usuarios que me siguen
-  following   Follow[] @relation("UserFollowing") // Usuarios que sigo
+  followers     Follow[]        @relation("UserFollowers") // Usuarios que me siguen
+  following     Follow[]        @relation("UserFollowing") // Usuarios que sigo
 
   @@map("users")
 }
 
 model Deck {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  cards       Json     // Array de DeckCard[]
-  format      String   @default("RE") // RE, RL, LI
-  isPublic    Boolean  @default(false)
-  publishedAt DateTime?
-  techCardId  String?
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  cards           Json // Array de DeckCard[]
+  format          String    @default("RE") // RE, RL, LI
+  isPublic        Boolean   @default(false)
+  publishedAt     DateTime?
+  techCardId      String?
   backgroundImage String? // URL de la imagen de fondo personalizada del banner
-  viewCount   Int      @default(0)
-  tags        String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  viewCount       Int       @default(0)
+  tags            String[]  @default([])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relaciones
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  favorites   FavoriteDeck[]
-  versions    DeckVersion[]
-  likes       DeckLike[]
-  comments    Comment[]
-  shareCodes  ShareCode[]
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favorites  FavoriteDeck[]
+  versions   DeckVersion[]
+  likes      DeckLike[]
+  comments   Comment[]
+  shareCodes ShareCode[]
 
   @@index([userId])
   @@index([isPublic])
   @@index([publishedAt])
+  @@index([isPublic, publishedAt]) // Índice compuesto para consultas de mazos públicos
+  @@index([format, isPublic, publishedAt]) // Índice compuesto para filtros por formato
+  @@index([userId, updatedAt]) // Índice compuesto para mazos del usuario ordenados
   @@map("decks")
 }
 
@@ -88,15 +91,15 @@ model DeckVersion {
   deckId      String
   name        String
   description String?
-  cards       Json     // Array de DeckCard[]
+  cards       Json // Array de DeckCard[]
   format      String
   tags        String[] @default([])
   createdAt   DateTime @default(now())
 
   // Relaciones
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deck        Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck   Deck   @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
   @@index([deckId])
   @@index([userId])
@@ -110,8 +113,8 @@ model FavoriteDeck {
   createdAt DateTime @default(now())
 
   // Relaciones
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deckId])
   @@index([userId])
@@ -126,8 +129,8 @@ model DeckLike {
   createdAt DateTime @default(now())
 
   // Relaciones
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deckId])
   @@index([userId])
@@ -143,7 +146,7 @@ model Vote {
   createdAt DateTime @default(now())
 
   // Relaciones
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, race])
   @@index([userId])
@@ -160,7 +163,7 @@ model UserCollection {
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("user_collections")
@@ -171,15 +174,15 @@ model Comment {
   content   String
   deckId    String
   userId    String
-  parentId  String?  // Para respuestas anidadas
+  parentId  String? // Para respuestas anidadas
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deck      Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[] @relation("CommentReplies")
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck    Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
 
   @@index([deckId])
   @@index([userId])
@@ -190,15 +193,15 @@ model Comment {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // "like", "comment", "follow", "featured"
+  type      String // "like", "comment", "follow", "featured"
   title     String
   message   String
-  link      String?  // URL relacionada
+  link      String? // URL relacionada
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   // Relaciones
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([read])
@@ -207,11 +210,11 @@ model Notification {
 }
 
 model CardMetadata {
-  id              String   @id @default(cuid())
-  cardId          String   @unique // ID de la carta (ej: "MYL-0001")
-  backgroundPositionY Int?  // Posición Y personalizada (porcentaje, ej: 20, 25, 30)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  cardId              String   @unique // ID de la carta (ej: "MYL-0001")
+  backgroundPositionY Int? // Posición Y personalizada (porcentaje, ej: 20, 25, 30)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([cardId])
   @@map("card_metadata")
@@ -220,10 +223,10 @@ model CardMetadata {
 model Card {
   id                String   @id // ID de la carta (ej: "MYL-0001" o "MYL-0001-01")
   name              String
-  type              String   // "Aliado", "Arma", "Talismán", "Tótem", "Oro"
-  cost              Int?     // Coste de la carta (null para Oro y Tótem)
-  power             Int?     // Fuerza de la carta (null para Talismán, Tótem, Oro)
-  race              String?  // Raza (null para Talismán, Tótem, Oro)
+  type              String // "Aliado", "Arma", "Talismán", "Tótem", "Oro"
+  cost              Int? // Coste de la carta (null para Oro y Tótem)
+  power             Int? // Fuerza de la carta (null para Talismán, Tótem, Oro)
+  race              String? // Raza (null para Talismán, Tótem, Oro)
   isCosmetic        Boolean  @default(false) // true para cartas con arte alternativo
   isRework          Boolean  @default(false)
   isUnique          Boolean  @default(false)
@@ -234,7 +237,7 @@ model Card {
   isOroIni          Boolean  @default(false)
   image             String
   description       String   @default("")
-  baseCardId        String?  // ID base para cartas alternativas (ej: "MYL-0001" para "MYL-0001-01")
+  baseCardId        String? // ID base para cartas alternativas (ej: "MYL-0001" para "MYL-0001-01")
   // Atributos booleanos para filtros avanzados
   errante           Boolean  @default(false)
   soloAtacNoBloq    Boolean  @default(false)
@@ -256,20 +259,20 @@ model Card {
   noJugar           Boolean  @default(false)
   quitaHab          Boolean  @default(false)
   copiaHabil        Boolean  @default(false)
-  anulación         Boolean  @default(false)
+  anulación        Boolean  @default(false)
   nPSA              Boolean  @default(false)
-  cancelación       Boolean  @default(false)
+  cancelación      Boolean  @default(false)
   prevencion        Boolean  @default(false)
-  redDaño           Boolean  @default(false)
+  redDaño          Boolean  @default(false)
   ramp              Boolean  @default(false)
   destierroDirec    Boolean  @default(false)
-  dañoDirec         Boolean  @default(false)
+  dañoDirec        Boolean  @default(false)
   buscador          Boolean  @default(false)
   invocador         Boolean  @default(false)
   transformador     Boolean  @default(false)
   limitador         Boolean  @default(false)
   taunt             Boolean  @default(false)
-  movimiento       Boolean  @default(false)
+  movimiento        Boolean  @default(false)
   evitAtacar        Boolean  @default(false)
   evitBloq          Boolean  @default(false)
   inmuni            Boolean  @default(false)
@@ -281,17 +284,17 @@ model Card {
   redCoste          Boolean  @default(false)
   ganaControl       Boolean  @default(false)
   redirec           Boolean  @default(false)
-  rDestrucción      Boolean  @default(false)
+  rDestrucción     Boolean  @default(false)
   rDestierro        Boolean  @default(false)
   rBaraje           Boolean  @default(false)
   rTopBot           Boolean  @default(false)
   rMano             Boolean  @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relación con carta base (para cartas alternativas)
-  baseCard          Card?    @relation("CardAlternatives", fields: [baseCardId], references: [id], onDelete: Cascade)
-  alternativeCards  Card[]   @relation("CardAlternatives")
+  baseCard         Card?  @relation("CardAlternatives", fields: [baseCardId], references: [id], onDelete: Cascade)
+  alternativeCards Card[] @relation("CardAlternatives")
 
   @@index([id])
   @@index([baseCardId])
@@ -303,15 +306,15 @@ model Card {
 }
 
 model ShareCode {
-  id          String   @id @default(cuid())
-  code        String   @unique // Código corto único (ej: "abc123")
-  deckId      String
-  clickCount  Int      @default(0) // Contador de clics para analytics
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime? // Fecha de expiración opcional
+  id         String    @id @default(cuid())
+  code       String    @unique // Código corto único (ej: "abc123")
+  deckId     String
+  clickCount Int       @default(0) // Contador de clics para analytics
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime? // Fecha de expiración opcional
 
   // Relaciones
-  deck        Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@index([deckId])
@@ -320,19 +323,19 @@ model ShareCode {
 }
 
 model DeckPanelBannerSettings {
-  id                String   @id @default(cuid())
-  context           String   // "mis-mazos", "mazos-comunidad", "favoritos", "deck-builder"
-  viewMode          String   @default("grid") // "grid", "list"
-  device            String   @default("desktop") // "desktop", "tablet", "mobile"
-  backgroundImageId String?  // ID de la imagen específica (null = ajustes por defecto para todas)
-  backgroundPositionX Float  @default(50.0) // Posición X en porcentaje (0-100)
-  backgroundPositionY Float  @default(50.0) // Posición Y en porcentaje (0-100)
-  backgroundSize     String   @default("cover") // "cover", "contain", o porcentaje como "135%"
-  height             Int      @default(128) // Altura en píxeles
-  overlayOpacity     Float    @default(0.6) // Opacidad del overlay (0.0 a 1.0)
-  overlayGradient    String   @default("to-t") // Dirección del gradiente: "to-t", "to-b", "to-l", "to-r"
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  context             String // "mis-mazos", "mazos-comunidad", "favoritos", "deck-builder"
+  viewMode            String   @default("grid") // "grid", "list"
+  device              String   @default("desktop") // "desktop", "tablet", "mobile"
+  backgroundImageId   String? // ID de la imagen específica (null = ajustes por defecto para todas)
+  backgroundPositionX Float    @default(50.0) // Posición X en porcentaje (0-100)
+  backgroundPositionY Float    @default(50.0) // Posición Y en porcentaje (0-100)
+  backgroundSize      String   @default("cover") // "cover", "contain", o porcentaje como "135%"
+  height              Int      @default(128) // Altura en píxeles
+  overlayOpacity      Float    @default(0.6) // Opacidad del overlay (0.0 a 1.0)
+  overlayGradient     String   @default("to-t") // Dirección del gradiente: "to-t", "to-b", "to-l", "to-r"
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@unique([context, viewMode, device, backgroundImageId])
   @@index([context])
@@ -341,14 +344,14 @@ model DeckPanelBannerSettings {
 }
 
 model Follow {
-  id        String   @id @default(cuid())
-  followerId String // Usuario que sigue
+  id          String   @id @default(cuid())
+  followerId  String // Usuario que sigue
   followingId String // Usuario seguido
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   // Relaciones
-  follower  User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
-  following User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  follower  User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followerId])
@@ -356,4 +359,3 @@ model Follow {
   @@index([createdAt])
   @@map("follows")
 }
-

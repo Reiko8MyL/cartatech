@@ -5,7 +5,7 @@ import type { Card } from "./types";
 let cardsCache: Card[] | null = null;
 let altCardsCache: Card[] | null = null;
 let cacheTimestamp: number = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos (las cartas casi nunca cambian)
 
 /**
  * Limpia el cache de cartas (útil después de actualizaciones)

@@ -129,15 +129,23 @@ export async function GET(
     const duration = Date.now() - startTime;
     log.api('GET', `/api/decks/${id}/comments`, 200, duration);
 
-    return NextResponse.json({ 
-      comments: formattedComments,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+    // Cache HTTP: Los comentarios cambian frecuentemente, cachear por 30 segundos
+    return NextResponse.json(
+      { 
+        comments: formattedComments,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       },
-    })
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60', // 30s cache, 1min stale
+        },
+      }
+    )
   } catch (error) {
     const duration = Date.now() - startTime;
     

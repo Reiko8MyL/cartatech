@@ -91,7 +91,6 @@ export async function GET(request: NextRequest) {
       }
 
       // Construir orderBy según sortBy
-      // Para likeCount y favoriteCount, necesitamos ordenar por agregación
       let orderBy: any = {};
       if (sortBy === "viewCount") {
         orderBy = { viewCount: sortOrder };
@@ -99,16 +98,90 @@ export async function GET(request: NextRequest) {
         orderBy = { createdAt: sortOrder };
       } else if (sortBy === "publishedAt") {
         orderBy = { publishedAt: sortOrder };
-      } else if (sortBy === "likeCount" || sortBy === "favoriteCount") {
-        // Para likes y favoritos, ordenaremos después de obtener los datos
-        // Por ahora, ordenar por publishedAt como fallback
-        orderBy = { publishedAt: "desc" };
       } else {
         // Default: ordenar por fecha de publicación
         orderBy = { publishedAt: "desc" };
       }
 
-      // Obtener mazos públicos con filtros (sin paginación inicial para poder filtrar por popularidad)
+      // OPTIMIZACIÓN CRÍTICA: Si no se ordena por likes/favoritos y no hay filtros de popularidad,
+      // usar paginación directa en BD (mucho más eficiente)
+      const needsPopularityFilter = minLikes > 0 || minFavorites > 0;
+      const needsPopularitySort = sortBy === "likeCount" || sortBy === "favoriteCount";
+
+      if (!needsPopularityFilter && !needsPopularitySort) {
+        // Caso optimizado: paginación directa en BD
+        const [total, decks] = await Promise.all([
+          prisma.deck.count({ where }),
+          prisma.deck.findMany({
+            where,
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                },
+              },
+              _count: {
+                select: {
+                  likes: true,
+                  favorites: true,
+                },
+              },
+            },
+            orderBy,
+            skip,
+            take: limit,
+          }),
+        ]);
+
+        const formattedDecks = decks.map((deck: any) => ({
+          id: deck.id,
+          name: deck.name,
+          description: deck.description,
+          cards: deck.cards as unknown as DeckCard[],
+          format: deck.format,
+          createdAt: deck.createdAt.getTime(),
+          userId: deck.userId,
+          author: deck.user.username,
+          isPublic: deck.isPublic,
+          publishedAt: deck.publishedAt?.getTime(),
+          techCardId: deck.techCardId,
+          backgroundImage: deck.backgroundImage,
+          viewCount: deck.viewCount,
+          tags: deck.tags,
+          likeCount: deck._count?.likes || 0,
+          favoriteCount: deck._count?.favorites || 0,
+        }));
+
+        const duration = Date.now() - startTime;
+        log.api('GET', '/api/decks', 200, duration, { 
+          publicOnly: true, 
+          filters: { format, author, search, sortBy },
+          optimized: true,
+        });
+
+        // Cache HTTP: Los mazos públicos cambian ocasionalmente, cachear por 2 minutos
+        return NextResponse.json(
+          {
+            decks: formattedDecks,
+            pagination: {
+              page,
+              limit,
+              total,
+              totalPages: Math.ceil(total / limit),
+            },
+          },
+          {
+            headers: {
+              'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300', // 2 min cache, 5 min stale
+            },
+          }
+        );
+      }
+
+      // Caso especial: ordenar/filtrar por popularidad (requiere cargar más datos)
+      // Limitar a máximo 500 mazos para evitar cargar demasiados
+      const maxDecksForPopularity = 500;
       const allDecks = await prisma.deck.findMany({
         where,
         include: {
@@ -125,8 +198,8 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        // Solo aplicar orderBy si no es por likes/favoritos (se ordenará después)
-        orderBy: (sortBy === "likeCount" || sortBy === "favoriteCount") ? { publishedAt: "desc" } : orderBy,
+        orderBy: { publishedAt: "desc" },
+        take: maxDecksForPopularity, // Limitar para evitar cargar miles de mazos
       });
 
       // Filtrar por popularidad (mínimo de likes/favoritos)

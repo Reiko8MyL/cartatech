@@ -31,8 +31,8 @@ export function usePublicDecksQuery(
         return getPublicDecksFromStorage(page, limit);
       }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutos (los mazos públicos pueden cambiar)
-    gcTime: 5 * 60 * 1000, // 5 minutos en cache
+    staleTime: 5 * 60 * 1000, // 5 minutos (aumentado para reducir operaciones de BD)
+    gcTime: 10 * 60 * 1000, // 10 minutos en cache (aumentado)
     retry: 1,
     refetchOnWindowFocus: false,
     // Usar datos de localStorage como placeholder mientras carga
@@ -52,8 +52,8 @@ export function useUserDecksQuery(userId: string | undefined, page: number = 1, 
       return getUserDecksFromStorage(userId, page, limit)
     },
     enabled: !!userId, // Solo ejecutar si hay userId
-    staleTime: 1 * 60 * 1000, // 1 minuto (los mazos del usuario cambian más frecuentemente)
-    gcTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000, // 2 minutos (aumentado para reducir operaciones de BD)
+    gcTime: 10 * 60 * 1000, // 10 minutos en cache (aumentado)
     retry: 1,
     refetchOnWindowFocus: false,
     placeholderData: (previousData) => previousData,

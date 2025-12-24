@@ -53,7 +53,7 @@ export async function GET(
       )
     }
 
-    // Obtener estadísticas del usuario
+    // Obtener estadísticas del usuario (optimizado: ejecutar en paralelo)
     const [deckCount, publicDeckCount, totalLikes, totalViews] = await Promise.all([
       prisma.deck.count({
         where: { userId: user.id },
@@ -131,7 +131,9 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({
+    // Cache HTTP: Los perfiles de usuario cambian ocasionalmente, cachear por 5 minutos
+    return NextResponse.json(
+      {
       user: {
         ...user,
         favoriteRaces: favoriteRacesParsed,
@@ -150,6 +152,11 @@ export async function GET(
         createdAt: deck.createdAt.getTime(),
         publishedAt: deck.publishedAt?.getTime(),
       })),
+    },
+    {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600', // 5 min cache, 10 min stale
+      },
     })
   } catch (error) {
     const duration = Date.now() - startTime;
