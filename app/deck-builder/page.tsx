@@ -156,6 +156,7 @@ function DeckBuilderContent() {
     showOnlyBanned: false,
     showOnlyRework: false,
     showOnlyAvailable: false,
+    attributes: [],
   })
 
   // Filtrar cartas según los filtros (solo cartas originales, no alternativas)

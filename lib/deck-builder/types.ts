@@ -15,6 +15,57 @@ export interface Card {
   isOroIni: boolean;
   image: string;
   description: string;
+  // Atributos booleanos para filtros avanzados
+  errante?: boolean;
+  soloAtacNoBloq?: boolean;
+  soloBloqNoAtac?: boolean;
+  bloquarVarios?: boolean;
+  pacej?: boolean;
+  imblo?: boolean;
+  bloqImblo?: boolean;
+  noArmas?: boolean;
+  mas1arma?: boolean;
+  indestructible?: boolean;
+  indestrerrable?: boolean;
+  exhumar?: boolean;
+  controlCementerio?: boolean;
+  lookDeck?: boolean;
+  desafio?: boolean;
+  sBuff?: boolean;
+  sNerf?: boolean;
+  noJugar?: boolean;
+  quitaHab?: boolean;
+  copiaHabil?: boolean;
+  anulación?: boolean;
+  nPSA?: boolean;
+  cancelación?: boolean;
+  prevencion?: boolean;
+  redDaño?: boolean;
+  ramp?: boolean;
+  destierroDirec?: boolean;
+  dañoDirec?: boolean;
+  buscador?: boolean;
+  invocador?: boolean;
+  transformador?: boolean;
+  limitador?: boolean;
+  taunt?: boolean;
+  movimiento?: boolean;
+  evitAtacar?: boolean;
+  evitBloq?: boolean;
+  inmuni?: boolean;
+  baraje?: boolean;
+  Robo?: boolean;
+  descartaMano?: boolean;
+  ordenMazo?: boolean;
+  genOro?: boolean;
+  redCoste?: boolean;
+  ganaControl?: boolean;
+  redirec?: boolean;
+  rDestrucción?: boolean;
+  rDestierro?: boolean;
+  rBaraje?: boolean;
+  rTopBot?: boolean;
+  rMano?: boolean;
 }
 
 export interface DeckCard {
@@ -74,6 +125,8 @@ export interface DeckFilters {
   showOnlyBanned?: boolean;
   showOnlyRework?: boolean;
   showOnlyAvailable?: boolean; // Solo cartas disponibles según ban list del formato actual
+  // Filtros por atributos booleanos
+  attributes?: string[]; // Array de claves de atributos activos (ej: ["pacej", "buscador", "ramp"])
 }
 
 export interface DeckStats {

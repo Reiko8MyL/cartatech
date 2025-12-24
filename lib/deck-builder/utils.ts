@@ -317,6 +317,17 @@ export function filterCards(cards: Card[], filters: DeckFilters, deckFormat?: De
     filtered = filtered.filter((card) => card.isRework);
   }
 
+  // Filtrar por atributos booleanos (si se especifican)
+  if (filters.attributes && filters.attributes.length > 0) {
+    filtered = filtered.filter((card) => {
+      // La carta debe tener TODOS los atributos seleccionados activos (true)
+      return filters.attributes!.every((attrKey) => {
+        const attrValue = card[attrKey as keyof Card];
+        return attrValue === true;
+      });
+    });
+  }
+
   return filtered;
 }
 

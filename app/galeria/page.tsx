@@ -198,6 +198,7 @@ function GaleriaContent() {
     showOnlyUnique: false,
     showOnlyBanned: false,
     showOnlyRework: false,
+    attributes: [],
   })
   
   // Usar deferred value para búsquedas de texto - no bloquea la UI

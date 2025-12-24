@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Filter, X, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react"
 import type { DeckFilters, DeckFormat } from "@/lib/deck-builder/types"
+import { 
+  CARD_ATTRIBUTES, 
+  ATTRIBUTE_CATEGORIES, 
+  getAttributeLabel, 
+  getCategoryLabel,
+  type CardAttributeKey 
+} from "@/lib/deck-builder/card-attributes"
 
 interface FiltersPanelProps {
   filters: DeckFilters
@@ -237,6 +244,30 @@ export const FiltersPanel = memo(function FiltersPanel({
     }
   }
 
+  function toggleAttributeFilter(attrKey: CardAttributeKey, checked: boolean) {
+    const currentAttributes = filters.attributes || []
+    if (checked) {
+      if (!currentAttributes.includes(attrKey)) {
+        onFiltersChange({
+          ...filters,
+          attributes: [...currentAttributes, attrKey],
+        })
+      }
+    } else {
+      onFiltersChange({
+        ...filters,
+        attributes: currentAttributes.filter((key) => key !== attrKey),
+      })
+    }
+  }
+
+  function clearAttributeFilters() {
+    onFiltersChange({
+      ...filters,
+      attributes: [],
+    })
+  }
+
   function clearFilters() {
     onFiltersChange({
       search: "",
@@ -249,6 +280,7 @@ export const FiltersPanel = memo(function FiltersPanel({
       showOnlyBanned: false,
       showOnlyRework: false,
       showOnlyAvailable: false,
+      attributes: [],
     })
   }
 
@@ -259,6 +291,7 @@ export const FiltersPanel = memo(function FiltersPanel({
     filters.type.length > 0 ||
     filters.race.length > 0 ||
     filters.cost.length > 0 ||
+    (filters.attributes && filters.attributes.length > 0) ||
     filters.showOnlyUnique === true ||
     filters.showOnlyBanned === true ||
     filters.showOnlyRework === true ||
@@ -608,6 +641,69 @@ export const FiltersPanel = memo(function FiltersPanel({
                 )}
               </div>
 
+              {/* Filtro por atributos - Expandido */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => toggleFilterSection("attributes")}
+                    className="flex items-center gap-1.5 text-xs font-medium hover:text-primary transition-colors"
+                  >
+                    {expandedFilters.has("attributes") ? (
+                      <Minus className="size-3.5" />
+                    ) : (
+                      <Plus className="size-3.5" />
+                    )}
+                    <span>Atributos</span>
+                  </button>
+                  {(filters.attributes && filters.attributes.length > 0) && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                        {filters.attributes.length}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          clearAttributeFilters()
+                        }}
+                        className="h-5 text-[10px] px-1.5"
+                      >
+                        Limpiar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {expandedFilters.has("attributes") && (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
+                      <div key={category} className="space-y-1.5">
+                        <div className="text-[10px] font-semibold text-muted-foreground px-1">
+                          {getCategoryLabel(category as keyof typeof ATTRIBUTE_CATEGORIES)}
+                        </div>
+                        {attributes.map((attrKey) => (
+                          <div key={attrKey} className="flex items-center space-x-1.5 pl-2">
+                            <Checkbox
+                              id={`attr-${attrKey}`}
+                              checked={(filters.attributes || []).includes(attrKey)}
+                              onCheckedChange={(checked) => {
+                                toggleAttributeFilter(attrKey, checked === true)
+                              }}
+                            />
+                            <label
+                              htmlFor={`attr-${attrKey}`}
+                              className="text-xs cursor-pointer select-none"
+                            >
+                              {getAttributeLabel(attrKey)}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Filtros adicionales - Abajo de coste en modo expandido (galería) */}
               <div className="space-y-1.5 pt-2 border-t">
                 <div className="flex items-center space-x-1.5">
@@ -852,6 +948,59 @@ export const FiltersPanel = memo(function FiltersPanel({
                     >
                       {cost}
                     </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Filtro por atributos */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                    {getFilterButtonText("Atributos", filters.attributes || [])}
+                    {(filters.attributes && filters.attributes.length > 0) && (
+                      <span className="ml-1 text-[9px] bg-primary text-primary-foreground rounded-full px-1 py-0.5">
+                        {filters.attributes.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-[400px] overflow-y-auto w-[280px]">
+                  <div className="flex items-center justify-between p-2">
+                    <DropdownMenuLabel>Atributos</DropdownMenuLabel>
+                    {(filters.attributes && filters.attributes.length > 0) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          clearAttributeFilters()
+                        }}
+                        className="h-6 text-[10px] px-2"
+                      >
+                        Limpiar
+                      </Button>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
+                    <div key={category}>
+                      <DropdownMenuLabel className="text-[10px] font-semibold text-muted-foreground px-2 py-1">
+                        {getCategoryLabel(category as keyof typeof ATTRIBUTE_CATEGORIES)}
+                      </DropdownMenuLabel>
+                      {attributes.map((attrKey) => (
+                        <DropdownMenuCheckboxItem
+                          key={attrKey}
+                          checked={(filters.attributes || []).includes(attrKey)}
+                          onCheckedChange={(checked) => {
+                            toggleAttributeFilter(attrKey, checked === true)
+                          }}
+                          className="text-xs"
+                        >
+                          {getAttributeLabel(attrKey)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                    </div>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
