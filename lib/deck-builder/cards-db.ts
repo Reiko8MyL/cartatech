@@ -16,6 +16,10 @@ export function clearCardsCache() {
   cacheTimestamp = 0;
 }
 
+// Limpiar cache al cargar el módulo para forzar recarga con nuevos atributos después de la migración
+// Esto asegura que se carguen los datos actualizados con los 50 nuevos atributos booleanos
+clearCardsCache();
+
 /**
  * Obtiene todas las cartas desde la base de datos
  * Mantiene compatibilidad con getAllCards()

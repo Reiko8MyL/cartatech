@@ -321,10 +321,16 @@ export function filterCards(cards: Card[], filters: DeckFilters, deckFormat?: De
   if (filters.attributes && filters.attributes.length > 0) {
     filtered = filtered.filter((card) => {
       // La carta debe tener TODOS los atributos seleccionados activos (true)
-      return filters.attributes!.every((attrKey) => {
-        const attrValue = card[attrKey as keyof Card];
+      // Manejar undefined como false para compatibilidad con datos antiguos
+      const hasAllAttributes = filters.attributes!.every((attrKey) => {
+        // Acceder al atributo de forma segura
+        const attrValue = (card as any)[attrKey];
+        // Considerar true solo si el valor es explícitamente true
+        // undefined, null, false se consideran como false
         return attrValue === true;
       });
+      
+      return hasAllAttributes;
     });
   }
 
