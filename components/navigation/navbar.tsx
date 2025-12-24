@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Menu, User, LogOut, LogIn, UserPlus, Sun, Moon, Monitor, Shield, Globe } from "lucide-react";
+import { Menu, User, LogOut, LogIn, UserPlus, Sun, Moon, Monitor, Shield, Globe, Rss } from "lucide-react";
 import { NavLink } from "./nav-link";
 import { UtilidadDropdown } from "./utilidad-dropdown";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -29,12 +29,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const mobileNavLinks = [
+const mobileNavLinks: Array<{ href: string; label: string; requiresAuth?: boolean }> = [
   { href: "/", label: "Inicio" },
   { href: "/deck-builder", label: "Deck Builder" },
   { href: "/galeria", label: "Galería" },
   { href: "/mis-mazos", label: "Mis Mazos" },
   { href: "/mis-favoritos", label: "Mis Favoritos" },
+  { href: "/feed", label: "Feed", requiresAuth: true },
   { href: "/mazos-comunidad", label: "Mazos de la Comunidad" },
 ];
 
@@ -79,6 +80,7 @@ export function Navbar() {
             <NavLink href="/deck-builder">Deck Builder</NavLink>
             <NavLink href="/galeria">Galería</NavLink>
             <NavLink href="/mis-mazos">Mis Mazos</NavLink>
+            {user && <NavLink href="/feed">Feed</NavLink>}
             <NavLink href="/mazos-comunidad">Mazos de la Comunidad</NavLink>
             <UtilidadDropdown />
           </div>
@@ -117,6 +119,12 @@ export function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/mis-favoritos" className="cursor-pointer">
                     Mis Favoritos
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/feed" className="cursor-pointer">
+                    <Rss className="mr-2 h-4 w-4" />
+                    Feed
                   </Link>
                 </DropdownMenuItem>
                 {hasModeratorAccess(user.role) && (
@@ -173,16 +181,18 @@ export function Navbar() {
                 <SheetTitle>Menú</SheetTitle>
               </SheetHeader>
               <nav className="mt-4 flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
-                {mobileNavLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {mobileNavLinks
+                  .filter((link) => !link.requiresAuth || user)
+                  .map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setIsOpen(false)}
+                      className="px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground rounded-md"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
                 <div className="border-t pt-2 mt-2">
                   <p className="px-4 py-1.5 text-xs font-semibold text-foreground">
                     Utilidad
