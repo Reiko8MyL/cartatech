@@ -13,6 +13,20 @@ import { ActivityItem } from "@/components/feed/activity-item"
 import { Pagination } from "@/components/ui/pagination"
 import type { Activity } from "@/lib/api/feed"
 
+// Helper function para obtener un ID único de cada actividad de forma type-safe
+function getActivityKey(activity: Activity): string {
+  switch (activity.type) {
+    case 'deck_published':
+      return `${activity.type}-${activity.data.deck.id}`
+    case 'deck_liked':
+      return `${activity.type}-${activity.data.like.id}`
+    case 'deck_commented':
+      return `${activity.type}-${activity.data.comment.id}`
+    default:
+      return `${activity.type}-${Date.now()}`
+  }
+}
+
 export default function FeedPage() {
   const router = useRouter()
   const { user } = useAuth()
@@ -143,7 +157,7 @@ export default function FeedPage() {
           <>
             <div className="space-y-4 mb-6">
               {activities.map((activity) => (
-                <ActivityItem key={`${activity.type}-${activity.data.deck?.id || activity.data.like?.id || activity.data.comment?.id}`} activity={activity} />
+                <ActivityItem key={getActivityKey(activity)} activity={activity} />
               ))}
             </div>
 
