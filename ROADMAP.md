@@ -1,8 +1,8 @@
 # 🚀 Roadmap y Plan de Mejoras - CartaTech
 
-**Última actualización**: Diciembre 2024  
+**Última actualización**: Enero 2025  
 **Estado del proyecto**: ✅ En producción (https://www.cartatech.cl/)  
-**Versión del documento**: 3.3 (Fase 1 completada: Deck Builder y Exportación)
+**Versión del documento**: 4.0 (Sprint 2 y 3 completados: Accesibilidad y Feed de Actividad)
 
 Este documento consolida el plan completo de mejoras, optimizaciones y funcionalidades futuras para CartaTech, organizado por prioridad y estado de implementación.
 
@@ -27,6 +27,8 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ✅ **Paginación** en todas las listas grandes
 - ✅ **Analytics** completo con todos los eventos críticos trackeados
 - ✅ **Sistema de seguimiento** (Follow/Unfollow) con notificaciones automáticas
+- ✅ **Feed de actividad** de usuarios seguidos con actualización automática
+- ✅ **Mejoras de accesibilidad** (ARIA labels, skip links, focus management, contraste WCAG AA)
 - ✅ **Deck Builder Pro**: Badge de total, Drag & Drop (reordenar y agregar), filtros rápidos
 - ✅ **Exportación Universal**: Imagen 2x (super-sampling), Lista de texto y TTS Code
 
@@ -35,8 +37,7 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ⏳ **Exportación avanzada** (PDF, formatos especializados)
 
 ### 📋 Pendiente Media Prioridad
-- ⏳ **Feed de actividad** de usuarios seguidos en el Dashboard
-- ⏳ **Mejoras de accesibilidad** avanzadas (ARIA completo, navegación por teclado)
+- ⏳ **Mejoras de accesibilidad avanzadas** (mejoras adicionales, auditorías periódicas)
 - ⏳ **PWA** (Progressive Web App) con service worker y manifest
 
 ### 🔮 Pendiente Baja Prioridad / Ideas Futuras
@@ -145,10 +146,13 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
   - Actualización optimista del estado ✅
   - Notificaciones cuando alguien te sigue ✅
 
-- [ ] **Feed de actividad** (Próximo paso)
-  - Página `/feed` con actividad de usuarios seguidos
-  - Nuevos mazos publicados por seguidos
-  - Actividad reciente (likes, comentarios)
+- [x] **Feed de actividad** ✅ COMPLETADO
+  - Página `/feed` con actividad de usuarios seguidos ✅
+  - Nuevos mazos publicados por seguidos ✅
+  - Actividad reciente (likes, comentarios) ✅
+  - Actualización automática cada 5 minutos ✅
+  - Paginación implementada ✅
+  - UI con estados de carga, error y vacío ✅
 
 ---
 
@@ -159,10 +163,14 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - [ ] **Service Worker** con caché offline para cartas
 - [ ] **Indicador offline** y persistencia local
 
-### 3.2 Mejoras de Accesibilidad Avanzadas 🟡
-- [ ] **ARIA labels** completos en toda la app
-- [ ] **Navegación por teclado** optimizada (Focus visible, Skip links)
-- [ ] **Verificación de contraste** WCAG AA
+### 3.2 Mejoras de Accesibilidad Avanzadas ✅
+- [x] **ARIA labels** completos en botones sin texto (iconos) ✅
+- [x] **Navegación por teclado** optimizada (Focus visible, Skip links) ✅
+- [x] **Verificación de contraste** WCAG AA ✅
+- [x] **Jerarquía de headings** corregida (h1 → h2 → h3) ✅
+- [x] **Labels asociados** en formularios verificados ✅
+- [x] **Error boundaries** y páginas de error personalizadas ✅
+- [x] **Loading states** en rutas críticas ✅
 
 ---
 
@@ -185,10 +193,16 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ✅ Mejoras Deck Builder (Badge, Dnd, Filtros)
 - ✅ Exportación Pro (Imagen 2x, Texto, TTS)
 
-### Sprint 3 (En curso) 🔄
+### Sprint 2 (Completado) ✅
+- ✅ Mejoras de accesibilidad base (ARIA labels, skip links, focus management)
+- ✅ Verificación de contraste WCAG AA
+- ✅ Jerarquía de headings y labels en formularios
+- ✅ Error boundaries y loading states
+
+### Sprint 3 (Completado) ✅
 - ✅ Sistema de seguimiento (Follow) - COMPLETADO
-- ⏳ Feed de actividad (en progreso)
-- ⏳ Mejoras de accesibilidad base
+- ✅ Feed de actividad - COMPLETADO
+- ✅ Mejoras en perfil: Mazos privados visibles en perfil propio
 
 ### Sprint 4+ (Ongoing) 🔮
 - ⏳ PWA básico
@@ -215,7 +229,31 @@ Este documento consolida el plan completo de mejoras, optimizaciones y funcional
 - ✅ `FollowButton` con actualización optimista
 - ✅ Notificaciones automáticas de tipo `follow`
 
+### Feed de Actividad ✅
+- ✅ API `/api/feed` con paginación y rate limiting
+- ✅ Página `/feed` con UI completa (loading, error, empty states)
+- ✅ Componente `ActivityItem` para diferentes tipos de actividad
+- ✅ Hook `useFeedQuery` con React Query (caché, refetch automático)
+- ✅ Tipos de actividad: mazos publicados, likes, comentarios
+- ✅ Actualización automática cada 5 minutos
+
+### Mejoras de Accesibilidad ✅
+- ✅ ARIA labels en botones sin texto
+- ✅ Skip links para navegación por teclado
+- ✅ Focus visible y trap focus en modals
+- ✅ Jerarquía de headings corregida
+- ✅ Labels asociados en formularios
+- ✅ Auditoría de contraste WCAG AA (todos los colores cumplen)
+- ✅ Script automático de verificación de contraste
+- ✅ Documentación completa de accesibilidad
+
+### Mejoras en Perfil de Usuario ✅
+- ✅ Mazos privados visibles en perfil propio
+- ✅ Mezcla balanceada de mazos públicos y privados en "Mazos Recientes"
+- ✅ Favoritos incluyen mazos públicos y mazos privados propios
+- ✅ Perfil público solo muestra mazos públicos (sin cambios)
+
 ---
 
-**Última actualización**: Diciembre 2024  
-**Versión del documento**: 3.3 (Fase 1 completada: Deck Builder y Exportación)
+**Última actualización**: Enero 2025  
+**Versión del documento**: 4.0 (Sprint 2 y 3 completados: Accesibilidad y Feed de Actividad)
