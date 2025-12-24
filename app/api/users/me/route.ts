@@ -165,7 +165,8 @@ export async function GET(request: NextRequest) {
       // Continuar con valores por defecto
     }
 
-    // Obtener mazos recientes (últimos 5) con todos los datos necesarios para mostrar banners
+    // Obtener mazos recientes (últimos 10, luego tomar 5 para tener variedad) con todos los datos necesarios para mostrar banners
+    // Incluir TODOS los mazos (públicos y privados) del usuario
     let recentDecks: Array<{ 
       id: string; 
       name: string; 
@@ -180,10 +181,14 @@ export async function GET(request: NextRequest) {
       cards: any;
     }> = [];
     try {
-      recentDecks = await prisma.deck.findMany({
-        where: { userId: user.id },
+      // Obtener más mazos para tener variedad (públicos y privados)
+      const allRecentDecks = await prisma.deck.findMany({
+        where: { 
+          userId: user.id,
+          // Sin filtro de isPublic - incluir todos los mazos
+        },
         orderBy: { updatedAt: "desc" },
-        take: 5,
+        take: 10, // Obtener más para tener variedad
         select: {
           id: true,
           name: true,
@@ -198,6 +203,25 @@ export async function GET(request: NextRequest) {
           cards: true,
         },
       });
+      
+      // Priorizar mostrar al menos algunos mazos públicos si existen
+      // Si hay mazos públicos, mezclar con privados
+      const publicDecks = allRecentDecks.filter(d => d.isPublic);
+      const privateDecks = allRecentDecks.filter(d => !d.isPublic);
+      
+      // Mezclar: primeros públicos, luego privados, hasta 5 total
+      recentDecks = [
+        ...publicDecks.slice(0, 3), // Hasta 3 públicos
+        ...privateDecks.slice(0, 2), // Hasta 2 privados
+      ].slice(0, 5); // Limitar a 5 total
+      
+      // Si no hay suficientes, completar con los más recientes
+      if (recentDecks.length < 5) {
+        const remaining = allRecentDecks
+          .filter(d => !recentDecks.some(rd => rd.id === d.id))
+          .slice(0, 5 - recentDecks.length);
+        recentDecks = [...recentDecks, ...remaining];
+      }
     } catch (e) {
       console.error("Error al obtener mazos recientes:", e);
     }
