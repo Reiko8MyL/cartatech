@@ -80,7 +80,6 @@ export function Navbar() {
             <NavLink href="/deck-builder">Deck Builder</NavLink>
             <NavLink href="/galeria">Galería</NavLink>
             <NavLink href="/mis-mazos">Mis Mazos</NavLink>
-            {user && <NavLink href="/feed">Feed</NavLink>}
             <NavLink href="/mazos-comunidad">Mazos de la Comunidad</NavLink>
             <UtilidadDropdown />
           </div>
