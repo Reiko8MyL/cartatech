@@ -325,6 +325,12 @@ export function filterCards(cards: Card[], filters: DeckFilters, deckFormat?: De
       const hasAllAttributes = filters.attributes!.every((attrKey) => {
         // Acceder al atributo de forma segura
         const attrValue = (card as any)[attrKey];
+        
+        // Debug temporal: loggear primera carta para verificar atributos
+        if (process.env.NODE_ENV === "development" && filtered.length > 0 && card.id === filtered[0]?.id) {
+          console.log(`[DEBUG FILTER] Carta ${card.id} - Atributo ${attrKey}:`, attrValue, "Tipo:", typeof attrValue);
+        }
+        
         // Considerar true solo si el valor es explícitamente true
         // undefined, null, false se consideran como false
         return attrValue === true;
@@ -332,6 +338,17 @@ export function filterCards(cards: Card[], filters: DeckFilters, deckFormat?: De
       
       return hasAllAttributes;
     });
+    
+    // Debug temporal: loggear resultado del filtrado
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[DEBUG FILTER] Filtros activos:`, filters.attributes, "Cartas encontradas:", filtered.length);
+      if (filtered.length > 0) {
+        console.log(`[DEBUG FILTER] Primera carta encontrada:`, filtered[0].id, filtered[0].name);
+        filters.attributes.forEach(attrKey => {
+          console.log(`  - ${attrKey}:`, (filtered[0] as any)[attrKey]);
+        });
+      }
+    }
   }
 
   return filtered;
